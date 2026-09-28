@@ -1,0 +1,17 @@
+- [Orval Zod generation](orval-zod-generation.md) — keep output schema-only and model integers with compatible Zod 3 constraints.
+- [Orval URI compatibility](orval-uri-compatibility.md) — OpenAPI URI formats can generate unsupported zod.url() calls with the workspace's Zod version.
+- [Expo workspace dependencies](expo-workspace-dependencies.md) — package installer targets the workspace root; scoped Expo dependencies need the artifact filter.
+- [Expo web preference persistence](expo-web-preference-persistence.md) — mirror critical first-run preferences to a same-site cookie because preview localStorage may reset on reload.
+- [Expo Android builds in constrained workspaces](expo-android-build-memory.md) — pause previews, cap both Gradle and Ninja, and keep build caches in the workspace.
+- [Radio embed compatibility](radio-embed-compatibility.md) — the supplied Orthodox radio embed is HTTP-only here; keep native WebView playback and a web/external fallback.
+- [Local image fallback](local-image-fallback.md) — use bundled artwork when public image search is unavailable in the current environment.
+- [Expo workflow restart behavior](expo-workflow-restart-behavior.md) — a managed Expo restart can disconnect without creating a new log; verify status before changing app code.
+- [Synaxarion locale boundary](synaxarion-locale-boundary.md) — keep live-card translation locales separate from database-backed content locales; Greek is translation-only.
+- [Synaxarion source connectivity](synaxarion-source-connectivity.md) — account for CORS, runtime egress, and Orthodox Jordan's Arabic quote/citation markup.
+- [Eastern calendar display dates](eastern-calendar-display-dates.md) — home calendar cards must use the displayed month/day directly, not the 13-day civil-date offset.
+- [APK signature verification](apk-signature-verification.md) — trust Android's `apksigner verify`; generic ZIP checkers can flag a valid signed APK's signing block.
+- [React Native image sizing](expo-image-sizing-parity.md) — give Android card thumbnails an explicit frame height; `minHeight` alone can let source dimensions expand the card.
+- [OrthoTypikon UI parity](orthotypikon-ui-parity.md) — keep user-facing UI and behavior shared between Android and web unless a platform difference is intentional.
+- [Google Drive audio streaming](orthotypikon-drive-audio-streaming.md) — a valid MP3 download and range response do not guarantee browser audio playback.
+- [Expo audio player lifecycle](orthotypikon-expo-audio-lifecycle.md) — let the hook release its shared player; cleanup can run after source replacement.
+- [API route source tests](api-route-source-tests.md) — Node's TypeScript test runner needs support for bundler-style imports and transform-only syntax.

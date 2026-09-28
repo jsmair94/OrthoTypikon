@@ -1,0 +1,44 @@
+uploads = []
+generated = []
+
+[[outputs]]
+id = "dfzvbVruGRBGhKPtKGx29"
+uri = "file://artifacts/orthotypikon/dist/OrthoTypikon-1.0.0-release.apk"
+type = "unspecified"
+title = "OrthoTypikon Android APK"
+description = "Updated direct-install Android build with fixed daily occasion card sizing and Arabic text alignment. Debug-signed; not signed for Play Store release."
+logical_id = "adca04aa-2f1a-4bca-95a4-dc736904aa38"
+content_hash = "sha256:59741c5175e3b933f67487a5cdff4716f35520882e590784343a706f59bbf60b"
+size = 54910782
+mtime_ms = 1790466736257
+storage_uri = "gcs://replit-rams-assets-pike/rams/assets/repl:1acb33f3-fdb4-48bf-b45f-f7614dea49b5/adca04aa-2f1a-4bca-95a4-dc736904aa38/4ae8128e-1c45-4f3c-a808-0f3c32ed8627"
+storage_version_token = "1790466915893937"
+content_type = "application/octet-stream"
+
+[[outputs]]
+id = "zHTJTd3LgKanlkuVYv5a1"
+uri = "file://artifacts/orthotypikon/dist/OrthoTypikon-project-source.zip"
+type = "unspecified"
+title = "OrthoTypikon complete project source"
+description = "Complete editable workspace source archive with OrthoTypikon, shared libraries, API server, mobile configuration, assets, and lockfiles. Generated dependencies, SDKs, build outputs, caches, and secret-like files were excluded."
+logical_id = "894ebb05-3b7e-40a0-a5ea-6ec91ce07c77"
+content_hash = "sha256:fa42828f16f5f80e57643a29c6ec20dd98df3086958133aad496c8fd0b9578e9"
+size = 15987093
+mtime_ms = 1789674249599
+storage_uri = "gcs://replit-rams-assets-pike/rams/assets/repl:1acb33f3-fdb4-48bf-b45f-f7614dea49b5/894ebb05-3b7e-40a0-a5ea-6ec91ce07c77/1484764c-7138-4e66-8cc1-4c5c08f8d99e"
+storage_version_token = "1789677306013724"
+content_type = "application/octet-stream"
+
+[[outputs]]
+id = "gRsytuVOpJh4w6tXZ3FLl"
+uri = "file://exports/orthotypikon-app.jpg"
+type = "image"
+title = "OrthoTypikon app screenshot"
+description = "Exported screenshot of the current OrthoTypikon app preview."
+logical_id = "8160b909-f90a-4f64-afea-70fde47368cd"
+content_hash = "sha256:934662dc816803a8c3c692d8d198af914b11b6a7d3b721377a4c46ab1d691baf"
+size = 29447
+mtime_ms = 1790352824935
+storage_uri = "gcs://replit-rams-assets-pike/rams/assets/repl:1acb33f3-fdb4-48bf-b45f-f7614dea49b5/8160b909-f90a-4f64-afea-70fde47368cd/f5dce994-5d01-4a4e-ad61-8dff6f598937"
+storage_version_token = "1790352832670079"
+content_type = "image/jpeg"

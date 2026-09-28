@@ -1,0 +1,28 @@
+kind = "web"
+previewPath = "/orthotypikon-admin/"
+title = "OrthoTypikon Admin"
+description = "A secure web console for managing OrthoTypikon daily content, calendar entries, saints, fasting guidance and recipes, learning entries, and prayer-request moderation through the existing API and PostgreSQL database."
+version = "1.0.0"
+id = "artifacts/orthotypikon-admin"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/orthotypikon-admin/" ]
+localPort = 18627
+
+[services.development]
+run = "pnpm --filter @workspace/orthotypikon-admin run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/orthotypikon-admin", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/orthotypikon-admin/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "18627"
+BASE_PATH = "/orthotypikon-admin/"

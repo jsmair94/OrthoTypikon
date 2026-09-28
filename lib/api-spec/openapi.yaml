@@ -1,0 +1,2575 @@
+openapi: 3.1.0
+info:
+  title: Api
+  version: 0.1.0
+  description: OrthoTypikon content API
+servers:
+  - url: /api
+    description: Base API path
+tags:
+  - name: health
+    description: Health operations
+  - name: prayer-community
+    description: Privacy-first prayer community
+  - name: moderation
+    description: Pastoral review and moderation
+  - name: admin
+    description: Authenticated content administration
+  - name: daily
+    description: Daily spiritual content
+  - name: synaxarion
+    description: Live Synaxarion card from the Orthodox Jordan homepage
+  - name: calendar
+    description: Liturgical calendar
+  - name: fasting
+    description: Fasting guidance and recipes
+  - name: saints
+    description: Saints and commemorations
+  - name: learning
+    description: Learning and liturgical dictionary
+paths:
+  /healthz:
+    get:
+      operationId: healthCheck
+      tags:
+        - health
+      summary: Health check
+      responses:
+        "200":
+          description: Healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthStatus"
+  /prayer-community/session:
+    post:
+      operationId: createPrayerSession
+      tags:
+        - prayer-community
+      summary: Create an anonymous device session
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PrayerSessionCreate"
+      responses:
+        "200":
+          description: Session token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PrayerSession"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+  /prayer-community/requests:
+    get:
+      operationId: listPrayerRequests
+      tags:
+        - prayer-community
+      summary: List approved community requests or the current user's requests
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: scope
+          in: query
+          required: false
+          schema:
+            type: string
+            enum:
+              - community
+              - mine
+            default: community
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 50
+            default: 30
+      responses:
+        "200":
+          description: Prayer requests
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - requests
+                properties:
+                  requests:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/PrayerRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+    post:
+      operationId: createPrayerRequest
+      tags:
+        - prayer-community
+      summary: Submit a prayer request for pastoral review
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PrayerRequestCreate"
+      responses:
+        "201":
+          description: Request submitted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PrayerRequest"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+  /prayer-community/requests/{requestId}:
+    delete:
+      operationId: deletePrayerRequest
+      tags:
+        - prayer-community
+      summary: Remove one of the current user's requests
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/RequestId"
+      responses:
+        "204":
+          description: Removed
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+  /prayer-community/requests/{requestId}/report:
+    post:
+      operationId: reportPrayerRequest
+      tags:
+        - prayer-community
+      summary: Report a prayer request for pastoral review
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/RequestId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PrayerReportCreate"
+      responses:
+        "204":
+          description: Report received
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /moderation/prayer-requests:
+    get:
+      operationId: listModerationPrayerRequests
+      tags:
+        - moderation
+      summary: List requests awaiting pastoral moderation
+      security:
+        - moderationKey: []
+      responses:
+        "200":
+          description: Moderation queue
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - requests
+                properties:
+                  requests:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/PrayerRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+  /moderation/prayer-requests/{requestId}/review:
+    post:
+      operationId: reviewPrayerRequest
+      tags:
+        - moderation
+      summary: Approve or reject one prayer request
+      security:
+        - moderationKey: []
+      parameters:
+        - $ref: "#/components/parameters/RequestId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PrayerReview"
+      responses:
+        "200":
+          description: Reviewed request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PrayerRequest"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /admin/session:
+    post:
+      operationId: createAdminSession
+      tags:
+        - admin
+      summary: Create a short-lived administrator session
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AdminSessionLogin"
+      responses:
+        "200":
+          description: Administrator session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminSession"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+        "503":
+          $ref: "#/components/responses/DatabaseUnavailable"
+  /admin/overview:
+    get:
+      operationId: getAdminOverview
+      tags:
+        - admin
+      summary: Get content totals and the prayer moderation backlog
+      security:
+        - adminBearerAuth: []
+      responses:
+        "200":
+          description: Administration overview
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminOverview"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "503":
+          $ref: "#/components/responses/DatabaseUnavailable"
+  /admin/daily-content:
+    get:
+      operationId: listAdminDailyContent
+      tags:
+        - admin
+      summary: List editable daily content
+      security:
+        - adminBearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/AdminLocaleQuery"
+        - $ref: "#/components/parameters/AdminPublicationStatusQuery"
+        - $ref: "#/components/parameters/AdminSearchQuery"
+        - $ref: "#/components/parameters/AdminPageQuery"
+        - $ref: "#/components/parameters/AdminLimitQuery"
+      responses:
+        "200":
+          description: Daily content records
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminDailyContentList"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "503":
+          $ref: "#/components/responses/DatabaseUnavailable"
+    post:
+      operationId: upsertAdminDailyContent
+      tags:
+        - admin
+      summary: Create or replace daily content for a date, calendar, and locale
+      security:
+        - adminBearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AdminDailyContentInput"
+      responses:
+        "200":
+          description: Saved daily content
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminDailyContent"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "503":
+          $ref: "#/components/responses/DatabaseUnavailable"
+  /admin/daily-content/{id}:
+    put:
+      operationId: updateAdminDailyContent
+      tags:
+        - admin
+      summary: Replace a daily content record
+      security:
+        - adminBearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/AdminContentId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AdminDailyContentInput"
+      responses:
+        "200":
+          description: Updated daily content
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminDailyContent"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "503":
+          $ref: "#/components/responses/DatabaseUnavailable"
+    delete:
+      operationId: archiveAdminDailyContent
+      tags:
+        - admin
+      summary: Archive a daily content record
+      security:
+        - adminBearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/AdminContentId"
+      responses:
+        "204":
+          description: Archived
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "503":
+          $ref: "#/components/responses/DatabaseUnavailable"
+  /admin/calendar-entries:
+    get:
+      operationId: listAdminCalendarEntries
+      tags:
+        - admin
+      summary: List editable calendar entries
+      security:
+        - adminBearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/AdminLocaleQuery"
+        - $ref: "#/components/parameters/AdminPublicationStatusQuery"
+        - $ref: "#/components/parameters/AdminSearchQuery"
+        - $ref: "#/components/parameters/AdminPageQuery"
+        - $ref: "#/components/parameters/AdminLimitQuery"
+      responses:
+        "200":
+          description: Calendar entries
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminCalendarEntryList"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "503":
+          $ref: "#/components/responses/DatabaseUnavailable"
+    post:
+      operationId: upsertAdminCalendarEntry
+      tags:
+        - admin
+      summary: Create or replace a calendar entry for a date and locale
+      security:
+        - adminBearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AdminCalendarEntryInput"
+      responses:
+        "200":
+          description: Saved calendar entry
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminCalendarEntry"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "503":
+          $ref: "#/components/responses/DatabaseUnavailable"
+  /admin/calendar-entries/{id}:
+    put:
+      operationId: updateAdminCalendarEntry
+      tags:
+        - admin
+      summary: Replace a calendar entry
+      security:
+        - adminBearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/AdminContentId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AdminCalendarEntryInput"
+      responses:
+        "200":
+          description: Updated calendar entry
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminCalendarEntry"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "503":
+          $ref: "#/components/responses/DatabaseUnavailable"
+    delete:
+      operationId: archiveAdminCalendarEntry
+      tags:
+        - admin
+      summary: Archive a calendar entry
+      security:
+        - adminBearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/AdminContentId"
+      responses:
+        "204":
+          description: Archived
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "503":
+          $ref: "#/components/responses/DatabaseUnavailable"
+  /admin/saints:
+    get:
+      operationId: listAdminSaints
+      tags:
+        - admin
+      summary: List editable saint profiles
+      security:
+        - adminBearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/AdminLocaleQuery"
+        - $ref: "#/components/parameters/AdminPublicationStatusQuery"
+        - $ref: "#/components/parameters/AdminSearchQuery"
+        - $ref: "#/components/parameters/AdminPageQuery"
+        - $ref: "#/components/parameters/AdminLimitQuery"
+      responses:
+        "200":
+          description: Saint profiles
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminSaintList"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "503":
+          $ref: "#/components/responses/DatabaseUnavailable"
+    post:
+      operationId: createAdminSaint
+      tags:
+        - admin
+      summary: Create a saint profile
+      security:
+        - adminBearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AdminSaintInput"
+      responses:
+        "201":
+          description: Created saint profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminSaint"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "503":
+          $ref: "#/components/responses/DatabaseUnavailable"
+  /admin/saints/{id}:
+    put:
+      operationId: updateAdminSaint
+      tags:
+        - admin
+      summary: Replace a saint profile
+      security:
+        - adminBearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/AdminContentId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AdminSaintUpdate"
+      responses:
+        "200":
+          description: Updated saint profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminSaint"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "503":
+          $ref: "#/components/responses/DatabaseUnavailable"
+    delete:
+      operationId: archiveAdminSaint
+      tags:
+        - admin
+      summary: Archive a saint profile
+      security:
+        - adminBearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/AdminContentId"
+      responses:
+        "204":
+          description: Archived
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "503":
+          $ref: "#/components/responses/DatabaseUnavailable"
+  /admin/fasting-guidance:
+    get:
+      operationId: listAdminFastingGuidance
+      tags:
+        - admin
+      summary: List editable fasting guidance
+      security:
+        - adminBearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/AdminLocaleQuery"
+        - $ref: "#/components/parameters/AdminPublicationStatusQuery"
+        - $ref: "#/components/parameters/AdminSearchQuery"
+        - $ref: "#/components/parameters/AdminPageQuery"
+        - $ref: "#/components/parameters/AdminLimitQuery"
+      responses:
+        "200":
+          description: Fasting guidance records
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminFastingGuidanceList"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "503":
+          $ref: "#/components/responses/DatabaseUnavailable"
+    post:
+      operationId: upsertAdminFastingGuidance
+      tags:
+        - admin
+      summary: Create or replace fasting guidance for a date and locale
+      security:
+        - adminBearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AdminFastingGuidanceInput"
+      responses:
+        "200":
+          description: Saved fasting guidance
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminFastingGuidance"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "503":
+          $ref: "#/components/responses/DatabaseUnavailable"
+  /admin/fasting-guidance/{id}:
+    put:
+      operationId: updateAdminFastingGuidance
+      tags:
+        - admin
+      summary: Replace fasting guidance
+      security:
+        - adminBearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/AdminContentId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AdminFastingGuidanceInput"
+      responses:
+        "200":
+          description: Updated fasting guidance
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminFastingGuidance"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "503":
+          $ref: "#/components/responses/DatabaseUnavailable"
+    delete:
+      operationId: archiveAdminFastingGuidance
+      tags:
+        - admin
+      summary: Archive fasting guidance
+      security:
+        - adminBearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/AdminContentId"
+      responses:
+        "204":
+          description: Archived
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "503":
+          $ref: "#/components/responses/DatabaseUnavailable"
+  /admin/fasting-recipes:
+    get:
+      operationId: listAdminFastingRecipes
+      tags:
+        - admin
+      summary: List editable fasting recipes
+      security:
+        - adminBearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/AdminLocaleQuery"
+        - $ref: "#/components/parameters/AdminPublicationStatusQuery"
+        - $ref: "#/components/parameters/AdminSearchQuery"
+        - $ref: "#/components/parameters/AdminPageQuery"
+        - $ref: "#/components/parameters/AdminLimitQuery"
+      responses:
+        "200":
+          description: Fasting recipes
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminFastingRecipeList"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "503":
+          $ref: "#/components/responses/DatabaseUnavailable"
+    post:
+      operationId: createAdminFastingRecipe
+      tags:
+        - admin
+      summary: Create a fasting recipe
+      security:
+        - adminBearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AdminFastingRecipeInput"
+      responses:
+        "201":
+          description: Created fasting recipe
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminFastingRecipe"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "503":
+          $ref: "#/components/responses/DatabaseUnavailable"
+  /admin/fasting-recipes/{id}:
+    put:
+      operationId: updateAdminFastingRecipe
+      tags:
+        - admin
+      summary: Replace a fasting recipe
+      security:
+        - adminBearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/AdminContentId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AdminFastingRecipeInput"
+      responses:
+        "200":
+          description: Updated fasting recipe
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminFastingRecipe"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "503":
+          $ref: "#/components/responses/DatabaseUnavailable"
+    delete:
+      operationId: archiveAdminFastingRecipe
+      tags:
+        - admin
+      summary: Archive a fasting recipe
+      security:
+        - adminBearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/AdminContentId"
+      responses:
+        "204":
+          description: Archived
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "503":
+          $ref: "#/components/responses/DatabaseUnavailable"
+  /admin/learning-entries:
+    get:
+      operationId: listAdminLearningEntries
+      tags:
+        - admin
+      summary: List editable learning entries
+      security:
+        - adminBearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/AdminLocaleQuery"
+        - $ref: "#/components/parameters/AdminPublicationStatusQuery"
+        - $ref: "#/components/parameters/AdminSearchQuery"
+        - $ref: "#/components/parameters/AdminPageQuery"
+        - $ref: "#/components/parameters/AdminLimitQuery"
+      responses:
+        "200":
+          description: Learning entries
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminLearningEntryList"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "503":
+          $ref: "#/components/responses/DatabaseUnavailable"
+    post:
+      operationId: createAdminLearningEntry
+      tags:
+        - admin
+      summary: Create a learning entry
+      security:
+        - adminBearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AdminLearningEntryInput"
+      responses:
+        "201":
+          description: Created learning entry
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminLearningEntry"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "503":
+          $ref: "#/components/responses/DatabaseUnavailable"
+  /admin/learning-entries/{id}:
+    put:
+      operationId: updateAdminLearningEntry
+      tags:
+        - admin
+      summary: Replace a learning entry
+      security:
+        - adminBearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/AdminContentId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AdminLearningEntryInput"
+      responses:
+        "200":
+          description: Updated learning entry
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminLearningEntry"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "503":
+          $ref: "#/components/responses/DatabaseUnavailable"
+    delete:
+      operationId: archiveAdminLearningEntry
+      tags:
+        - admin
+      summary: Archive a learning entry
+      security:
+        - adminBearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/AdminContentId"
+      responses:
+        "204":
+          description: Archived
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "503":
+          $ref: "#/components/responses/DatabaseUnavailable"
+  /admin/moderation/prayer-requests:
+    get:
+      operationId: listAdminPrayerRequests
+      tags:
+        - admin
+      summary: List community prayer requests awaiting review
+      security:
+        - adminBearerAuth: []
+      responses:
+        "200":
+          description: Prayer moderation queue
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminPrayerQueue"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "503":
+          $ref: "#/components/responses/DatabaseUnavailable"
+  /admin/moderation/prayer-requests/{requestId}/review:
+    post:
+      operationId: reviewAdminPrayerRequest
+      tags:
+        - admin
+      summary: Approve, reject, or hide a community prayer request
+      security:
+        - adminBearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/RequestId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PrayerReview"
+      responses:
+        "200":
+          description: Reviewed prayer request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PrayerRequest"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "503":
+          $ref: "#/components/responses/DatabaseUnavailable"
+  /daily:
+    get:
+      operationId: getDailyContent
+      tags:
+        - daily
+      summary: Get daily spiritual content
+      parameters:
+        - $ref: "#/components/parameters/DateQuery"
+        - $ref: "#/components/parameters/LocaleQuery"
+        - $ref: "#/components/parameters/CalendarTypeQuery"
+      responses:
+        "200":
+          description: Daily payload
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DailyHomePayload"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "503":
+          $ref: "#/components/responses/DatabaseUnavailable"
+  /synaxarion/homepage:
+    get:
+      operationId: getSynaxarionHomepage
+      tags:
+        - synaxarion
+      summary: Get the live Synaxarion card from Orthodox Jordan
+      parameters:
+        - $ref: "#/components/parameters/SynaxarionLocaleQuery"
+      responses:
+        "200":
+          description: Live homepage Synaxarion card
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SynaxarionHomepagePayload"
+        "502":
+          description: The source website could not be read or parsed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+  /calendar:
+    get:
+      operationId: listCalendarByMonth
+      tags:
+        - calendar
+      summary: List calendar entries for a month
+      parameters:
+        - $ref: "#/components/parameters/MonthQuery"
+        - $ref: "#/components/parameters/LocaleQuery"
+        - $ref: "#/components/parameters/CalendarTypeQuery"
+      responses:
+        "200":
+          description: Calendar entries
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/CalendarEntry"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "503":
+          $ref: "#/components/responses/DatabaseUnavailable"
+  /calendar/{date}:
+    get:
+      operationId: getCalendarByDate
+      tags:
+        - calendar
+      summary: Get calendar details for a date
+      parameters:
+        - $ref: "#/components/parameters/DatePath"
+        - $ref: "#/components/parameters/LocaleQuery"
+        - $ref: "#/components/parameters/CalendarTypeQuery"
+      responses:
+        "200":
+          description: Calendar entry
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CalendarEntry"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "503":
+          $ref: "#/components/responses/DatabaseUnavailable"
+  /fasting/{date}:
+    get:
+      operationId: getFastingByDate
+      tags:
+        - fasting
+      summary: Get fasting guidance and recipes
+      parameters:
+        - $ref: "#/components/parameters/DatePath"
+        - $ref: "#/components/parameters/LocaleQuery"
+        - $ref: "#/components/parameters/CalendarTypeQuery"
+      responses:
+        "200":
+          description: Fasting guidance
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FastingDay"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "503":
+          $ref: "#/components/responses/DatabaseUnavailable"
+  /saints:
+    get:
+      operationId: listSaints
+      tags:
+        - saints
+      summary: Browse saints
+      parameters:
+        - $ref: "#/components/parameters/LocaleQuery"
+        - $ref: "#/components/parameters/PageQuery"
+        - $ref: "#/components/parameters/LimitQuery"
+        - $ref: "#/components/parameters/SearchQuery"
+      responses:
+        "200":
+          description: Paginated saints
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaginatedSaints"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "503":
+          $ref: "#/components/responses/DatabaseUnavailable"
+  /saints/{id}:
+    get:
+      operationId: getSaint
+      tags:
+        - saints
+      summary: Get a saint by stable identifier
+      parameters:
+        - $ref: "#/components/parameters/SaintIdPath"
+        - $ref: "#/components/parameters/LocaleQuery"
+      responses:
+        "200":
+          description: Saint details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Saint"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "503":
+          $ref: "#/components/responses/DatabaseUnavailable"
+  /learning:
+    get:
+      operationId: listLearningEntries
+      tags:
+        - learning
+      summary: Browse learning content
+      parameters:
+        - $ref: "#/components/parameters/LocaleQuery"
+        - $ref: "#/components/parameters/PageQuery"
+        - $ref: "#/components/parameters/LimitQuery"
+        - $ref: "#/components/parameters/SearchQuery"
+        - $ref: "#/components/parameters/LearningCategoryQuery"
+      responses:
+        "200":
+          description: Paginated learning entries
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaginatedLearning"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "503":
+          $ref: "#/components/responses/DatabaseUnavailable"
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+    moderationKey:
+      type: apiKey
+      in: header
+      name: X-Moderation-Key
+    adminBearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: admin-session
+  parameters:
+    RequestId:
+      name: requestId
+      in: path
+      required: true
+      schema:
+        type: string
+        minLength: 10
+        maxLength: 100
+    DatePath:
+      name: date
+      in: path
+      required: true
+      description: Calendar date in YYYY-MM-DD format
+      schema:
+        type: string
+        pattern: ^[0-9]{4}-[0-9]{2}-[0-9]{2}$
+    DateQuery:
+      name: date
+      in: query
+      required: false
+      description: Calendar date in YYYY-MM-DD format; defaults to today in UTC
+      schema:
+        type: string
+        pattern: ^[0-9]{4}-[0-9]{2}-[0-9]{2}$
+    MonthQuery:
+      name: month
+      in: query
+      required: true
+      description: Month in YYYY-MM format
+      schema:
+        type: string
+        pattern: ^[0-9]{4}-[0-9]{2}$
+    LocaleQuery:
+      name: locale
+      in: query
+      required: false
+      description: Content locale
+      schema:
+        $ref: "#/components/schemas/Locale"
+        default: ar
+    SynaxarionLocaleQuery:
+      name: locale
+      in: query
+      required: false
+      description: Translation locale for the live Synaxarion card
+      schema:
+        $ref: "#/components/schemas/SynaxarionLocale"
+        default: ar
+    CalendarTypeQuery:
+      name: calendarType
+      in: query
+      required: false
+      description: Calendar used for the requested date
+      schema:
+        $ref: "#/components/schemas/CalendarType"
+        default: gregorian
+    PageQuery:
+      name: page
+      in: query
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100000
+        default: 1
+    LimitQuery:
+      name: limit
+      in: query
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 50
+        default: 20
+    SearchQuery:
+      name: search
+      in: query
+      required: false
+      schema:
+        type: string
+        maxLength: 100
+    LearningCategoryQuery:
+      name: category
+      in: query
+      required: false
+      schema:
+        $ref: "#/components/schemas/LearningCategory"
+    SaintIdPath:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+        pattern: ^[a-z0-9-]{1,120}$
+    AdminContentId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 120
+    AdminLocaleQuery:
+      name: locale
+      in: query
+      required: false
+      schema:
+        $ref: "#/components/schemas/Locale"
+    AdminPublicationStatusQuery:
+      name: publicationStatus
+      in: query
+      required: false
+      schema:
+        $ref: "#/components/schemas/PublicationStatus"
+    AdminSearchQuery:
+      name: search
+      in: query
+      required: false
+      schema:
+        type: string
+        maxLength: 100
+    AdminPageQuery:
+      name: page
+      in: query
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100000
+        default: 1
+    AdminLimitQuery:
+      name: limit
+      in: query
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 50
+        default: 25
+  responses:
+    BadRequest:
+      description: Invalid request
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Problem"
+    Unauthorized:
+      description: Authentication required
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ApiError"
+    NotFound:
+      description: Content not found
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Problem"
+    Conflict:
+      description: A record with the same unique fields already exists
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Problem"
+    TooManyRequests:
+      description: Rate limit exceeded
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ApiError"
+    DatabaseUnavailable:
+      description: Database unavailable
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Problem"
+  schemas:
+    HealthStatus:
+      type: object
+      properties:
+        status:
+          type: string
+          enum:
+            - ok
+      required:
+        - status
+    PrayerSessionCreate:
+      type: object
+      required:
+        - installationId
+      properties:
+        installationId:
+          type: string
+          minLength: 32
+          maxLength: 128
+    PrayerSession:
+      type: object
+      required:
+        - token
+        - expiresAt
+      properties:
+        token:
+          type: string
+        expiresAt:
+          type: string
+          format: date-time
+    PrayerRequestCreate:
+      type: object
+      required:
+        - name
+        - category
+        - visibility
+        - nameVisibility
+        - showCategory
+        - showDuration
+        - durationDays
+        - consent
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+        category:
+          type: string
+          enum:
+            - sick
+            - departed
+            - thanksgiving
+            - other
+        visibility:
+          type: string
+          enum:
+            - community
+            - private
+        nameVisibility:
+          type: string
+          enum:
+            - named
+            - anonymous
+        showCategory:
+          type: boolean
+        showDuration:
+          type: boolean
+        durationDays:
+          type: integer
+          enum:
+            - 1
+            - 7
+            - 30
+            - 90
+        consent:
+          type: boolean
+          enum:
+            - true
+    PrayerRequest:
+      type: object
+      required:
+        - id
+        - name
+        - visibility
+        - nameVisibility
+        - showCategory
+        - showDuration
+        - status
+        - createdAt
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        category:
+          type: string
+          enum:
+            - sick
+            - departed
+            - thanksgiving
+            - other
+        visibility:
+          type: string
+          enum:
+            - community
+            - private
+        nameVisibility:
+          type: string
+          enum:
+            - named
+            - anonymous
+        showCategory:
+          type: boolean
+        showDuration:
+          type: boolean
+        durationDays:
+          type: integer
+          enum:
+            - 1
+            - 7
+            - 30
+            - 90
+        status:
+          type: string
+          enum:
+            - pending
+            - approved
+            - rejected
+            - hidden
+            - removed
+        expiresAt:
+          type: string
+          format: date-time
+        createdAt:
+          type: string
+          format: date-time
+    PrayerReportCreate:
+      type: object
+      required:
+        - reason
+      properties:
+        reason:
+          type: string
+          minLength: 1
+          maxLength: 500
+    PrayerReview:
+      type: object
+      required:
+        - status
+      properties:
+        status:
+          type: string
+          enum:
+            - approved
+            - rejected
+            - hidden
+    ApiError:
+      type: object
+      required:
+        - message
+      properties:
+        message:
+          type: string
+    Locale:
+      type: string
+      enum:
+        - ar
+        - en
+        - fr
+    PublicationStatus:
+      type: string
+      enum:
+        - draft
+        - published
+        - archived
+    SynaxarionLocale:
+      type: string
+      enum:
+        - ar
+        - en
+        - el
+    CalendarType:
+      type: string
+      enum:
+        - gregorian
+        - julian
+    LearningCategory:
+      type: string
+      enum:
+        - audio
+        - icon
+        - dictionary
+    FastLevel:
+      type: string
+      enum:
+        - strict
+        - oil
+        - fish
+        - none
+    Problem:
+      type: object
+      additionalProperties: false
+      properties:
+        error:
+          type: string
+        code:
+          type: string
+          enum:
+            - INVALID_REQUEST
+            - NOT_FOUND
+            - DATABASE_UNAVAILABLE
+            - INTERNAL_ERROR
+      required:
+        - error
+        - code
+    SaintSummary:
+      type: object
+      additionalProperties: false
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        shortBio:
+          type: string
+      required:
+        - id
+        - name
+        - shortBio
+    Saint:
+      type: object
+      additionalProperties: false
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        shortBio:
+          type: string
+        feastDate:
+          type:
+            - string
+            - "null"
+        audioText:
+          type: string
+      required:
+        - id
+        - name
+        - shortBio
+        - feastDate
+        - audioText
+    Feast:
+      type: object
+      additionalProperties: false
+      properties:
+        title:
+          type: string
+        description:
+          type:
+            - string
+            - "null"
+      required:
+        - title
+        - description
+    Reading:
+      type: object
+      additionalProperties: false
+      properties:
+        title:
+          type: string
+        reference:
+          type:
+            - string
+            - "null"
+        durationMinutes:
+          type:
+            - number
+            - "null"
+          multipleOf: 1
+      required:
+        - title
+        - reference
+        - durationMinutes
+    Verse:
+      type: object
+      additionalProperties: false
+      properties:
+        reference:
+          type: string
+        text:
+          type: string
+        author:
+          type: string
+      required:
+        - reference
+        - text
+        - author
+    FastingSummary:
+      type: object
+      additionalProperties: false
+      properties:
+        level:
+          $ref: "#/components/schemas/FastLevel"
+        title:
+          type: string
+      required:
+        - level
+        - title
+    DailyHomePayload:
+      type: object
+      additionalProperties: false
+      properties:
+        date:
+          type: string
+        canonicalDate:
+          type: string
+        calendarType:
+          $ref: "#/components/schemas/CalendarType"
+        locale:
+          $ref: "#/components/schemas/Locale"
+        verse:
+          $ref: "#/components/schemas/Verse"
+        feast:
+          oneOf:
+            - $ref: "#/components/schemas/Feast"
+            - type: "null"
+        saints:
+          type: array
+          items:
+            $ref: "#/components/schemas/SaintSummary"
+        fasting:
+          oneOf:
+            - $ref: "#/components/schemas/FastingSummary"
+            - type: "null"
+        relatedReading:
+          oneOf:
+            - $ref: "#/components/schemas/Reading"
+            - type: "null"
+      required:
+        - date
+        - canonicalDate
+        - calendarType
+        - locale
+        - verse
+        - feast
+        - saints
+        - fasting
+        - relatedReading
+    SynaxarionHomepagePayload:
+      type: object
+      additionalProperties: false
+      properties:
+        sourceUrl:
+          type: string
+        modifiedAt:
+          type:
+            - string
+            - "null"
+          format: date-time
+        dateLabel:
+          type: string
+        liturgicalLabel:
+          type: string
+        commemorations:
+          type: string
+        verse:
+          type: object
+          additionalProperties: false
+          properties:
+            text:
+              type: string
+            reference:
+              type:
+                - string
+                - "null"
+          required:
+            - text
+            - reference
+        saintImageUrl:
+          type: string
+        gospelUrl:
+          type:
+            - string
+            - "null"
+        calendarUrl:
+          type:
+            - string
+            - "null"
+      required:
+        - sourceUrl
+        - modifiedAt
+        - dateLabel
+        - liturgicalLabel
+        - commemorations
+        - verse
+        - saintImageUrl
+        - gospelUrl
+        - calendarUrl
+    CalendarEntry:
+      type: object
+      additionalProperties: false
+      properties:
+        id:
+          type: string
+        date:
+          type: string
+        canonicalDate:
+          type: string
+        calendarType:
+          $ref: "#/components/schemas/CalendarType"
+        locale:
+          $ref: "#/components/schemas/Locale"
+        feast:
+          oneOf:
+            - $ref: "#/components/schemas/Feast"
+            - type: "null"
+        fastingTitle:
+          type:
+            - string
+            - "null"
+        liturgy:
+          type:
+            - string
+            - "null"
+        color:
+          type:
+            - string
+            - "null"
+        saints:
+          type: array
+          items:
+            $ref: "#/components/schemas/SaintSummary"
+      required:
+        - id
+        - date
+        - canonicalDate
+        - calendarType
+        - locale
+        - feast
+        - fastingTitle
+        - liturgy
+        - color
+        - saints
+    Recipe:
+      type: object
+      additionalProperties: false
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        subtitle:
+          type: string
+        time:
+          type: string
+        level:
+          $ref: "#/components/schemas/FastLevel"
+        ingredients:
+          type: array
+          items:
+            type: string
+        steps:
+          type: array
+          items:
+            type: string
+      required:
+        - id
+        - title
+        - subtitle
+        - time
+        - level
+        - ingredients
+        - steps
+    FastingDay:
+      type: object
+      additionalProperties: false
+      properties:
+        date:
+          type: string
+        canonicalDate:
+          type: string
+        calendarType:
+          $ref: "#/components/schemas/CalendarType"
+        locale:
+          $ref: "#/components/schemas/Locale"
+        level:
+          $ref: "#/components/schemas/FastLevel"
+        title:
+          type: string
+        description:
+          type: string
+        note:
+          type:
+            - string
+            - "null"
+        recipes:
+          type: array
+          items:
+            $ref: "#/components/schemas/Recipe"
+      required:
+        - date
+        - canonicalDate
+        - calendarType
+        - locale
+        - level
+        - title
+        - description
+        - note
+        - recipes
+    Pagination:
+      type: object
+      properties:
+        page:
+          type: number
+          multipleOf: 1
+        limit:
+          type: number
+          multipleOf: 1
+        total:
+          type: number
+          multipleOf: 1
+        hasMore:
+          type: boolean
+      required:
+        - page
+        - limit
+        - total
+        - hasMore
+    PaginatedSaints:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/SaintSummary"
+        pagination:
+          $ref: "#/components/schemas/Pagination"
+      required:
+        - items
+        - pagination
+    LearningEntry:
+      type: object
+      additionalProperties: false
+      properties:
+        id:
+          type: string
+        category:
+          $ref: "#/components/schemas/LearningCategory"
+        title:
+          type: string
+        alternate:
+          type:
+            - string
+            - "null"
+        pronunciation:
+          type:
+            - string
+            - "null"
+        definition:
+          type: string
+        body:
+          type:
+            - string
+            - "null"
+      required:
+        - id
+        - category
+        - title
+        - alternate
+        - pronunciation
+        - definition
+        - body
+    PaginatedLearning:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/LearningEntry"
+        pagination:
+          $ref: "#/components/schemas/Pagination"
+      required:
+        - items
+        - pagination
+    AdminSessionLogin:
+      type: object
+      additionalProperties: false
+      properties:
+        key:
+          type: string
+          minLength: 1
+          maxLength: 256
+      required:
+        - key
+    AdminSession:
+      type: object
+      additionalProperties: false
+      properties:
+        token:
+          type: string
+        expiresAt:
+          type: string
+          format: date-time
+      required:
+        - token
+        - expiresAt
+    AdminContentCounts:
+      type: object
+      additionalProperties: false
+      properties:
+        total:
+          type: number
+          multipleOf: 1
+        published:
+          type: number
+          multipleOf: 1
+        draft:
+          type: number
+          multipleOf: 1
+        archived:
+          type: number
+          multipleOf: 1
+      required:
+        - total
+        - published
+        - draft
+        - archived
+    AdminOverview:
+      type: object
+      additionalProperties: false
+      properties:
+        dailyContent:
+          $ref: "#/components/schemas/AdminContentCounts"
+        calendarEntries:
+          $ref: "#/components/schemas/AdminContentCounts"
+        saints:
+          $ref: "#/components/schemas/AdminContentCounts"
+        fastingGuidance:
+          $ref: "#/components/schemas/AdminContentCounts"
+        fastingRecipes:
+          $ref: "#/components/schemas/AdminContentCounts"
+        learningEntries:
+          $ref: "#/components/schemas/AdminContentCounts"
+        prayerRequestsPending:
+          type: number
+          multipleOf: 1
+        prayerRequestsHidden:
+          type: number
+          multipleOf: 1
+      required:
+        - dailyContent
+        - calendarEntries
+        - saints
+        - fastingGuidance
+        - fastingRecipes
+        - learningEntries
+        - prayerRequestsPending
+        - prayerRequestsHidden
+    AdminDailyContent:
+      type: object
+      additionalProperties: false
+      properties:
+        id:
+          type: string
+        contentDate:
+          type: string
+          format: date
+        calendarSystem:
+          $ref: "#/components/schemas/CalendarType"
+        locale:
+          $ref: "#/components/schemas/Locale"
+        verseReference:
+          type: string
+        verseText:
+          type: string
+        verseAuthor:
+          type: string
+        feastTitle:
+          type: ["string", "null"]
+        feastDescription:
+          type: ["string", "null"]
+        readingTitle:
+          type: ["string", "null"]
+        readingReference:
+          type: ["string", "null"]
+        readingDurationMinutes:
+          type: ["number", "null"]
+          multipleOf: 1
+        publicationStatus:
+          $ref: "#/components/schemas/PublicationStatus"
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - contentDate
+        - calendarSystem
+        - locale
+        - verseReference
+        - verseText
+        - verseAuthor
+        - feastTitle
+        - feastDescription
+        - readingTitle
+        - readingReference
+        - readingDurationMinutes
+        - publicationStatus
+        - createdAt
+        - updatedAt
+    AdminDailyContentInput:
+      type: object
+      additionalProperties: false
+      properties:
+        contentDate:
+          type: string
+          format: date
+        calendarSystem:
+          $ref: "#/components/schemas/CalendarType"
+        locale:
+          $ref: "#/components/schemas/Locale"
+        verseReference:
+          type: string
+          minLength: 1
+        verseText:
+          type: string
+          minLength: 1
+        verseAuthor:
+          type: string
+          minLength: 1
+        feastTitle:
+          type: ["string", "null"]
+        feastDescription:
+          type: ["string", "null"]
+        readingTitle:
+          type: ["string", "null"]
+        readingReference:
+          type: ["string", "null"]
+        readingDurationMinutes:
+          type: ["number", "null"]
+          multipleOf: 1
+          minimum: 1
+        publicationStatus:
+          $ref: "#/components/schemas/PublicationStatus"
+      required:
+        - contentDate
+        - calendarSystem
+        - locale
+        - verseReference
+        - verseText
+        - verseAuthor
+        - feastTitle
+        - feastDescription
+        - readingTitle
+        - readingReference
+        - readingDurationMinutes
+        - publicationStatus
+    AdminDailyContentList:
+      type: object
+      additionalProperties: false
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/AdminDailyContent"
+        pagination:
+          $ref: "#/components/schemas/Pagination"
+      required:
+        - items
+        - pagination
+    AdminCalendarEntry:
+      type: object
+      additionalProperties: false
+      properties:
+        id:
+          type: string
+        gregorianDate:
+          type: string
+          format: date
+        calendarSystem:
+          $ref: "#/components/schemas/CalendarType"
+        locale:
+          $ref: "#/components/schemas/Locale"
+        feastTitle:
+          type: ["string", "null"]
+        fastingTitle:
+          type: ["string", "null"]
+        liturgy:
+          type: ["string", "null"]
+        color:
+          type: ["string", "null"]
+        saintIds:
+          type: array
+          items:
+            type: string
+        publicationStatus:
+          $ref: "#/components/schemas/PublicationStatus"
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - gregorianDate
+        - calendarSystem
+        - locale
+        - feastTitle
+        - fastingTitle
+        - liturgy
+        - color
+        - saintIds
+        - publicationStatus
+        - createdAt
+        - updatedAt
+    AdminCalendarEntryInput:
+      type: object
+      additionalProperties: false
+      properties:
+        gregorianDate:
+          type: string
+          format: date
+        calendarSystem:
+          $ref: "#/components/schemas/CalendarType"
+        locale:
+          $ref: "#/components/schemas/Locale"
+        feastTitle:
+          type: ["string", "null"]
+        fastingTitle:
+          type: ["string", "null"]
+        liturgy:
+          type: ["string", "null"]
+        color:
+          type: ["string", "null"]
+        saintIds:
+          type: array
+          items:
+            type: string
+        publicationStatus:
+          $ref: "#/components/schemas/PublicationStatus"
+      required:
+        - gregorianDate
+        - calendarSystem
+        - locale
+        - feastTitle
+        - fastingTitle
+        - liturgy
+        - color
+        - saintIds
+        - publicationStatus
+    AdminCalendarEntryList:
+      type: object
+      additionalProperties: false
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/AdminCalendarEntry"
+        pagination:
+          $ref: "#/components/schemas/Pagination"
+      required:
+        - items
+        - pagination
+    AdminSaint:
+      type: object
+      additionalProperties: false
+      properties:
+        id:
+          type: string
+          pattern: ^[a-z0-9-]{1,120}$
+        name:
+          type: string
+        feastMonth:
+          type: ["number", "null"]
+          multipleOf: 1
+        feastDay:
+          type: ["number", "null"]
+          multipleOf: 1
+        shortBio:
+          type: string
+        audioText:
+          type: string
+        locale:
+          $ref: "#/components/schemas/Locale"
+        publicationStatus:
+          $ref: "#/components/schemas/PublicationStatus"
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - name
+        - feastMonth
+        - feastDay
+        - shortBio
+        - audioText
+        - locale
+        - publicationStatus
+        - createdAt
+        - updatedAt
+    AdminSaintInput:
+      type: object
+      additionalProperties: false
+      properties:
+        id:
+          type: string
+          pattern: ^[a-z0-9-]{1,120}$
+        name:
+          type: string
+          minLength: 1
+        feastMonth:
+          type: ["number", "null"]
+          multipleOf: 1
+          minimum: 1
+          maximum: 12
+        feastDay:
+          type: ["number", "null"]
+          multipleOf: 1
+          minimum: 1
+          maximum: 31
+        shortBio:
+          type: string
+        audioText:
+          type: string
+        locale:
+          $ref: "#/components/schemas/Locale"
+        publicationStatus:
+          $ref: "#/components/schemas/PublicationStatus"
+      required:
+        - id
+        - name
+        - feastMonth
+        - feastDay
+        - shortBio
+        - audioText
+        - locale
+        - publicationStatus
+    AdminSaintUpdate:
+      type: object
+      additionalProperties: false
+      properties:
+        name:
+          type: string
+          minLength: 1
+        feastMonth:
+          type: ["number", "null"]
+          multipleOf: 1
+          minimum: 1
+          maximum: 12
+        feastDay:
+          type: ["number", "null"]
+          multipleOf: 1
+          minimum: 1
+          maximum: 31
+        shortBio:
+          type: string
+        audioText:
+          type: string
+        locale:
+          $ref: "#/components/schemas/Locale"
+        publicationStatus:
+          $ref: "#/components/schemas/PublicationStatus"
+      required:
+        - name
+        - feastMonth
+        - feastDay
+        - shortBio
+        - audioText
+        - locale
+        - publicationStatus
+    AdminSaintList:
+      type: object
+      additionalProperties: false
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/AdminSaint"
+        pagination:
+          $ref: "#/components/schemas/Pagination"
+      required:
+        - items
+        - pagination
+    AdminFastingGuidance:
+      type: object
+      additionalProperties: false
+      properties:
+        id:
+          type: string
+        contentDate:
+          type: string
+          format: date
+        calendarSystem:
+          $ref: "#/components/schemas/CalendarType"
+        locale:
+          $ref: "#/components/schemas/Locale"
+        level:
+          $ref: "#/components/schemas/FastLevel"
+        title:
+          type: string
+        description:
+          type: string
+        note:
+          type: ["string", "null"]
+        publicationStatus:
+          $ref: "#/components/schemas/PublicationStatus"
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - contentDate
+        - calendarSystem
+        - locale
+        - level
+        - title
+        - description
+        - note
+        - publicationStatus
+        - createdAt
+        - updatedAt
+    AdminFastingGuidanceInput:
+      type: object
+      additionalProperties: false
+      properties:
+        contentDate:
+          type: string
+          format: date
+        calendarSystem:
+          $ref: "#/components/schemas/CalendarType"
+        locale:
+          $ref: "#/components/schemas/Locale"
+        level:
+          $ref: "#/components/schemas/FastLevel"
+        title:
+          type: string
+          minLength: 1
+        description:
+          type: string
+        note:
+          type: ["string", "null"]
+        publicationStatus:
+          $ref: "#/components/schemas/PublicationStatus"
+      required:
+        - contentDate
+        - calendarSystem
+        - locale
+        - level
+        - title
+        - description
+        - note
+        - publicationStatus
+    AdminFastingGuidanceList:
+      type: object
+      additionalProperties: false
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/AdminFastingGuidance"
+        pagination:
+          $ref: "#/components/schemas/Pagination"
+      required:
+        - items
+        - pagination
+    AdminFastingRecipe:
+      type: object
+      additionalProperties: false
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        subtitle:
+          type: string
+        time:
+          type: string
+        level:
+          $ref: "#/components/schemas/FastLevel"
+        ingredients:
+          type: array
+          items:
+            type: string
+        steps:
+          type: array
+          items:
+            type: string
+        locale:
+          $ref: "#/components/schemas/Locale"
+        publicationStatus:
+          $ref: "#/components/schemas/PublicationStatus"
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - title
+        - subtitle
+        - time
+        - level
+        - ingredients
+        - steps
+        - locale
+        - publicationStatus
+        - createdAt
+        - updatedAt
+    AdminFastingRecipeInput:
+      type: object
+      additionalProperties: false
+      properties:
+        title:
+          type: string
+          minLength: 1
+        subtitle:
+          type: string
+        time:
+          type: string
+        level:
+          $ref: "#/components/schemas/FastLevel"
+        ingredients:
+          type: array
+          items:
+            type: string
+        steps:
+          type: array
+          items:
+            type: string
+        locale:
+          $ref: "#/components/schemas/Locale"
+        publicationStatus:
+          $ref: "#/components/schemas/PublicationStatus"
+      required:
+        - title
+        - subtitle
+        - time
+        - level
+        - ingredients
+        - steps
+        - locale
+        - publicationStatus
+    AdminFastingRecipeList:
+      type: object
+      additionalProperties: false
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/AdminFastingRecipe"
+        pagination:
+          $ref: "#/components/schemas/Pagination"
+      required:
+        - items
+        - pagination
+    AdminLearningEntry:
+      type: object
+      additionalProperties: false
+      properties:
+        id:
+          type: string
+        category:
+          $ref: "#/components/schemas/LearningCategory"
+        title:
+          type: string
+        alternate:
+          type: ["string", "null"]
+        pronunciation:
+          type: ["string", "null"]
+        definition:
+          type: string
+        body:
+          type: ["string", "null"]
+        locale:
+          $ref: "#/components/schemas/Locale"
+        publicationStatus:
+          $ref: "#/components/schemas/PublicationStatus"
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - category
+        - title
+        - alternate
+        - pronunciation
+        - definition
+        - body
+        - locale
+        - publicationStatus
+        - createdAt
+        - updatedAt
+    AdminLearningEntryInput:
+      type: object
+      additionalProperties: false
+      properties:
+        category:
+          $ref: "#/components/schemas/LearningCategory"
+        title:
+          type: string
+          minLength: 1
+        alternate:
+          type: ["string", "null"]
+        pronunciation:
+          type: ["string", "null"]
+        definition:
+          type: string
+        body:
+          type: ["string", "null"]
+        locale:
+          $ref: "#/components/schemas/Locale"
+        publicationStatus:
+          $ref: "#/components/schemas/PublicationStatus"
+      required:
+        - category
+        - title
+        - alternate
+        - pronunciation
+        - definition
+        - body
+        - locale
+        - publicationStatus
+    AdminLearningEntryList:
+      type: object
+      additionalProperties: false
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/AdminLearningEntry"
+        pagination:
+          $ref: "#/components/schemas/Pagination"
+      required:
+        - items
+        - pagination
+    AdminPrayerQueue:
+      type: object
+      additionalProperties: false
+      properties:
+        requests:
+          type: array
+          items:
+            $ref: "#/components/schemas/PrayerRequest"
+      required:
+        - requests
