@@ -49,9 +49,8 @@ app.use(express.urlencoded({ extended: true }));
 app.use("/api", router);
 
 const adminBuildDirectory = path.resolve(
-  process.cwd(),
-  "artifacts",
-  "orthotypikon-admin",
+  import.meta.dirname,
+  "../../orthotypikon-admin",
   "dist",
   "public",
 );
