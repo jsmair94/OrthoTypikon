@@ -1,3 +1,5 @@
+import { existsSync } from "node:fs";
+import path from "node:path";
 import express, {
   type ErrorRequestHandler,
   type Express,
@@ -45,6 +47,45 @@ app.use(express.json({ limit: "256kb" }));
 app.use(express.urlencoded({ extended: true }));
 
 app.use("/api", router);
+
+const adminBuildDirectory = path.resolve(
+  process.cwd(),
+  "artifacts",
+  "orthotypikon-admin",
+  "dist",
+  "public",
+);
+const adminIndexPath = path.join(adminBuildDirectory, "index.html");
+
+if (existsSync(adminIndexPath)) {
+  const serveAdminAssets = express.static(adminBuildDirectory);
+  const isApiPath = (requestPath: string): boolean =>
+    requestPath === "/api" || requestPath.startsWith("/api/");
+
+  app.use((req, res, next) => {
+    if (isApiPath(req.path)) {
+      next();
+      return;
+    }
+
+    serveAdminAssets(req, res, next);
+  });
+
+  app.use((req, res, next) => {
+    if (
+      (req.method !== "GET" && req.method !== "HEAD") ||
+      isApiPath(req.path) ||
+      !req.accepts("html")
+    ) {
+      next();
+      return;
+    }
+
+    res.sendFile(adminIndexPath, (error) => {
+      if (error) next(error);
+    });
+  });
+}
 
 const notFoundHandler: RequestHandler = (_req, res) => {
   res.status(404).json(
