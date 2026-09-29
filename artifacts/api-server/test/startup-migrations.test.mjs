@@ -91,6 +91,7 @@ test("a failed database migration is reported and prevents API startup", async (
   assert.deepEqual(result, { code: 1, signal: null });
   assert.match(
     output,
-    /Database migration or schema validation failed; API server will not start/,
+    /Database migration or schema validation failed; API server will not start: .*ECONNREFUSED/,
   );
+  assert.doesNotMatch(output, /postgres:\/\/migration:local/);
 });
