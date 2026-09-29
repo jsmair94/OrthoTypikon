@@ -1116,6 +1116,9 @@ export async function validateDatabaseSchema(
        JOIN pg_namespace table_namespace ON table_namespace.oid = table_relation.relnamespace
        LEFT JOIN pg_class referenced_relation ON referenced_relation.oid = constraint_data.confrelid
        LEFT JOIN pg_namespace referenced_namespace ON referenced_namespace.oid = referenced_relation.relnamespace
+        -- PostgreSQL 18 exposes column-level NOT NULL rules in pg_constraint;
+        -- nullability is checked separately from Drizzle table constraints.
+        WHERE constraint_data.contype <> 'n'
      )
      SELECT 'constraint ' || expected.schema_name || '.' || expected.table_name || '.' || expected.constraint_name AS object
      FROM expected
@@ -1167,6 +1170,8 @@ export async function validateDatabaseSchema(
          ON table_relation.oid = constraint_data.conrelid
        JOIN pg_namespace table_namespace
          ON table_namespace.oid = table_relation.relnamespace
+        -- Keep NOT NULL catalog entries out of the table-level rule check.
+        WHERE constraint_data.contype <> 'n'
      )
      SELECT
        'unexpected constraint ' || actual_constraints.schema_name || '.'

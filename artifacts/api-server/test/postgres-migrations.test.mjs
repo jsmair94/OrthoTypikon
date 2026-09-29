@@ -364,8 +364,37 @@ test("real PostgreSQL migrations preserve rows in fresh and pre-existing databas
       psql(
         port,
         "existing_upgrade",
+        `ALTER TABLE calendar_entry_saints
+           DROP CONSTRAINT calendar_entry_saints_calendar_entry_id_saint_id_pk;
+         ALTER TABLE calendar_entry_saints
+           ADD CONSTRAINT calendar_entry_saints_pkey
+           PRIMARY KEY (calendar_entry_id, saint_id);
+         ALTER TABLE calendar_entry_saints
+           DROP CONSTRAINT calendar_entry_saints_calendar_entry_id_calendar_entries_id_fk;
+         ALTER TABLE calendar_entry_saints
+           DROP CONSTRAINT calendar_entry_saints_saint_id_saints_id_fk;
+         ALTER TABLE calendar_entry_saints
+           ADD CONSTRAINT calendar_entry_saints_calendar_entry_id_fkey
+           FOREIGN KEY (calendar_entry_id) REFERENCES calendar_entries (id)
+           ON DELETE CASCADE ON UPDATE NO ACTION;
+         ALTER TABLE calendar_entry_saints
+           ADD CONSTRAINT calendar_entry_saints_saint_id_fkey
+           FOREIGN KEY (saint_id) REFERENCES saints (id)
+           ON DELETE CASCADE ON UPDATE NO ACTION;`,
+      );
+
+      psql(
+        port,
+        "existing_upgrade",
         `INSERT INTO saints (id, name, feast_month, feast_day, short_bio, audio_text, locale)
          VALUES ('fixture-saint', 'Saint Fixture', 2, 17, 'Existing saint bio must survive.', 'Existing audio text must survive.', 'en');
+         INSERT INTO calendar_entries (
+           id, gregorian_date, calendar_system, locale, publication_status
+         ) VALUES (
+           'fixture-calendar-entry-saint', '2026-09-29', 'gregorian', 'en', 'published'
+         );
+         INSERT INTO calendar_entry_saints (calendar_entry_id, saint_id)
+         VALUES ('fixture-calendar-entry-saint', 'fixture-saint');
          INSERT INTO daily_content (id, content_date, verse_reference, verse_text, verse_author, locale)
          VALUES ('fixture-daily-content', '2026-09-29', 'John 1:1', 'Existing verse must survive.', 'Saint John', 'en');
          INSERT INTO daily_content (
@@ -380,6 +409,30 @@ test("real PostgreSQL migrations preserve rows in fresh and pre-existing databas
       const existingApi = await startApi(databaseUrl);
       try {
         assertMigrationRecorded(port, "existing_upgrade");
+        assert.equal(
+          psql(
+            port,
+            "existing_upgrade",
+            `SELECT string_agg(conname::text, ',' ORDER BY conname)
+             FROM pg_constraint
+             WHERE conrelid = 'public.calendar_entry_saints'::regclass
+               AND contype IN ('p', 'f')`,
+          ),
+          "calendar_entry_saints_calendar_entry_id_calendar_entries_id_fk,calendar_entry_saints_calendar_entry_id_saint_id_pk,calendar_entry_saints_saint_id_saints_id_fk",
+          "startup should normalize the legacy primary-key and foreign-key names",
+        );
+        assert.equal(
+          psql(
+            port,
+            "existing_upgrade",
+            `SELECT count(*)
+             FROM calendar_entry_saints
+             WHERE calendar_entry_id = 'fixture-calendar-entry-saint'
+               AND saint_id = 'fixture-saint'`,
+          ),
+          "1",
+          "normalizing constraints must preserve existing calendar-to-saint links",
+        );
         assert.equal(
           psql(
             port,
