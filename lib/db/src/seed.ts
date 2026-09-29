@@ -173,10 +173,40 @@ async function seed() {
     }
   }
 
-  const dailyRows = [
-    { date: "2026-08-25", feastTitle: "رقاد والدة الإله", feastDescription: "تذكار مبارك نعيشه اليوم مع الكنيسة الجامعة" },
+  const dailyRowsByDate = new Map<
+    string,
+    { date: string; feastTitle: string | null; feastDescription: string | null }
+  >();
+  const seedYear = new Date().getUTCFullYear();
+  const seedEndDate = addDays(`${seedYear + 1}-01-01`, 13);
+  for (
+    let day = `${seedYear}-01-01`;
+    day <= seedEndDate;
+    day = addDays(day, 1)
+  ) {
+    const calendarEntry = calendarData.find((entry) => entry.date === day);
+    dailyRowsByDate.set(day, {
+      date: day,
+      feastTitle: calendarEntry?.feast ?? null,
+      feastDescription: null,
+    });
+  }
+  for (const row of [
+    {
+      date: "2026-08-25",
+      feastTitle: "رقاد والدة الإله",
+      feastDescription: "تذكار مبارك نعيشه اليوم مع الكنيسة الجامعة",
+    },
     { date: "2026-08-26", feastTitle: null, feastDescription: null },
-  ];
+  ]) {
+    dailyRowsByDate.set(row.date, row);
+  }
+
+  // These are generic defaults, not date-specific readings. Insert-only writes
+  // preserve any editorial daily content already stored for the same date.
+  const dailyRows = [...dailyRowsByDate.values()].sort((left, right) =>
+    left.date.localeCompare(right.date),
+  );
   for (const row of dailyRows) {
     await database.insert(dailyContentTable).values({
       id: `daily-${row.date}`,
@@ -192,10 +222,7 @@ async function seed() {
       readingTitle: "إنجيل متى",
       readingReference: "الإصحاح الخامس",
       readingDurationMinutes: 8,
-    }).onConflictDoUpdate({
-      target: dailyContentTable.id,
-      set: { contentDate: row.date, feastTitle: row.feastTitle, feastDescription: row.feastDescription, publicationStatus: "published" },
-    });
+    }).onConflictDoNothing();
   }
 
   for (let day = "2026-01-01"; day <= "2026-12-31"; day = addDays(day, 1)) {

@@ -8,7 +8,7 @@
     "build": "node ./build.mjs",
     "start": "node --enable-source-maps ./dist/index.mjs",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "node --experimental-transform-types --experimental-loader ./test/extensionless-ts-loader.mjs --test test/*.test.mjs",
+    "test": "pnpm run build && node --experimental-transform-types --experimental-loader ./test/extensionless-ts-loader.mjs --test test/*.test.mjs",
     "verify": "node ./scripts/verify.mjs"
   },
   "dependencies": {

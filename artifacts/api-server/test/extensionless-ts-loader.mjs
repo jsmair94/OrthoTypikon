@@ -2,8 +2,11 @@ export async function resolve(specifier, context, nextResolve) {
   try {
     return await nextResolve(specifier, context);
   } catch (error) {
+    const canTryExtension =
+      error?.code === "ERR_MODULE_NOT_FOUND" ||
+      error?.code === "ERR_UNSUPPORTED_DIR_IMPORT";
     if (
-      error?.code !== "ERR_MODULE_NOT_FOUND" ||
+      !canTryExtension ||
       !specifier.startsWith(".") ||
       /\.[^/]+$/.test(specifier)
     ) {
@@ -16,6 +19,19 @@ export async function resolve(specifier, context, nextResolve) {
       } catch (candidateError) {
         if (candidateError?.code !== "ERR_MODULE_NOT_FOUND")
           throw candidateError;
+      }
+    }
+
+    for (const extension of [".ts", ".js", ".mjs"]) {
+      try {
+        return await nextResolve(`${specifier}/index${extension}`, context);
+      } catch (candidateError) {
+        if (
+          candidateError?.code !== "ERR_MODULE_NOT_FOUND" &&
+          candidateError?.code !== "ERR_UNSUPPORTED_DIR_IMPORT"
+        ) {
+          throw candidateError;
+        }
       }
     }
 
