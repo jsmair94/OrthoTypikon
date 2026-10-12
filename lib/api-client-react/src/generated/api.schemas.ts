@@ -5,6 +5,142 @@
  * OrthoTypikon content API
  * OpenAPI spec version: 0.1.0
  */
+export type OrthodoxPlaceCategory =
+  (typeof OrthodoxPlaceCategory)[keyof typeof OrthodoxPlaceCategory];
+
+export const OrthodoxPlaceCategory = {
+  church: "church",
+  monastery: "monastery",
+  school: "school",
+} as const;
+
+export type OrthodoxPlaceStatus =
+  (typeof OrthodoxPlaceStatus)[keyof typeof OrthodoxPlaceStatus];
+
+export const OrthodoxPlaceStatus = {
+  active: "active",
+  retired: "retired",
+} as const;
+
+export type OrthodoxPlaceReportStatus =
+  (typeof OrthodoxPlaceReportStatus)[keyof typeof OrthodoxPlaceReportStatus];
+
+export const OrthodoxPlaceReportStatus = {
+  open: "open",
+  reviewed: "reviewed",
+  resolved: "resolved",
+} as const;
+
+export interface NearbyOrthodoxPlace {
+  id: string;
+  name: string;
+  category: OrthodoxPlaceCategory;
+  jurisdiction: string;
+  latitude: number;
+  longitude: number;
+  distanceKm: number;
+  address: string;
+  sourceName: string;
+  /** @nullable */
+  sourceUrl: string | null;
+  verificationDetails: string;
+  isVerified: boolean;
+}
+
+export interface OrthodoxPlaceReportInput {
+  /**
+   * @minLength 5
+   * @maxLength 1000
+   */
+  details: string;
+}
+
+export interface OrthodoxPlaceReportReceipt {
+  id: string;
+  createdAt: string;
+}
+
+export interface AdminOrthodoxPlace {
+  id: string;
+  name: string;
+  category: OrthodoxPlaceCategory;
+  jurisdiction: string;
+  latitude: number;
+  longitude: number;
+  address: string;
+  sourceName: string;
+  /** @nullable */
+  sourceUrl: string | null;
+  verificationDetails: string;
+  isVerified: boolean;
+  /** @nullable */
+  verifiedAt: string | null;
+  status: OrthodoxPlaceStatus;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AdminOrthodoxPlaceInput {
+  /**
+   * @minLength 1
+   * @maxLength 200
+   */
+  name: string;
+  category: OrthodoxPlaceCategory;
+  /**
+   * @minLength 1
+   * @maxLength 200
+   */
+  jurisdiction: string;
+  /**
+   * @minimum -90
+   * @maximum 90
+   */
+  latitude: number;
+  /**
+   * @minimum -180
+   * @maximum 180
+   */
+  longitude: number;
+  /**
+   * @minLength 1
+   * @maxLength 500
+   */
+  address: string;
+  /**
+   * @minLength 1
+   * @maxLength 200
+   */
+  sourceName: string;
+  /**
+   * @maxLength 1000
+   * @nullable
+   */
+  sourceUrl: string | null;
+  /**
+   * @minLength 1
+   * @maxLength 2000
+   */
+  verificationDetails: string;
+  isVerified: boolean;
+  status: OrthodoxPlaceStatus;
+}
+
+export interface AdminOrthodoxPlaceReport {
+  id: string;
+  placeId: string;
+  placeName: string;
+  details: string;
+  status: OrthodoxPlaceReportStatus;
+  createdAt: string;
+  /** @nullable */
+  reviewedAt: string | null;
+}
+
+export interface AdminOrthodoxPlaceReportUpdate {
+  status: OrthodoxPlaceReportStatus;
+}
+
 export type HealthStatusStatus =
   (typeof HealthStatusStatus)[keyof typeof HealthStatusStatus];
 
@@ -281,6 +417,12 @@ export interface DailyHomePayload {
   saints: SaintSummary[];
   fasting: FastingSummary | null;
   relatedReading: Reading | null;
+}
+
+export interface DailyGospelReading {
+  title: string;
+  text: string;
+  sourceUrl: string;
 }
 
 export type SynaxarionHomepagePayloadVerse = {
@@ -757,6 +899,24 @@ export type ListModerationPrayerRequests200 = {
   requests: PrayerRequest[];
 };
 
+export type ListNearbyOrthodoxPlacesParams = {
+  /**
+   * @minimum -90
+   * @maximum 90
+   */
+  latitude: number;
+  /**
+   * @minimum -180
+   * @maximum 180
+   */
+  longitude: number;
+  /**
+   * @minimum 1
+   * @maximum 100
+   */
+  radiusKm?: number;
+};
+
 export type ListAdminDailyContentParams = {
   locale?: AdminLocaleQueryParameter;
   publicationStatus?: AdminPublicationStatusQueryParameter;
@@ -888,6 +1048,13 @@ export type GetDailyContentParams = {
 };
 
 export type GetSynaxarionHomepageParams = {
+  /**
+   * Translation locale for the live Synaxarion card
+   */
+  locale?: SynaxarionLocaleQueryParameter;
+};
+
+export type GetSynaxarionDailyGospelParams = {
   /**
    * Translation locale for the live Synaxarion card
    */

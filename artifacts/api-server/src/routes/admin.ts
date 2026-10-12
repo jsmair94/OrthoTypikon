@@ -18,6 +18,8 @@ import {
   fastingGuidanceTable,
   fastingRecipesTable,
   learningEntriesTable,
+  orthodoxPlaceReportsTable,
+  orthodoxPlacesTable,
   prayerRequestsTable,
   saintsTable,
 } from "@workspace/db";
@@ -42,6 +44,8 @@ import {
   CreateAdminSaintResponse,
   CreateAdminSessionBody,
   CreateAdminSessionResponse,
+  CreateAdminOrthodoxPlaceBody,
+  CreateAdminOrthodoxPlaceResponse,
   GetAdminOverviewResponse,
   ListAdminCalendarEntriesQueryParams,
   ListAdminCalendarEntriesResponse,
@@ -54,11 +58,16 @@ import {
   ListAdminLearningEntriesQueryParams,
   ListAdminLearningEntriesResponse,
   ListAdminPrayerRequestsResponse,
+  ListAdminOrthodoxPlaceReportsResponse,
+  ListAdminOrthodoxPlacesResponse,
   ListAdminSaintsQueryParams,
   ListAdminSaintsResponse,
   ReviewAdminPrayerRequestBody,
   ReviewAdminPrayerRequestParams,
   ReviewAdminPrayerRequestResponse,
+  ReviewAdminOrthodoxPlaceReportBody,
+  ReviewAdminOrthodoxPlaceReportParams,
+  ReviewAdminOrthodoxPlaceReportResponse,
   UpdateAdminCalendarEntryBody,
   UpdateAdminCalendarEntryParams,
   UpdateAdminCalendarEntryResponse,
@@ -77,6 +86,11 @@ import {
   UpdateAdminSaintBody,
   UpdateAdminSaintParams,
   UpdateAdminSaintResponse,
+  UpdateAdminOrthodoxPlaceBody,
+  UpdateAdminOrthodoxPlaceParams,
+  UpdateAdminOrthodoxPlaceResponse,
+  RetireAdminOrthodoxPlaceParams,
+  RetireAdminOrthodoxPlaceResponse,
   UpsertAdminCalendarEntryBody,
   UpsertAdminCalendarEntryResponse,
   UpsertAdminDailyContentBody,
@@ -198,6 +212,58 @@ function databaseDate(value: Date) {
   return value.toISOString().slice(0, 10);
 }
 
+function orthodoxPlaceOutput(row: typeof orthodoxPlacesTable.$inferSelect) {
+  return {
+    ...row,
+    verifiedAt: row.verifiedAt?.toISOString() ?? null,
+    createdAt: row.createdAt.toISOString(),
+    updatedAt: row.updatedAt.toISOString(),
+  };
+}
+
+function validateSourceUrl(sourceUrl: string | null) {
+  if (sourceUrl === null) return null;
+  const trimmed = sourceUrl.trim();
+  if (!trimmed) return null;
+  try {
+    const parsed = new URL(trimmed);
+    if (parsed.protocol !== "https:" && parsed.protocol !== "http:") {
+      throw new Error("Unsupported URL protocol");
+    }
+  } catch {
+    throw invalidRequest("The source URL must be a valid HTTP or HTTPS URL.");
+  }
+  return trimmed;
+}
+
+function normalizePlaceInput<T extends {
+  name: string;
+  jurisdiction: string;
+  address: string;
+  sourceName: string;
+  verificationDetails: string;
+  sourceUrl: string | null;
+}>(input: T) {
+  const normalized = {
+    ...input,
+    name: input.name.trim(),
+    jurisdiction: input.jurisdiction.trim(),
+    address: input.address.trim(),
+    sourceName: input.sourceName.trim(),
+    verificationDetails: input.verificationDetails.trim(),
+    sourceUrl: validateSourceUrl(input.sourceUrl),
+  };
+  if (
+    !normalized.name ||
+    !normalized.jurisdiction ||
+    !normalized.address ||
+    !normalized.sourceName ||
+    !normalized.verificationDetails
+  ) {
+    throw invalidRequest("Place name, jurisdiction, address, source, and verification notes are required.");
+  }
+  return normalized;
+}
 type StatusCountRow = { status: string; total: number };
 
 function contentCounts(rows: StatusCountRow[]) {
@@ -653,6 +719,127 @@ router.delete("/admin/saints/:id", async (req, res): Promise<void> => {
     .returning({ id: saintsTable.id });
   if (!row) throw notFound("Saint was not found.");
   res.status(204).send();
+});
+
+router.get("/admin/places", async (_req, res): Promise<void> => {
+  const rows = await requireDatabase()
+    .select()
+    .from(orthodoxPlacesTable)
+    .orderBy(asc(orthodoxPlacesTable.name));
+  res.json(ListAdminOrthodoxPlacesResponse.parse(rows.map(orthodoxPlaceOutput)));
+});
+
+router.post("/admin/places", async (req, res): Promise<void> => {
+  const parsed = CreateAdminOrthodoxPlaceBody.safeParse(req.body);
+  if (!parsed.success) throw invalidRequest();
+  const input = normalizePlaceInput(parsed.data);
+  const now = new Date();
+  const [row] = await requireDatabase()
+    .insert(orthodoxPlacesTable)
+    .values({
+      ...input,
+      id: randomUUID(),
+      verifiedAt: input.isVerified ? now : null,
+      createdAt: now,
+      updatedAt: now,
+    })
+    .returning();
+  res.status(201).json(CreateAdminOrthodoxPlaceResponse.parse(orthodoxPlaceOutput(row)));
+});
+
+router.put("/admin/places/:id", async (req, res): Promise<void> => {
+  const params = UpdateAdminOrthodoxPlaceParams.safeParse(req.params);
+  const body = UpdateAdminOrthodoxPlaceBody.safeParse(req.body);
+  if (!params.success || !body.success) throw invalidRequest();
+  const input = normalizePlaceInput(body.data);
+
+  const database = requireDatabase();
+  const [current] = await database
+    .select({
+      id: orthodoxPlacesTable.id,
+      isVerified: orthodoxPlacesTable.isVerified,
+      verifiedAt: orthodoxPlacesTable.verifiedAt,
+    })
+    .from(orthodoxPlacesTable)
+    .where(eq(orthodoxPlacesTable.id, params.data.id))
+    .limit(1);
+  if (!current) throw notFound("Place listing was not found.");
+
+  const now = new Date();
+  const [row] = await database
+    .update(orthodoxPlacesTable)
+    .set({
+      ...input,
+      verifiedAt: input.isVerified
+        ? current.isVerified && current.verifiedAt
+          ? current.verifiedAt
+          : now
+        : null,
+      updatedAt: now,
+    })
+    .where(eq(orthodoxPlacesTable.id, params.data.id))
+    .returning();
+  if (!row) throw notFound("Place listing was not found.");
+  res.json(UpdateAdminOrthodoxPlaceResponse.parse(orthodoxPlaceOutput(row)));
+});
+
+router.delete("/admin/places/:id", async (req, res): Promise<void> => {
+  const params = RetireAdminOrthodoxPlaceParams.safeParse(req.params);
+  if (!params.success) throw invalidRequest();
+  const [row] = await requireDatabase()
+    .update(orthodoxPlacesTable)
+    .set({ status: "retired", updatedAt: new Date() })
+    .where(eq(orthodoxPlacesTable.id, params.data.id))
+    .returning({ id: orthodoxPlacesTable.id });
+  if (!row) throw notFound("Place listing was not found.");
+  res.status(204).json(RetireAdminOrthodoxPlaceResponse.parse(undefined));
+});
+
+router.get("/admin/place-reports", async (_req, res): Promise<void> => {
+  const rows = await requireDatabase()
+    .select({
+      id: orthodoxPlaceReportsTable.id,
+      placeId: orthodoxPlaceReportsTable.placeId,
+      placeName: orthodoxPlacesTable.name,
+      details: orthodoxPlaceReportsTable.details,
+      status: orthodoxPlaceReportsTable.status,
+      createdAt: orthodoxPlaceReportsTable.createdAt,
+      reviewedAt: orthodoxPlaceReportsTable.reviewedAt,
+    })
+    .from(orthodoxPlaceReportsTable)
+    .innerJoin(
+      orthodoxPlacesTable,
+      eq(orthodoxPlacesTable.id, orthodoxPlaceReportsTable.placeId),
+    )
+    .orderBy(desc(orthodoxPlaceReportsTable.createdAt))
+    .limit(250);
+  res.json(ListAdminOrthodoxPlaceReportsResponse.parse(rows));
+});
+
+router.patch("/admin/place-reports/:id", async (req, res): Promise<void> => {
+  const params = ReviewAdminOrthodoxPlaceReportParams.safeParse(req.params);
+  const body = ReviewAdminOrthodoxPlaceReportBody.safeParse(req.body);
+  if (!params.success || !body.success) throw invalidRequest();
+  const [row] = await requireDatabase()
+    .update(orthodoxPlaceReportsTable)
+    .set({
+      status: body.data.status,
+      reviewedAt: body.data.status === "open" ? null : new Date(),
+    })
+    .where(eq(orthodoxPlaceReportsTable.id, params.data.id))
+    .returning();
+  if (!row) throw notFound("Place report was not found.");
+
+  const [place] = await requireDatabase()
+    .select({ name: orthodoxPlacesTable.name })
+    .from(orthodoxPlacesTable)
+    .where(eq(orthodoxPlacesTable.id, row.placeId))
+    .limit(1);
+  if (!place) throw notFound("Place listing was not found.");
+  res.json(ReviewAdminOrthodoxPlaceReportResponse.parse({
+    ...row,
+    placeName: place.name,
+  }));
 });
 
 router.get("/admin/fasting-guidance", async (req, res): Promise<void> => {

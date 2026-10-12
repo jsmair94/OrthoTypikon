@@ -227,6 +227,76 @@ export const ReviewPrayerRequestResponse = zod.object({
 });
 
 /**
+ * @summary Find active Orthodox places near a coordinate
+ */
+export const listNearbyOrthodoxPlacesQueryLatitudeMin = -90;
+export const listNearbyOrthodoxPlacesQueryLatitudeMax = 90;
+
+export const listNearbyOrthodoxPlacesQueryLongitudeMin = -180;
+export const listNearbyOrthodoxPlacesQueryLongitudeMax = 180;
+
+export const listNearbyOrthodoxPlacesQueryRadiusKmDefault = 25;
+export const listNearbyOrthodoxPlacesQueryRadiusKmMax = 100;
+
+export const ListNearbyOrthodoxPlacesQueryParams = zod.object({
+  latitude: zod.coerce
+    .number()
+    .min(listNearbyOrthodoxPlacesQueryLatitudeMin)
+    .max(listNearbyOrthodoxPlacesQueryLatitudeMax),
+  longitude: zod.coerce
+    .number()
+    .min(listNearbyOrthodoxPlacesQueryLongitudeMin)
+    .max(listNearbyOrthodoxPlacesQueryLongitudeMax),
+  radiusKm: zod.coerce
+    .number()
+    .min(1)
+    .max(listNearbyOrthodoxPlacesQueryRadiusKmMax)
+    .default(listNearbyOrthodoxPlacesQueryRadiusKmDefault),
+});
+
+export const ListNearbyOrthodoxPlacesResponseItem = zod.object({
+  id: zod.string(),
+  name: zod.string(),
+  category: zod.enum(["church", "monastery", "school"]),
+  jurisdiction: zod.string(),
+  latitude: zod.number(),
+  longitude: zod.number(),
+  distanceKm: zod.number(),
+  address: zod.string(),
+  sourceName: zod.string(),
+  sourceUrl: zod.string().nullable(),
+  verificationDetails: zod.string(),
+  isVerified: zod.boolean(),
+});
+export const ListNearbyOrthodoxPlacesResponse = zod.array(
+  ListNearbyOrthodoxPlacesResponseItem,
+);
+
+/**
+ * @summary Report incorrect details for a directory listing
+ */
+export const reportOrthodoxPlacePathPlaceIdMax = 120;
+
+export const ReportOrthodoxPlaceParams = zod.object({
+  placeId: zod.coerce.string().min(1).max(reportOrthodoxPlacePathPlaceIdMax),
+});
+
+export const reportOrthodoxPlaceBodyDetailsMin = 5;
+export const reportOrthodoxPlaceBodyDetailsMax = 1000;
+
+export const ReportOrthodoxPlaceBody = zod.object({
+  details: zod
+    .string()
+    .min(reportOrthodoxPlaceBodyDetailsMin)
+    .max(reportOrthodoxPlaceBodyDetailsMax),
+});
+
+export const ReportOrthodoxPlaceResponse = zod.object({
+  id: zod.string(),
+  createdAt: zod.coerce.date(),
+});
+
+/**
  * @summary Create a short-lived administrator session
  */
 export const createAdminSessionBodyKeyMax = 256;
@@ -933,6 +1003,228 @@ export const ArchiveAdminSaintParams = zod.object({
 export const ArchiveAdminSaintResponse = zod.void();
 
 /**
+ * @summary List active and retired Orthodox place records
+ */
+export const ListAdminOrthodoxPlacesResponseItem = zod.object({
+  id: zod.string(),
+  name: zod.string(),
+  category: zod.enum(["church", "monastery", "school"]),
+  jurisdiction: zod.string(),
+  latitude: zod.number(),
+  longitude: zod.number(),
+  address: zod.string(),
+  sourceName: zod.string(),
+  sourceUrl: zod.string().nullable(),
+  verificationDetails: zod.string(),
+  isVerified: zod.boolean(),
+  verifiedAt: zod.coerce.date().nullable(),
+  status: zod.enum(["active", "retired"]),
+  createdAt: zod.coerce.date(),
+  updatedAt: zod.coerce.date(),
+});
+export const ListAdminOrthodoxPlacesResponse = zod.array(
+  ListAdminOrthodoxPlacesResponseItem,
+);
+
+/**
+ * @summary Add an Orthodox place record
+ */
+export const createAdminOrthodoxPlaceBodyNameMax = 200;
+
+export const createAdminOrthodoxPlaceBodyJurisdictionMax = 200;
+
+export const createAdminOrthodoxPlaceBodyLatitudeMin = -90;
+export const createAdminOrthodoxPlaceBodyLatitudeMax = 90;
+
+export const createAdminOrthodoxPlaceBodyLongitudeMin = -180;
+export const createAdminOrthodoxPlaceBodyLongitudeMax = 180;
+
+export const createAdminOrthodoxPlaceBodyAddressMax = 500;
+
+export const createAdminOrthodoxPlaceBodySourceNameMax = 200;
+
+export const createAdminOrthodoxPlaceBodySourceUrlMax = 1000;
+
+export const createAdminOrthodoxPlaceBodyVerificationDetailsMax = 2000;
+
+export const CreateAdminOrthodoxPlaceBody = zod.object({
+  name: zod.string().min(1).max(createAdminOrthodoxPlaceBodyNameMax),
+  category: zod.enum(["church", "monastery", "school"]),
+  jurisdiction: zod
+    .string()
+    .min(1)
+    .max(createAdminOrthodoxPlaceBodyJurisdictionMax),
+  latitude: zod
+    .number()
+    .min(createAdminOrthodoxPlaceBodyLatitudeMin)
+    .max(createAdminOrthodoxPlaceBodyLatitudeMax),
+  longitude: zod
+    .number()
+    .min(createAdminOrthodoxPlaceBodyLongitudeMin)
+    .max(createAdminOrthodoxPlaceBodyLongitudeMax),
+  address: zod.string().min(1).max(createAdminOrthodoxPlaceBodyAddressMax),
+  sourceName: zod
+    .string()
+    .min(1)
+    .max(createAdminOrthodoxPlaceBodySourceNameMax),
+  sourceUrl: zod
+    .string()
+    .max(createAdminOrthodoxPlaceBodySourceUrlMax)
+    .nullable(),
+  verificationDetails: zod
+    .string()
+    .min(1)
+    .max(createAdminOrthodoxPlaceBodyVerificationDetailsMax),
+  isVerified: zod.boolean(),
+  status: zod.enum(["active", "retired"]),
+});
+
+export const CreateAdminOrthodoxPlaceResponse = zod.object({
+  id: zod.string(),
+  name: zod.string(),
+  category: zod.enum(["church", "monastery", "school"]),
+  jurisdiction: zod.string(),
+  latitude: zod.number(),
+  longitude: zod.number(),
+  address: zod.string(),
+  sourceName: zod.string(),
+  sourceUrl: zod.string().nullable(),
+  verificationDetails: zod.string(),
+  isVerified: zod.boolean(),
+  verifiedAt: zod.coerce.date().nullable(),
+  status: zod.enum(["active", "retired"]),
+  createdAt: zod.coerce.date(),
+  updatedAt: zod.coerce.date(),
+});
+
+/**
+ * @summary Update a place record
+ */
+export const updateAdminOrthodoxPlacePathIdMax = 120;
+
+export const UpdateAdminOrthodoxPlaceParams = zod.object({
+  id: zod.coerce.string().min(1).max(updateAdminOrthodoxPlacePathIdMax),
+});
+
+export const updateAdminOrthodoxPlaceBodyNameMax = 200;
+
+export const updateAdminOrthodoxPlaceBodyJurisdictionMax = 200;
+
+export const updateAdminOrthodoxPlaceBodyLatitudeMin = -90;
+export const updateAdminOrthodoxPlaceBodyLatitudeMax = 90;
+
+export const updateAdminOrthodoxPlaceBodyLongitudeMin = -180;
+export const updateAdminOrthodoxPlaceBodyLongitudeMax = 180;
+
+export const updateAdminOrthodoxPlaceBodyAddressMax = 500;
+
+export const updateAdminOrthodoxPlaceBodySourceNameMax = 200;
+
+export const updateAdminOrthodoxPlaceBodySourceUrlMax = 1000;
+
+export const updateAdminOrthodoxPlaceBodyVerificationDetailsMax = 2000;
+
+export const UpdateAdminOrthodoxPlaceBody = zod.object({
+  name: zod.string().min(1).max(updateAdminOrthodoxPlaceBodyNameMax),
+  category: zod.enum(["church", "monastery", "school"]),
+  jurisdiction: zod
+    .string()
+    .min(1)
+    .max(updateAdminOrthodoxPlaceBodyJurisdictionMax),
+  latitude: zod
+    .number()
+    .min(updateAdminOrthodoxPlaceBodyLatitudeMin)
+    .max(updateAdminOrthodoxPlaceBodyLatitudeMax),
+  longitude: zod
+    .number()
+    .min(updateAdminOrthodoxPlaceBodyLongitudeMin)
+    .max(updateAdminOrthodoxPlaceBodyLongitudeMax),
+  address: zod.string().min(1).max(updateAdminOrthodoxPlaceBodyAddressMax),
+  sourceName: zod
+    .string()
+    .min(1)
+    .max(updateAdminOrthodoxPlaceBodySourceNameMax),
+  sourceUrl: zod
+    .string()
+    .max(updateAdminOrthodoxPlaceBodySourceUrlMax)
+    .nullable(),
+  verificationDetails: zod
+    .string()
+    .min(1)
+    .max(updateAdminOrthodoxPlaceBodyVerificationDetailsMax),
+  isVerified: zod.boolean(),
+  status: zod.enum(["active", "retired"]),
+});
+
+export const UpdateAdminOrthodoxPlaceResponse = zod.object({
+  id: zod.string(),
+  name: zod.string(),
+  category: zod.enum(["church", "monastery", "school"]),
+  jurisdiction: zod.string(),
+  latitude: zod.number(),
+  longitude: zod.number(),
+  address: zod.string(),
+  sourceName: zod.string(),
+  sourceUrl: zod.string().nullable(),
+  verificationDetails: zod.string(),
+  isVerified: zod.boolean(),
+  verifiedAt: zod.coerce.date().nullable(),
+  status: zod.enum(["active", "retired"]),
+  createdAt: zod.coerce.date(),
+  updatedAt: zod.coerce.date(),
+});
+
+/**
+ * @summary Retire a place record without deleting its reports
+ */
+export const retireAdminOrthodoxPlacePathIdMax = 120;
+
+export const RetireAdminOrthodoxPlaceParams = zod.object({
+  id: zod.coerce.string().min(1).max(retireAdminOrthodoxPlacePathIdMax),
+});
+
+export const RetireAdminOrthodoxPlaceResponse = zod.void();
+
+/**
+ * @summary List reports submitted for Orthodox place records
+ */
+export const ListAdminOrthodoxPlaceReportsResponseItem = zod.object({
+  id: zod.string(),
+  placeId: zod.string(),
+  placeName: zod.string(),
+  details: zod.string(),
+  status: zod.enum(["open", "reviewed", "resolved"]),
+  createdAt: zod.coerce.date(),
+  reviewedAt: zod.coerce.date().nullable(),
+});
+export const ListAdminOrthodoxPlaceReportsResponse = zod.array(
+  ListAdminOrthodoxPlaceReportsResponseItem,
+);
+
+/**
+ * @summary Update a place report review status
+ */
+export const reviewAdminOrthodoxPlaceReportPathIdMax = 120;
+
+export const ReviewAdminOrthodoxPlaceReportParams = zod.object({
+  id: zod.coerce.string().min(1).max(reviewAdminOrthodoxPlaceReportPathIdMax),
+});
+
+export const ReviewAdminOrthodoxPlaceReportBody = zod.object({
+  status: zod.enum(["open", "reviewed", "resolved"]),
+});
+
+export const ReviewAdminOrthodoxPlaceReportResponse = zod.object({
+  id: zod.string(),
+  placeId: zod.string(),
+  placeName: zod.string(),
+  details: zod.string(),
+  status: zod.enum(["open", "reviewed", "resolved"]),
+  createdAt: zod.coerce.date(),
+  reviewedAt: zod.coerce.date().nullable(),
+});
+
+/**
  * @summary List editable fasting guidance
  */
 export const listAdminFastingGuidanceQuerySearchMax = 100;
@@ -1519,6 +1811,30 @@ export const GetSynaxarionHomepageResponse = zod.object({
   gospelUrl: zod.string().nullable(),
   calendarUrl: zod.string().nullable(),
 });
+
+/**
+ * @summary Get the full daily Gospel passage from Orthodox Jordan
+ */
+export const GetSynaxarionDailyGospelQueryParams = zod.object({
+  locale: zod
+    .enum(["ar", "en", "el"])
+    .optional()
+    .describe("Translation locale for the live Synaxarion card"),
+});
+
+export const GetSynaxarionDailyGospelResponse = zod.union([
+  zod.object({
+    title: zod.string(),
+    text: zod.string(),
+    sourceUrl: zod.string(),
+  }),
+  zod.null(),
+]);
+
+/**
+ * @summary Generate or retrieve spoken audio for the daily Gospel
+ */
+export const GetSynaxarionDailyGospelAudioResponse = zod.unknown();
 
 /**
  * @summary List calendar entries for a month

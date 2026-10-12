@@ -32,6 +32,10 @@ import type {
   AdminLearningEntry,
   AdminLearningEntryInput,
   AdminLearningEntryList,
+  AdminOrthodoxPlace,
+  AdminOrthodoxPlaceInput,
+  AdminOrthodoxPlaceReport,
+  AdminOrthodoxPlaceReportUpdate,
   AdminOverview,
   AdminPrayerQueue,
   AdminSaint,
@@ -43,6 +47,7 @@ import type {
   BadRequestResponse,
   CalendarEntry,
   ConflictResponse,
+  DailyGospelReading,
   DailyHomePayload,
   DatabaseUnavailableResponse,
   FastingDay,
@@ -50,6 +55,7 @@ import type {
   GetDailyContentParams,
   GetFastingByDateParams,
   GetSaintParams,
+  GetSynaxarionDailyGospelParams,
   GetSynaxarionHomepageParams,
   HealthStatus,
   ListAdminCalendarEntriesParams,
@@ -61,10 +67,14 @@ import type {
   ListCalendarByMonthParams,
   ListLearningEntriesParams,
   ListModerationPrayerRequests200,
+  ListNearbyOrthodoxPlacesParams,
   ListPrayerRequests200,
   ListPrayerRequestsParams,
   ListSaintsParams,
+  NearbyOrthodoxPlace,
   NotFoundResponse,
+  OrthodoxPlaceReportInput,
+  OrthodoxPlaceReportReceipt,
   PaginatedLearning,
   PaginatedSaints,
   PrayerReportCreate,
@@ -815,6 +825,217 @@ export const useReviewPrayerRequest = <
   TContext
 > => {
   return useMutation(getReviewPrayerRequestMutationOptions(options));
+};
+
+export const getListNearbyOrthodoxPlacesUrl = (
+  params: ListNearbyOrthodoxPlacesParams,
+) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : String(value));
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/places/nearby?${stringifiedParams}`
+    : `/api/places/nearby`;
+};
+
+/**
+ * @summary Find active Orthodox places near a coordinate
+ */
+export const listNearbyOrthodoxPlaces = async (
+  params: ListNearbyOrthodoxPlacesParams,
+  options?: Parameters<typeof customFetch>[1],
+): Promise<NearbyOrthodoxPlace[]> => {
+  return customFetch<NearbyOrthodoxPlace[]>(
+    getListNearbyOrthodoxPlacesUrl(params),
+    {
+      ...options,
+      method: "GET",
+    },
+  );
+};
+
+export const getListNearbyOrthodoxPlacesQueryKey = (
+  params?: ListNearbyOrthodoxPlacesParams,
+) => {
+  return [`/api/places/nearby`, ...(params ? [params] : [])] as const;
+};
+
+export const getListNearbyOrthodoxPlacesQueryOptions = <
+  TData = Awaited<ReturnType<typeof listNearbyOrthodoxPlaces>>,
+  TError = ErrorType<BadRequestResponse | DatabaseUnavailableResponse>,
+>(
+  params: ListNearbyOrthodoxPlacesParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof listNearbyOrthodoxPlaces>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getListNearbyOrthodoxPlacesQueryKey(params);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof listNearbyOrthodoxPlaces>>
+  > = ({ signal }) =>
+    listNearbyOrthodoxPlaces(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listNearbyOrthodoxPlaces>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type ListNearbyOrthodoxPlacesQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listNearbyOrthodoxPlaces>>
+>;
+export type ListNearbyOrthodoxPlacesQueryError = ErrorType<
+  BadRequestResponse | DatabaseUnavailableResponse
+>;
+
+/**
+ * @summary Find active Orthodox places near a coordinate
+ */
+
+export function useListNearbyOrthodoxPlaces<
+  TData = Awaited<ReturnType<typeof listNearbyOrthodoxPlaces>>,
+  TError = ErrorType<BadRequestResponse | DatabaseUnavailableResponse>,
+>(
+  params: ListNearbyOrthodoxPlacesParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof listNearbyOrthodoxPlaces>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getListNearbyOrthodoxPlacesQueryOptions(params, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getReportOrthodoxPlaceUrl = (placeId: string) => {
+  return `/api/places/${placeId}/reports`;
+};
+
+/**
+ * @summary Report incorrect details for a directory listing
+ */
+export const reportOrthodoxPlace = async (
+  placeId: string,
+  orthodoxPlaceReportInput: OrthodoxPlaceReportInput,
+  options?: Parameters<typeof customFetch>[1],
+): Promise<OrthodoxPlaceReportReceipt> => {
+  return customFetch<OrthodoxPlaceReportReceipt>(
+    getReportOrthodoxPlaceUrl(placeId),
+    {
+      ...options,
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...options?.headers },
+      body: JSON.stringify(orthodoxPlaceReportInput),
+    },
+  );
+};
+
+export const getReportOrthodoxPlaceMutationOptions = <
+  TError = ErrorType<
+    | BadRequestResponse
+    | NotFoundResponse
+    | TooManyRequestsResponse
+    | DatabaseUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof reportOrthodoxPlace>>,
+    TError,
+    { placeId: string; data: BodyType<OrthodoxPlaceReportInput> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof reportOrthodoxPlace>>,
+  TError,
+  { placeId: string; data: BodyType<OrthodoxPlaceReportInput> },
+  TContext
+> => {
+  const mutationKey = ["reportOrthodoxPlace"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof reportOrthodoxPlace>>,
+    { placeId: string; data: BodyType<OrthodoxPlaceReportInput> }
+  > = (props) => {
+    const { placeId, data } = props ?? {};
+
+    return reportOrthodoxPlace(placeId, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ReportOrthodoxPlaceMutationResult = NonNullable<
+  Awaited<ReturnType<typeof reportOrthodoxPlace>>
+>;
+export type ReportOrthodoxPlaceMutationBody =
+  BodyType<OrthodoxPlaceReportInput>;
+export type ReportOrthodoxPlaceMutationError = ErrorType<
+  | BadRequestResponse
+  | NotFoundResponse
+  | TooManyRequestsResponse
+  | DatabaseUnavailableResponse
+>;
+
+/**
+ * @summary Report incorrect details for a directory listing
+ */
+export const useReportOrthodoxPlace = <
+  TError = ErrorType<
+    | BadRequestResponse
+    | NotFoundResponse
+    | TooManyRequestsResponse
+    | DatabaseUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof reportOrthodoxPlace>>,
+    TError,
+    { placeId: string; data: BodyType<OrthodoxPlaceReportInput> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof reportOrthodoxPlace>>,
+  TError,
+  { placeId: string; data: BodyType<OrthodoxPlaceReportInput> },
+  TContext
+> => {
+  return useMutation(getReportOrthodoxPlaceMutationOptions(options));
 };
 
 export const getCreateAdminSessionUrl = () => {
@@ -2191,6 +2412,558 @@ export const useArchiveAdminSaint = <
   TContext
 > => {
   return useMutation(getArchiveAdminSaintMutationOptions(options));
+};
+
+export const getListAdminOrthodoxPlacesUrl = () => {
+  return `/api/admin/places`;
+};
+
+/**
+ * @summary List active and retired Orthodox place records
+ */
+export const listAdminOrthodoxPlaces = async (
+  options?: Parameters<typeof customFetch>[1],
+): Promise<AdminOrthodoxPlace[]> => {
+  return customFetch<AdminOrthodoxPlace[]>(getListAdminOrthodoxPlacesUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListAdminOrthodoxPlacesQueryKey = () => {
+  return [`/api/admin/places`] as const;
+};
+
+export const getListAdminOrthodoxPlacesQueryOptions = <
+  TData = Awaited<ReturnType<typeof listAdminOrthodoxPlaces>>,
+  TError = ErrorType<UnauthorizedResponse | DatabaseUnavailableResponse>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof listAdminOrthodoxPlaces>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getListAdminOrthodoxPlacesQueryKey();
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof listAdminOrthodoxPlaces>>
+  > = ({ signal }) => listAdminOrthodoxPlaces({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listAdminOrthodoxPlaces>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type ListAdminOrthodoxPlacesQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listAdminOrthodoxPlaces>>
+>;
+export type ListAdminOrthodoxPlacesQueryError = ErrorType<
+  UnauthorizedResponse | DatabaseUnavailableResponse
+>;
+
+/**
+ * @summary List active and retired Orthodox place records
+ */
+
+export function useListAdminOrthodoxPlaces<
+  TData = Awaited<ReturnType<typeof listAdminOrthodoxPlaces>>,
+  TError = ErrorType<UnauthorizedResponse | DatabaseUnavailableResponse>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof listAdminOrthodoxPlaces>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getListAdminOrthodoxPlacesQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getCreateAdminOrthodoxPlaceUrl = () => {
+  return `/api/admin/places`;
+};
+
+/**
+ * @summary Add an Orthodox place record
+ */
+export const createAdminOrthodoxPlace = async (
+  adminOrthodoxPlaceInput: AdminOrthodoxPlaceInput,
+  options?: Parameters<typeof customFetch>[1],
+): Promise<AdminOrthodoxPlace> => {
+  return customFetch<AdminOrthodoxPlace>(getCreateAdminOrthodoxPlaceUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(adminOrthodoxPlaceInput),
+  });
+};
+
+export const getCreateAdminOrthodoxPlaceMutationOptions = <
+  TError = ErrorType<
+    BadRequestResponse | UnauthorizedResponse | DatabaseUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createAdminOrthodoxPlace>>,
+    TError,
+    { data: BodyType<AdminOrthodoxPlaceInput> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createAdminOrthodoxPlace>>,
+  TError,
+  { data: BodyType<AdminOrthodoxPlaceInput> },
+  TContext
+> => {
+  const mutationKey = ["createAdminOrthodoxPlace"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createAdminOrthodoxPlace>>,
+    { data: BodyType<AdminOrthodoxPlaceInput> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return createAdminOrthodoxPlace(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CreateAdminOrthodoxPlaceMutationResult = NonNullable<
+  Awaited<ReturnType<typeof createAdminOrthodoxPlace>>
+>;
+export type CreateAdminOrthodoxPlaceMutationBody =
+  BodyType<AdminOrthodoxPlaceInput>;
+export type CreateAdminOrthodoxPlaceMutationError = ErrorType<
+  BadRequestResponse | UnauthorizedResponse | DatabaseUnavailableResponse
+>;
+
+/**
+ * @summary Add an Orthodox place record
+ */
+export const useCreateAdminOrthodoxPlace = <
+  TError = ErrorType<
+    BadRequestResponse | UnauthorizedResponse | DatabaseUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createAdminOrthodoxPlace>>,
+    TError,
+    { data: BodyType<AdminOrthodoxPlaceInput> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof createAdminOrthodoxPlace>>,
+  TError,
+  { data: BodyType<AdminOrthodoxPlaceInput> },
+  TContext
+> => {
+  return useMutation(getCreateAdminOrthodoxPlaceMutationOptions(options));
+};
+
+export const getUpdateAdminOrthodoxPlaceUrl = (id: string) => {
+  return `/api/admin/places/${id}`;
+};
+
+/**
+ * @summary Update a place record
+ */
+export const updateAdminOrthodoxPlace = async (
+  id: string,
+  adminOrthodoxPlaceInput: AdminOrthodoxPlaceInput,
+  options?: Parameters<typeof customFetch>[1],
+): Promise<AdminOrthodoxPlace> => {
+  return customFetch<AdminOrthodoxPlace>(getUpdateAdminOrthodoxPlaceUrl(id), {
+    ...options,
+    method: "PUT",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(adminOrthodoxPlaceInput),
+  });
+};
+
+export const getUpdateAdminOrthodoxPlaceMutationOptions = <
+  TError = ErrorType<
+    | BadRequestResponse
+    | UnauthorizedResponse
+    | NotFoundResponse
+    | DatabaseUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateAdminOrthodoxPlace>>,
+    TError,
+    { id: string; data: BodyType<AdminOrthodoxPlaceInput> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof updateAdminOrthodoxPlace>>,
+  TError,
+  { id: string; data: BodyType<AdminOrthodoxPlaceInput> },
+  TContext
+> => {
+  const mutationKey = ["updateAdminOrthodoxPlace"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof updateAdminOrthodoxPlace>>,
+    { id: string; data: BodyType<AdminOrthodoxPlaceInput> }
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return updateAdminOrthodoxPlace(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UpdateAdminOrthodoxPlaceMutationResult = NonNullable<
+  Awaited<ReturnType<typeof updateAdminOrthodoxPlace>>
+>;
+export type UpdateAdminOrthodoxPlaceMutationBody =
+  BodyType<AdminOrthodoxPlaceInput>;
+export type UpdateAdminOrthodoxPlaceMutationError = ErrorType<
+  | BadRequestResponse
+  | UnauthorizedResponse
+  | NotFoundResponse
+  | DatabaseUnavailableResponse
+>;
+
+/**
+ * @summary Update a place record
+ */
+export const useUpdateAdminOrthodoxPlace = <
+  TError = ErrorType<
+    | BadRequestResponse
+    | UnauthorizedResponse
+    | NotFoundResponse
+    | DatabaseUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateAdminOrthodoxPlace>>,
+    TError,
+    { id: string; data: BodyType<AdminOrthodoxPlaceInput> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof updateAdminOrthodoxPlace>>,
+  TError,
+  { id: string; data: BodyType<AdminOrthodoxPlaceInput> },
+  TContext
+> => {
+  return useMutation(getUpdateAdminOrthodoxPlaceMutationOptions(options));
+};
+
+export const getRetireAdminOrthodoxPlaceUrl = (id: string) => {
+  return `/api/admin/places/${id}`;
+};
+
+/**
+ * @summary Retire a place record without deleting its reports
+ */
+export const retireAdminOrthodoxPlace = async (
+  id: string,
+  options?: Parameters<typeof customFetch>[1],
+): Promise<void> => {
+  return customFetch<void>(getRetireAdminOrthodoxPlaceUrl(id), {
+    ...options,
+    method: "DELETE",
+  });
+};
+
+export const getRetireAdminOrthodoxPlaceMutationOptions = <
+  TError = ErrorType<
+    UnauthorizedResponse | NotFoundResponse | DatabaseUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof retireAdminOrthodoxPlace>>,
+    TError,
+    { id: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof retireAdminOrthodoxPlace>>,
+  TError,
+  { id: string },
+  TContext
+> => {
+  const mutationKey = ["retireAdminOrthodoxPlace"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof retireAdminOrthodoxPlace>>,
+    { id: string }
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return retireAdminOrthodoxPlace(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type RetireAdminOrthodoxPlaceMutationResult = NonNullable<
+  Awaited<ReturnType<typeof retireAdminOrthodoxPlace>>
+>;
+
+export type RetireAdminOrthodoxPlaceMutationError = ErrorType<
+  UnauthorizedResponse | NotFoundResponse | DatabaseUnavailableResponse
+>;
+
+/**
+ * @summary Retire a place record without deleting its reports
+ */
+export const useRetireAdminOrthodoxPlace = <
+  TError = ErrorType<
+    UnauthorizedResponse | NotFoundResponse | DatabaseUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof retireAdminOrthodoxPlace>>,
+    TError,
+    { id: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof retireAdminOrthodoxPlace>>,
+  TError,
+  { id: string },
+  TContext
+> => {
+  return useMutation(getRetireAdminOrthodoxPlaceMutationOptions(options));
+};
+
+export const getListAdminOrthodoxPlaceReportsUrl = () => {
+  return `/api/admin/place-reports`;
+};
+
+/**
+ * @summary List reports submitted for Orthodox place records
+ */
+export const listAdminOrthodoxPlaceReports = async (
+  options?: Parameters<typeof customFetch>[1],
+): Promise<AdminOrthodoxPlaceReport[]> => {
+  return customFetch<AdminOrthodoxPlaceReport[]>(
+    getListAdminOrthodoxPlaceReportsUrl(),
+    {
+      ...options,
+      method: "GET",
+    },
+  );
+};
+
+export const getListAdminOrthodoxPlaceReportsQueryKey = () => {
+  return [`/api/admin/place-reports`] as const;
+};
+
+export const getListAdminOrthodoxPlaceReportsQueryOptions = <
+  TData = Awaited<ReturnType<typeof listAdminOrthodoxPlaceReports>>,
+  TError = ErrorType<UnauthorizedResponse | DatabaseUnavailableResponse>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof listAdminOrthodoxPlaceReports>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getListAdminOrthodoxPlaceReportsQueryKey();
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof listAdminOrthodoxPlaceReports>>
+  > = ({ signal }) =>
+    listAdminOrthodoxPlaceReports({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listAdminOrthodoxPlaceReports>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type ListAdminOrthodoxPlaceReportsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listAdminOrthodoxPlaceReports>>
+>;
+export type ListAdminOrthodoxPlaceReportsQueryError = ErrorType<
+  UnauthorizedResponse | DatabaseUnavailableResponse
+>;
+
+/**
+ * @summary List reports submitted for Orthodox place records
+ */
+
+export function useListAdminOrthodoxPlaceReports<
+  TData = Awaited<ReturnType<typeof listAdminOrthodoxPlaceReports>>,
+  TError = ErrorType<UnauthorizedResponse | DatabaseUnavailableResponse>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof listAdminOrthodoxPlaceReports>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getListAdminOrthodoxPlaceReportsQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getReviewAdminOrthodoxPlaceReportUrl = (id: string) => {
+  return `/api/admin/place-reports/${id}`;
+};
+
+/**
+ * @summary Update a place report review status
+ */
+export const reviewAdminOrthodoxPlaceReport = async (
+  id: string,
+  adminOrthodoxPlaceReportUpdate: AdminOrthodoxPlaceReportUpdate,
+  options?: Parameters<typeof customFetch>[1],
+): Promise<AdminOrthodoxPlaceReport> => {
+  return customFetch<AdminOrthodoxPlaceReport>(
+    getReviewAdminOrthodoxPlaceReportUrl(id),
+    {
+      ...options,
+      method: "PATCH",
+      headers: { "Content-Type": "application/json", ...options?.headers },
+      body: JSON.stringify(adminOrthodoxPlaceReportUpdate),
+    },
+  );
+};
+
+export const getReviewAdminOrthodoxPlaceReportMutationOptions = <
+  TError = ErrorType<
+    | BadRequestResponse
+    | UnauthorizedResponse
+    | NotFoundResponse
+    | DatabaseUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof reviewAdminOrthodoxPlaceReport>>,
+    TError,
+    { id: string; data: BodyType<AdminOrthodoxPlaceReportUpdate> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof reviewAdminOrthodoxPlaceReport>>,
+  TError,
+  { id: string; data: BodyType<AdminOrthodoxPlaceReportUpdate> },
+  TContext
+> => {
+  const mutationKey = ["reviewAdminOrthodoxPlaceReport"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof reviewAdminOrthodoxPlaceReport>>,
+    { id: string; data: BodyType<AdminOrthodoxPlaceReportUpdate> }
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return reviewAdminOrthodoxPlaceReport(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ReviewAdminOrthodoxPlaceReportMutationResult = NonNullable<
+  Awaited<ReturnType<typeof reviewAdminOrthodoxPlaceReport>>
+>;
+export type ReviewAdminOrthodoxPlaceReportMutationBody =
+  BodyType<AdminOrthodoxPlaceReportUpdate>;
+export type ReviewAdminOrthodoxPlaceReportMutationError = ErrorType<
+  | BadRequestResponse
+  | UnauthorizedResponse
+  | NotFoundResponse
+  | DatabaseUnavailableResponse
+>;
+
+/**
+ * @summary Update a place report review status
+ */
+export const useReviewAdminOrthodoxPlaceReport = <
+  TError = ErrorType<
+    | BadRequestResponse
+    | UnauthorizedResponse
+    | NotFoundResponse
+    | DatabaseUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof reviewAdminOrthodoxPlaceReport>>,
+    TError,
+    { id: string; data: BodyType<AdminOrthodoxPlaceReportUpdate> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof reviewAdminOrthodoxPlaceReport>>,
+  TError,
+  { id: string; data: BodyType<AdminOrthodoxPlaceReportUpdate> },
+  TContext
+> => {
+  return useMutation(getReviewAdminOrthodoxPlaceReportMutationOptions(options));
 };
 
 export const getListAdminFastingGuidanceUrl = (
@@ -3768,6 +4541,186 @@ export function useGetSynaxarionHomepage<
   },
 ): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
   const queryOptions = getGetSynaxarionHomepageQueryOptions(params, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getGetSynaxarionDailyGospelUrl = (
+  params?: GetSynaxarionDailyGospelParams,
+) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : String(value));
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/synaxarion/daily-gospel?${stringifiedParams}`
+    : `/api/synaxarion/daily-gospel`;
+};
+
+/**
+ * @summary Get the full daily Gospel passage from Orthodox Jordan
+ */
+export const getSynaxarionDailyGospel = async (
+  params?: GetSynaxarionDailyGospelParams,
+  options?: Parameters<typeof customFetch>[1],
+): Promise<DailyGospelReading | null> => {
+  return customFetch<DailyGospelReading | null>(
+    getGetSynaxarionDailyGospelUrl(params),
+    {
+      ...options,
+      method: "GET",
+    },
+  );
+};
+
+export const getGetSynaxarionDailyGospelQueryKey = (
+  params?: GetSynaxarionDailyGospelParams,
+) => {
+  return [`/api/synaxarion/daily-gospel`, ...(params ? [params] : [])] as const;
+};
+
+export const getGetSynaxarionDailyGospelQueryOptions = <
+  TData = Awaited<ReturnType<typeof getSynaxarionDailyGospel>>,
+  TError = ErrorType<unknown>,
+>(
+  params?: GetSynaxarionDailyGospelParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getSynaxarionDailyGospel>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getGetSynaxarionDailyGospelQueryKey(params);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getSynaxarionDailyGospel>>
+  > = ({ signal }) =>
+    getSynaxarionDailyGospel(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getSynaxarionDailyGospel>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetSynaxarionDailyGospelQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getSynaxarionDailyGospel>>
+>;
+export type GetSynaxarionDailyGospelQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Get the full daily Gospel passage from Orthodox Jordan
+ */
+
+export function useGetSynaxarionDailyGospel<
+  TData = Awaited<ReturnType<typeof getSynaxarionDailyGospel>>,
+  TError = ErrorType<unknown>,
+>(
+  params?: GetSynaxarionDailyGospelParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getSynaxarionDailyGospel>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetSynaxarionDailyGospelQueryOptions(params, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getGetSynaxarionDailyGospelAudioUrl = () => {
+  return `/api/synaxarion/daily-gospel/audio`;
+};
+
+/**
+ * @summary Generate or retrieve spoken audio for the daily Gospel
+ */
+export const getSynaxarionDailyGospelAudio = async (
+  options?: Parameters<typeof customFetch>[1],
+): Promise<Blob> => {
+  return customFetch<Blob>(getGetSynaxarionDailyGospelAudioUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetSynaxarionDailyGospelAudioQueryKey = () => {
+  return [`/api/synaxarion/daily-gospel/audio`] as const;
+};
+
+export const getGetSynaxarionDailyGospelAudioQueryOptions = <
+  TData = Awaited<ReturnType<typeof getSynaxarionDailyGospelAudio>>,
+  TError = ErrorType<Problem>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getSynaxarionDailyGospelAudio>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getGetSynaxarionDailyGospelAudioQueryKey();
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getSynaxarionDailyGospelAudio>>
+  > = ({ signal }) =>
+    getSynaxarionDailyGospelAudio({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getSynaxarionDailyGospelAudio>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetSynaxarionDailyGospelAudioQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getSynaxarionDailyGospelAudio>>
+>;
+export type GetSynaxarionDailyGospelAudioQueryError = ErrorType<Problem>;
+
+/**
+ * @summary Generate or retrieve spoken audio for the daily Gospel
+ */
+
+export function useGetSynaxarionDailyGospelAudio<
+  TData = Awaited<ReturnType<typeof getSynaxarionDailyGospelAudio>>,
+  TError = ErrorType<Problem>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getSynaxarionDailyGospelAudio>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetSynaxarionDailyGospelAudioQueryOptions(options);
 
   const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
     queryKey: QueryKey;

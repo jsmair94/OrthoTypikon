@@ -27,6 +27,8 @@ tags:
     description: Saints and commemorations
   - name: learning
     description: Learning and liturgical dictionary
+  - name: places
+    description: Verified Orthodox places directory
 paths:
   /healthz:
     get:
@@ -229,6 +231,77 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "404":
           $ref: "#/components/responses/NotFound"
+  /places/nearby:
+    get:
+      operationId: listNearbyOrthodoxPlaces
+      tags:
+        - places
+      summary: Find active Orthodox places near a coordinate
+      parameters:
+        - name: latitude
+          in: query
+          required: true
+          schema:
+            type: number
+            minimum: -90
+            maximum: 90
+        - name: longitude
+          in: query
+          required: true
+          schema:
+            type: number
+            minimum: -180
+            maximum: 180
+        - name: radiusKm
+          in: query
+          required: false
+          schema:
+            type: number
+            minimum: 1
+            maximum: 100
+            default: 25
+      responses:
+        "200":
+          description: Nearby active directory listings, closest first
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/NearbyOrthodoxPlace"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "503":
+          $ref: "#/components/responses/DatabaseUnavailable"
+  /places/{placeId}/reports:
+    post:
+      operationId: reportOrthodoxPlace
+      tags:
+        - places
+      summary: Report incorrect details for a directory listing
+      parameters:
+        - $ref: "#/components/parameters/PlaceId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OrthodoxPlaceReportInput"
+      responses:
+        "201":
+          description: Report received
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrthodoxPlaceReportReceipt"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+        "503":
+          $ref: "#/components/responses/DatabaseUnavailable"
   /admin/session:
     post:
       operationId: createAdminSession
@@ -581,6 +654,160 @@ paths:
       responses:
         "204":
           description: Archived
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "503":
+          $ref: "#/components/responses/DatabaseUnavailable"
+  /admin/places:
+    get:
+      operationId: listAdminOrthodoxPlaces
+      tags:
+        - admin
+        - places
+      summary: List active and retired Orthodox place records
+      security:
+        - adminBearerAuth: []
+      responses:
+        "200":
+          description: Orthodox place records
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AdminOrthodoxPlace"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "503":
+          $ref: "#/components/responses/DatabaseUnavailable"
+    post:
+      operationId: createAdminOrthodoxPlace
+      tags:
+        - admin
+        - places
+      summary: Add an Orthodox place record
+      security:
+        - adminBearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AdminOrthodoxPlaceInput"
+      responses:
+        "201":
+          description: Created place record
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminOrthodoxPlace"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "503":
+          $ref: "#/components/responses/DatabaseUnavailable"
+  /admin/places/{id}:
+    put:
+      operationId: updateAdminOrthodoxPlace
+      tags:
+        - admin
+        - places
+      summary: Update a place record
+      security:
+        - adminBearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/AdminContentId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AdminOrthodoxPlaceInput"
+      responses:
+        "200":
+          description: Updated place record
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminOrthodoxPlace"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "503":
+          $ref: "#/components/responses/DatabaseUnavailable"
+    delete:
+      operationId: retireAdminOrthodoxPlace
+      tags:
+        - admin
+        - places
+      summary: Retire a place record without deleting its reports
+      security:
+        - adminBearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/AdminContentId"
+      responses:
+        "204":
+          description: Place retired
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "503":
+          $ref: "#/components/responses/DatabaseUnavailable"
+  /admin/place-reports:
+    get:
+      operationId: listAdminOrthodoxPlaceReports
+      tags:
+        - admin
+        - places
+      summary: List reports submitted for Orthodox place records
+      security:
+        - adminBearerAuth: []
+      responses:
+        "200":
+          description: Place report queue
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AdminOrthodoxPlaceReport"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "503":
+          $ref: "#/components/responses/DatabaseUnavailable"
+  /admin/place-reports/{id}:
+    patch:
+      operationId: reviewAdminOrthodoxPlaceReport
+      tags:
+        - admin
+        - places
+      summary: Update a place report review status
+      security:
+        - adminBearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/AdminContentId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AdminOrthodoxPlaceReportUpdate"
+      responses:
+        "200":
+          description: Reviewed place report
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminOrthodoxPlaceReport"
+        "400":
+          $ref: "#/components/responses/BadRequest"
         "401":
           $ref: "#/components/responses/Unauthorized"
         "404":
@@ -989,6 +1216,43 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Problem"
+  /synaxarion/daily-gospel:
+    get:
+      operationId: getSynaxarionDailyGospel
+      tags:
+        - synaxarion
+      summary: Get the full daily Gospel passage from Orthodox Jordan
+      parameters:
+        - $ref: "#/components/parameters/SynaxarionLocaleQuery"
+      responses:
+        "200":
+          description: The daily Gospel reading, or null when the source is unavailable
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: "#/components/schemas/DailyGospelReading"
+                  - type: "null"
+  /synaxarion/daily-gospel/audio:
+    get:
+      operationId: getSynaxarionDailyGospelAudio
+      tags:
+        - synaxarion
+      summary: Generate or retrieve spoken audio for the daily Gospel
+      responses:
+        "200":
+          description: MP3 audio of the Arabic Gospel reading
+          content:
+            audio/mpeg:
+              schema:
+                type: string
+                format: binary
+        "503":
+          description: The daily reading or speech service is unavailable
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Problem"
   /calendar:
     get:
       operationId: listCalendarByMonth
@@ -1278,6 +1542,14 @@ components:
         minimum: 1
         maximum: 50
         default: 25
+    PlaceId:
+      name: placeId
+      in: path
+      required: true
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 120
   responses:
     BadRequest:
       description: Invalid request
@@ -1316,6 +1588,228 @@ components:
           schema:
             $ref: "#/components/schemas/Problem"
   schemas:
+    OrthodoxPlaceCategory:
+      type: string
+      enum:
+        - church
+        - monastery
+        - school
+    OrthodoxPlaceStatus:
+      type: string
+      enum:
+        - active
+        - retired
+    OrthodoxPlaceReportStatus:
+      type: string
+      enum:
+        - open
+        - reviewed
+        - resolved
+    NearbyOrthodoxPlace:
+      type: object
+      additionalProperties: false
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        category:
+          $ref: "#/components/schemas/OrthodoxPlaceCategory"
+        jurisdiction:
+          type: string
+        latitude:
+          type: number
+        longitude:
+          type: number
+        distanceKm:
+          type: number
+        address:
+          type: string
+        sourceName:
+          type: string
+        sourceUrl:
+          type: ["string", "null"]
+        verificationDetails:
+          type: string
+        isVerified:
+          type: boolean
+      required:
+        - id
+        - name
+        - category
+        - jurisdiction
+        - latitude
+        - longitude
+        - distanceKm
+        - address
+        - sourceName
+        - sourceUrl
+        - verificationDetails
+        - isVerified
+    OrthodoxPlaceReportInput:
+      type: object
+      additionalProperties: false
+      properties:
+        details:
+          type: string
+          minLength: 5
+          maxLength: 1000
+      required:
+        - details
+    OrthodoxPlaceReportReceipt:
+      type: object
+      additionalProperties: false
+      properties:
+        id:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - createdAt
+    AdminOrthodoxPlace:
+      type: object
+      additionalProperties: false
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        category:
+          $ref: "#/components/schemas/OrthodoxPlaceCategory"
+        jurisdiction:
+          type: string
+        latitude:
+          type: number
+        longitude:
+          type: number
+        address:
+          type: string
+        sourceName:
+          type: string
+        sourceUrl:
+          type: ["string", "null"]
+        verificationDetails:
+          type: string
+        isVerified:
+          type: boolean
+        verifiedAt:
+          type: ["string", "null"]
+          format: date-time
+        status:
+          $ref: "#/components/schemas/OrthodoxPlaceStatus"
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - name
+        - category
+        - jurisdiction
+        - latitude
+        - longitude
+        - address
+        - sourceName
+        - sourceUrl
+        - verificationDetails
+        - isVerified
+        - verifiedAt
+        - status
+        - createdAt
+        - updatedAt
+    AdminOrthodoxPlaceInput:
+      type: object
+      additionalProperties: false
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 200
+        category:
+          $ref: "#/components/schemas/OrthodoxPlaceCategory"
+        jurisdiction:
+          type: string
+          minLength: 1
+          maxLength: 200
+        latitude:
+          type: number
+          minimum: -90
+          maximum: 90
+        longitude:
+          type: number
+          minimum: -180
+          maximum: 180
+        address:
+          type: string
+          minLength: 1
+          maxLength: 500
+        sourceName:
+          type: string
+          minLength: 1
+          maxLength: 200
+        sourceUrl:
+          type: ["string", "null"]
+          maxLength: 1000
+        verificationDetails:
+          type: string
+          minLength: 1
+          maxLength: 2000
+        isVerified:
+          type: boolean
+        status:
+          $ref: "#/components/schemas/OrthodoxPlaceStatus"
+      required:
+        - name
+        - category
+        - jurisdiction
+        - latitude
+        - longitude
+        - address
+        - sourceName
+        - sourceUrl
+        - verificationDetails
+        - isVerified
+        - status
+    AdminOrthodoxPlaceReport:
+      type: object
+      additionalProperties: false
+      properties:
+        id:
+          type: string
+        placeId:
+          type: string
+        placeName:
+          type: string
+        details:
+          type: string
+        status:
+          $ref: "#/components/schemas/OrthodoxPlaceReportStatus"
+        createdAt:
+          type: string
+          format: date-time
+        reviewedAt:
+          type: ["string", "null"]
+          format: date-time
+      required:
+        - id
+        - placeId
+        - placeName
+        - details
+        - status
+        - createdAt
+        - reviewedAt
+    AdminOrthodoxPlaceReportUpdate:
+      type: object
+      additionalProperties: false
+      properties:
+        status:
+          $ref: "#/components/schemas/OrthodoxPlaceReportStatus"
+      required:
+        - status
     HealthStatus:
       type: object
       properties:
@@ -1663,6 +2157,20 @@ components:
         - saints
         - fasting
         - relatedReading
+    DailyGospelReading:
+      type: object
+      additionalProperties: false
+      properties:
+        title:
+          type: string
+        text:
+          type: string
+        sourceUrl:
+          type: string
+      required:
+        - title
+        - text
+        - sourceUrl
     SynaxarionHomepagePayload:
       type: object
       additionalProperties: false

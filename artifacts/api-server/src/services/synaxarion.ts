@@ -1,9 +1,12 @@
 const ORTHODOX_JORDAN_HOME = "https://orthodoxjo.tv/";
 const ORTHODOX_JORDAN_HOME_API =
   "https://orthodoxjo.tv/wp-json/wp/v2/pages/32376?_fields=content,link,modified";
+const ORTHODOX_JORDAN_DAILY_GOSPEL =
+  "https://orthodoxjo.tv/%d8%b1%d8%b3%d8%a7%d9%84%d8%a9-%d9%88-%d8%a5%d9%86%d8%ac%d9%8a%d9%84-%d8%a7%d9%84%d9%8a%d9%88%d9%85/";
 const TRANSLATION_API = "https://translate.googleapis.com/translate_a/single";
 const CACHE_TTL_MS = 5 * 60 * 1000;
 const FALLBACK_TRANSLATION_TTL_MS = 60 * 1000;
+const DAILY_GOSPEL_FAILURE_CACHE_TTL_MS = 60 * 1000;
 
 type WordPressHomepage = {
   content?: { rendered?: string };
@@ -26,13 +29,27 @@ export type SynaxarionHomepagePayload = {
   calendarUrl: string | null;
 };
 
+export type DailyGospelReading = {
+  title: string;
+  text: string;
+  sourceUrl: string;
+};
+
 let cachedSourcePayload: {
   expiresAt: number;
   payload: SynaxarionHomepagePayload;
 } | null = null;
+let cachedDailyGospel: {
+  expiresAt: number;
+  payload: DailyGospelReading | null;
+} | null = null;
 const translatedPayloadCache = new Map<
   string,
   { expiresAt: number; payload: SynaxarionHomepagePayload }
+>();
+const translatedDailyGospelCache = new Map<
+  string,
+  { expiresAt: number; payload: DailyGospelReading }
 >();
 
 const decodeHtml = (value: string) =>
@@ -79,6 +96,39 @@ export function parseVerse(value: string) {
     text: verseText.replace(/^[«“”"‘’]+|[»“”"‘’]+$/g, "").trim(),
     reference: citationMatch?.[1].trim() ?? null,
   };
+}
+
+export function parseDailyGospelPage(html: string): DailyGospelReading {
+  const headingPattern =
+    /<h2\b[^>]*class=["'][^"']*\bdaily-message-title\b[^"']*["'][^>]*>([\s\S]*?)<\/h2>/gi;
+
+  for (const heading of html.matchAll(headingPattern)) {
+    const title = stripHtml(heading[1]);
+    if (!title.startsWith("الإنجيل")) continue;
+
+    const headingEnd = (heading.index ?? 0) + heading[0].length;
+    const followingMarkup = html.slice(headingEnd);
+    const nextHeading = followingMarkup.search(headingPattern);
+    const gospelItem = nextHeading < 0
+      ? followingMarkup
+      : followingMarkup.slice(0, nextHeading);
+    const bodyMatch = gospelItem.match(
+      /<div\b[^>]*class=["'][^"']*\bdaily-message-body\b[^"']*["'][^>]*>\s*<p\b[^>]*>([\s\S]*?)<\/p>/i,
+    );
+    const text = bodyMatch ? stripHtml(bodyMatch[1]) : "";
+
+    if (!text) {
+      throw new Error("Orthodox Jordan daily Gospel paragraph was not found.");
+    }
+
+    return {
+      title,
+      text,
+      sourceUrl: ORTHODOX_JORDAN_DAILY_GOSPEL,
+    };
+  }
+
+  throw new Error("Orthodox Jordan daily Gospel heading was not found.");
 }
 
 function parseHomepage(payload: WordPressHomepage): SynaxarionHomepagePayload {
@@ -162,6 +212,64 @@ async function fetchSourcePayload() {
   }
 }
 
+async function fetchDailyGospelPayload() {
+  if (cachedDailyGospel && cachedDailyGospel.expiresAt > Date.now()) {
+    return cachedDailyGospel.payload;
+  }
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 10_000);
+  try {
+    const response = await fetch(ORTHODOX_JORDAN_DAILY_GOSPEL, {
+      headers: { accept: "text/html" },
+      signal: controller.signal,
+    });
+    if (!response.ok) {
+      throw new Error(`Orthodox Jordan Gospel page returned HTTP ${response.status}.`);
+    }
+    const payload = parseDailyGospelPage(await response.text());
+    cachedDailyGospel = { expiresAt: Date.now() + CACHE_TTL_MS, payload };
+    return payload;
+  } catch (error) {
+    console.warn("Orthodox Jordan daily Gospel could not be loaded.", error);
+    cachedDailyGospel = {
+      expiresAt: Date.now() + DAILY_GOSPEL_FAILURE_CACHE_TTL_MS,
+      payload: null,
+    };
+    return null;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+export async function getDailyGospelReading(
+  locale: "ar" | "en" | "el" | "fr" = "ar",
+) {
+  const source = await fetchDailyGospelPayload();
+  if (!source || locale === "ar") return source;
+
+  const cacheKey = `${source.title}:${locale}`;
+  const cachedTranslation = translatedDailyGospelCache.get(cacheKey);
+  if (cachedTranslation && cachedTranslation.expiresAt > Date.now()) {
+    return cachedTranslation.payload;
+  }
+
+  try {
+    const translated = await translateDailyGospelPayload(source, locale);
+    translatedDailyGospelCache.set(cacheKey, {
+      expiresAt: Date.now() + CACHE_TTL_MS,
+      payload: translated,
+    });
+    return translated;
+  } catch {
+    translatedDailyGospelCache.set(cacheKey, {
+      expiresAt: Date.now() + FALLBACK_TRANSLATION_TTL_MS,
+      payload: source,
+    });
+    return source;
+  }
+}
+
 type SynaxarionTranslationLocale = "en" | "el" | "fr";
 type SynaxarionTextTranslator = (
   text: string,
@@ -229,6 +337,24 @@ export async function translateSynaxarionPayload(
         reference: verseReference,
       },
     };
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+export async function translateDailyGospelPayload(
+  source: DailyGospelReading,
+  locale: SynaxarionTranslationLocale,
+  translator: SynaxarionTextTranslator = translateText,
+) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 15_000);
+  try {
+    const [title, text] = await Promise.all([
+      translator(source.title, locale, controller.signal),
+      translator(source.text, locale, controller.signal),
+    ]);
+    return { ...source, title, text };
   } finally {
     clearTimeout(timeout);
   }

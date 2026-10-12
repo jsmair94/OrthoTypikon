@@ -22,6 +22,13 @@
       "when": 1790713480650,
       "tag": "0002_normalize_calendar_entry_saints_constraints",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1790879947260,
+      "tag": "0003_numerous_warlock",
+      "breakpoints": true
     }
   ]
 }

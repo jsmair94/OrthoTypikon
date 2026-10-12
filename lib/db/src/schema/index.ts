@@ -1,6 +1,7 @@
 import { boolean, integer, pgTable, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
 
 export * from "./content";
+export * from "./places";
 
 export const prayerRequestsTable = pgTable("prayer_requests", {
   id: text("id").primaryKey(),

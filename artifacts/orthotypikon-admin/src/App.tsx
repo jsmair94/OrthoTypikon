@@ -4,7 +4,7 @@ import { MutationCache, QueryCache, QueryClient, QueryClientProvider, useQueryCl
 import {
   Archive, BookOpen, CalendarDays, Check, ChevronRight, CircleAlert, Clock3, FileText,
   Flame, HeartHandshake, KeyRound, Languages, LayoutDashboard, LogOut, Menu, Pencil,
-  Plus, Search, ShieldCheck, Sparkles, Utensils, UsersRound, X, type LucideIcon,
+  MapPin, Plus, Search, ShieldCheck, Sparkles, Utensils, UsersRound, X, type LucideIcon,
 } from 'lucide-react';
 import {
   getGetAdminOverviewQueryKey, getListAdminCalendarEntriesQueryKey, getListAdminDailyContentQueryKey,
@@ -22,6 +22,7 @@ import {
   type AdminLearningEntry, type AdminSaint, type PrayerRequest,
 } from '@workspace/api-client-react';
 import NotFound from '@/pages/not-found';
+import OrthodoxPlacesPage from '@/pages/orthodox-places';
 
 type AnyRecord = Record<string, any>;
 const TOKEN_KEY = 'orthotypikon_admin_token';
@@ -36,6 +37,7 @@ const nav = [
   { href: '/saints', label: 'Saints', icon: Sparkles },
   { href: '/fasting', label: 'Fasting', icon: Flame },
   { href: '/learning', label: 'Learning', icon: BookOpen },
+  { href: '/places', label: 'Places', icon: MapPin },
   { href: '/moderation', label: 'Moderation', icon: HeartHandshake },
 ];
 
@@ -218,7 +220,7 @@ const queryClient = new QueryClient({
   mutationCache: new MutationCache({ onError: (error) => { if (is401(error)) clearAdminSession(queryClient); } }),
 });
 function Router() {
-  return <Switch><Route path="/" component={Overview} /><Route path="/daily-content" component={DailyContentPage} /><Route path="/calendar" component={CalendarPage} /><Route path="/saints" component={SaintsPage} /><Route path="/fasting" component={FastingPage} /><Route path="/learning" component={LearningPage} /><Route path="/moderation" component={ModerationPage} /><Route component={NotFound} /></Switch>;
+  return <Switch><Route path="/" component={Overview} /><Route path="/daily-content" component={DailyContentPage} /><Route path="/calendar" component={CalendarPage} /><Route path="/saints" component={SaintsPage} /><Route path="/fasting" component={FastingPage} /><Route path="/learning" component={LearningPage} /><Route path="/places" component={OrthodoxPlacesPage} /><Route path="/moderation" component={ModerationPage} /><Route component={NotFound} /></Switch>;
 }
 function App() {
   return <QueryClientProvider client={queryClient}><AuthGate><Router /></AuthGate></QueryClientProvider>;

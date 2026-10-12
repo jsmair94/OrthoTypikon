@@ -160,6 +160,7 @@ async function startApi(
   databaseUrl,
   distDirectory = path.join(apiDirectory, "dist"),
   requestedPort,
+  extraEnv = {},
 ) {
   const port = requestedPort ?? (await availablePort());
   const child = spawn(
@@ -172,10 +173,12 @@ async function startApi(
         DATABASE_URL: databaseUrl,
         NODE_ENV: "production",
         PORT: String(port),
+        ...extraEnv,
       },
       stdio: ["ignore", "pipe", "pipe"],
     },
   );
+  child.testPort = port;
   let output = "";
   child.stdout.setEncoding("utf8").on("data", (chunk) => {
     output = (output + chunk).slice(-20_000);
@@ -298,9 +301,13 @@ test("real PostgreSQL migrations preserve rows in fresh and pre-existing databas
     try {
       createDatabase(port, "fresh_upgrade");
       const freshDatabaseUrl = `postgres://postgres@127.0.0.1:${port}/fresh_upgrade`;
+      const adminTestEnvironment = {
+        MODERATOR_KEY: "places-integration-admin-key",
+        SESSION_SECRET: "places-integration-session-secret",
+      };
       const freshApiResults = await Promise.allSettled([
-        startApi(freshDatabaseUrl),
-        startApi(freshDatabaseUrl),
+        startApi(freshDatabaseUrl, undefined, undefined, adminTestEnvironment),
+        startApi(freshDatabaseUrl, undefined, undefined, adminTestEnvironment),
       ]);
       const freshApis = freshApiResults
         .filter((result) => result.status === "fulfilled")
@@ -311,6 +318,135 @@ test("real PostgreSQL migrations preserve rows in fresh and pre-existing databas
         );
         if (failedStartup?.status === "rejected") throw failedStartup.reason;
         assertMigrationRecorded(port, "fresh_upgrade");
+
+        const apiPort = freshApis[0].testPort;
+        const apiRequest = (route, options) =>
+          fetch(`http://127.0.0.1:${apiPort}/api${route}`, options);
+        const sessionResponse = await apiRequest("/admin/session", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ key: adminTestEnvironment.MODERATOR_KEY }),
+        });
+        assert.equal(sessionResponse.status, 200, "the admin test session should be created");
+        const { token } = await sessionResponse.json();
+        const adminHeaders = {
+          authorization: `Bearer ${token}`,
+          "content-type": "application/json",
+        };
+        const createPlace = async (input) => {
+          const response = await apiRequest("/admin/places", {
+            method: "POST",
+            headers: adminHeaders,
+            body: JSON.stringify(input),
+          });
+          if (response.status !== 201) {
+            assert.fail(`place creation failed: ${await response.text()}`);
+          }
+          return response.json();
+        };
+        const center = { latitude: 37.9838, longitude: 23.7275 };
+        const nearbyInput = {
+          name: "Holy Cross Parish",
+          category: "church",
+          jurisdiction: "Greek Orthodox Archdiocese",
+          ...center,
+          address: "1 Parish Road, Athens",
+          sourceName: "Parish website",
+          sourceUrl: "https://example.org/holy-cross",
+          verificationDetails: "Confirmed against the parish website.",
+          isVerified: true,
+          status: "active",
+        };
+        const nearbyPlace = await createPlace(nearbyInput);
+        await createPlace({
+          ...nearbyInput,
+          name: "St Elias Monastery",
+          category: "monastery",
+          latitude: center.latitude,
+          longitude: center.longitude + 0.15,
+          isVerified: false,
+        });
+        await createPlace({
+          ...nearbyInput,
+          name: "Retired Parish",
+          status: "retired",
+        });
+
+        const nearbyResponse = await apiRequest(
+          `/places/nearby?latitude=${center.latitude}&longitude=${center.longitude}&radiusKm=25`,
+        );
+        assert.equal(nearbyResponse.status, 200);
+        const nearbyPlaces = await nearbyResponse.json();
+        assert.deepEqual(
+          nearbyPlaces.map(({ name }) => name),
+          ["Holy Cross Parish", "St Elias Monastery"],
+          "nearby listings should exclude retired places and sort by distance",
+        );
+        assert.equal(nearbyPlaces[0].isVerified, true);
+        assert.ok(nearbyPlaces[0].distanceKm < nearbyPlaces[1].distanceKm);
+
+        const reportResponse = await apiRequest(
+          `/places/${encodeURIComponent(nearbyPlace.id)}/reports`,
+          {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({ details: "Entrance address is outdated." }),
+          },
+        );
+        assert.equal(reportResponse.status, 201);
+        const report = await reportResponse.json();
+        const reviewResponse = await apiRequest("/admin/place-reports", {
+          headers: adminHeaders,
+        });
+        assert.equal(reviewResponse.status, 200);
+        assert.deepEqual(
+          (await reviewResponse.json()).map(({ id, placeName, status }) => ({
+            id,
+            placeName,
+            status,
+          })),
+          [{ id: report.id, placeName: "Holy Cross Parish", status: "open" }],
+        );
+
+        const resolveResponse = await apiRequest(`/admin/place-reports/${report.id}`, {
+          method: "PATCH",
+          headers: adminHeaders,
+          body: JSON.stringify({ status: "resolved" }),
+        });
+        assert.equal(resolveResponse.status, 200);
+        assert.equal((await resolveResponse.json()).status, "resolved");
+
+        const retireResponse = await apiRequest(`/admin/places/${nearbyPlace.id}`, {
+          method: "DELETE",
+          headers: adminHeaders,
+        });
+        assert.equal(retireResponse.status, 204);
+        const afterRetirementResponse = await apiRequest(
+          `/places/nearby?latitude=${center.latitude}&longitude=${center.longitude}&radiusKm=25`,
+        );
+        assert.deepEqual(
+          (await afterRetirementResponse.json()).map(({ name }) => name),
+          ["St Elias Monastery"],
+        );
+
+        const restoreResponse = await apiRequest(`/admin/places/${nearbyPlace.id}`, {
+          method: "PUT",
+          headers: adminHeaders,
+          body: JSON.stringify({
+            ...nearbyInput,
+            name: "Holy Cross Community",
+          }),
+        });
+        assert.equal(restoreResponse.status, 200);
+        assert.ok((await restoreResponse.json()).verifiedAt);
+        const reportsAfterRetirement = await apiRequest("/admin/place-reports", {
+          headers: adminHeaders,
+        });
+        const preservedReport = (await reportsAfterRetirement.json())[0];
+        assert.equal(preservedReport.id, report.id);
+        assert.equal(preservedReport.placeName, "Holy Cross Community");
+        assert.equal(preservedReport.status, "resolved");
+
         assert.equal(
           psql(
             port,

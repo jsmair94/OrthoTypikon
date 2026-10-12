@@ -1,0 +1,28 @@
+kind = "web"
+previewPath = "/orthotypikon-companion/"
+title = "OrthoTypikon Web"
+description = "A public web companion to the OrthoTypikon mobile app for browsing daily Scripture, Orthodox calendar entries, saints, fasting guidance, and spiritual learning in Arabic, English, and French. It uses the same public content API as the mobile app and keeps editing tools in the separate admin panel."
+version = "1.0.0"
+id = "artifacts/orthotypikon-companion"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/orthotypikon-companion/" ]
+localPort = 25605
+
+[services.development]
+run = "pnpm --filter @workspace/orthotypikon-companion run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/orthotypikon-companion", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/orthotypikon-companion/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "25605"
+BASE_PATH = "/orthotypikon-companion/"
