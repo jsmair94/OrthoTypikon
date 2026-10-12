@@ -1,10 +1,13 @@
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { AppState, Platform, Pressable, ScrollView, StyleProp, StyleSheet, Text, View, ViewStyle } from 'react-native';
+import { useAudioPlayer, useAudioPlayerStatus } from 'expo-audio';
+import { Alert, AppState, Image, Linking, Modal, Platform, Pressable, ScrollView, Share, StyleProp, StyleSheet, Text, View, ViewStyle } from 'react-native';
 import { Circle, Line, Path, Rect, Svg } from 'react-native-svg';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type MutableRefObject } from 'react';
 import {
+  getGetSynaxarionDailyGospelQueryKey,
   getGetSynaxarionHomepageQueryKey,
+  useGetSynaxarionDailyGospel,
   useGetSynaxarionHomepage,
 } from '@workspace/api-client-react';
 import { useColors } from '@/hooks/useColors';
@@ -12,20 +15,14 @@ import { useI18n, usePreferences } from '@/hooks/usePreferences';
 import { useHymnPlayer } from '@/hooks/useHymnPlayer';
 import { dateKeyFromDate, getDailyWidgetContent } from '@/data/dailyWidget';
 import { getCalendarEntryForType } from '@/data/calendar2026';
-import { fetchSynaxarionFromSource } from '@/lib/synaxarionSource';
+import { fetchDailyGospelFromSource, fetchSynaxarionFromSource } from '@/lib/synaxarionSource';
 import { resolveHomeDailyContent } from '@/lib/homeDailyContent';
-import type { LibraryTopicKey } from '@/components/LibraryTopicArtwork';
-import { LibraryTopicImage } from '@/components/LibraryTopicImage';
 import { RegionalNewsSection } from '@/components/RegionalNewsSection';
 import { SynaxarionPreview } from '@/components/SynaxarionPreview';
+import { exploreItems } from '@/data/exploreItems';
 
-const exploreItems = [
-  { key: 'library', imageTopic: 'services', route: '/library', color: '#25394A' },
-  { key: 'prayer', imageTopic: 'spiritual', route: '/prayer', color: '#8C5948' },
-  { key: 'kitchen', imageTopic: 'family', route: '/fasting', color: '#55706B' },
-  { key: 'learn', imageTopic: 'patristics', route: '/learn', color: '#6C7C96' },
-  { key: 'pastoral', imageTopic: 'saints', route: '/pastoral', color: '#8C5948' },
-] as const;
+const DAILY_GOSPEL_SOURCE_URL =
+  'https://orthodoxjo.tv/%d8%b1%d8%b3%d8%a7%d9%84%d8%a9-%d9%88-%d8%a5%d9%86%d8%ac%d9%8a%d9%84-%d8%a7%d9%84%d9%8a%d9%88%d9%85/';
 
 type HomeIconName =
   | 'sun'
@@ -55,7 +52,8 @@ type HomeIconName =
   | 'share'
   | 'play'
   | 'pause'
-  | 'church';
+  | 'church'
+  | 'close';
 
 function HomeIcon({ name, color, size = 23, style }: { name: HomeIconName; color: string; size?: number; style?: StyleProp<ViewStyle> }) {
   const common = {
@@ -177,6 +175,8 @@ function HomeIcon({ name, color, size = 23, style }: { name: HomeIconName; color
         <>
           <Path d="M12 3v4M9.5 5h5M5 10l7-4 7 4v10H5V10ZM9 20v-5h6v5M7 10h10" {...common} />
         </>
+      ) : name === 'close' ? (
+        <Path d="m6 6 12 12M18 6 6 18" {...common} />
       ) : (
         <Path d={name === 'arrow-left' ? 'M19 12H5m7-7-7 7 7 7' : 'M5 12h14m-7-7 7 7-7 7'} {...common} />
       )}
@@ -201,6 +201,112 @@ function formatHomeDate(
   return `${weekdays[date.getDay()]}${separator} ${localizeNumber(day, language)} ${months[month - 1]} ${localizeNumber(year, language)}`;
 }
 
+function DailyGospelAudioControl({
+  sourceUrl,
+  stopPlayerRef,
+}: {
+  sourceUrl: string;
+  stopPlayerRef: MutableRefObject<(() => void) | null>;
+}) {
+  const colors = useColors();
+  const { t } = useI18n();
+  const player = useAudioPlayer(null, {
+    updateInterval: 250,
+    keepAudioSessionActive: true,
+  });
+  const audioStatus = useAudioPlayerStatus(player);
+  const sourceLoaded = useRef(false);
+  const isActiveRef = useRef(true);
+  const [isPreparing, setIsPreparing] = useState(false);
+  const [hasError, setHasError] = useState(false);
+
+  useEffect(() => {
+    isActiveRef.current = true;
+    stopPlayerRef.current = () => {
+      player.pause();
+      setIsPreparing(false);
+    };
+    return () => {
+      isActiveRef.current = false;
+      stopPlayerRef.current = null;
+    };
+  }, [player, stopPlayerRef]);
+
+  useEffect(() => {
+    if (audioStatus.playing) {
+      setIsPreparing(false);
+      setHasError(false);
+    } else if (audioStatus.playbackState.toLowerCase().includes('error')) {
+      setIsPreparing(false);
+      setHasError(true);
+    } else if (audioStatus.isLoaded && !audioStatus.isBuffering) {
+      setIsPreparing(false);
+    }
+  }, [audioStatus.isBuffering, audioStatus.isLoaded, audioStatus.playbackState, audioStatus.playing]);
+
+  const isLoading = isPreparing || audioStatus.isBuffering;
+  const label = hasError
+    ? t.home.gospelAudioError
+    : isLoading
+      ? t.home.gospelAudioLoading
+      : audioStatus.playing
+        ? t.home.gospelStop
+        : t.home.gospelListen;
+
+  const togglePlayback = async () => {
+    if (audioStatus.playing) {
+      player.pause();
+      return;
+    }
+
+    setHasError(false);
+    setIsPreparing(true);
+    try {
+      if (!sourceLoaded.current || hasError) {
+        player.replace({ uri: sourceUrl });
+        sourceLoaded.current = true;
+      }
+      if (
+        audioStatus.didJustFinish ||
+        (audioStatus.duration > 0 && audioStatus.currentTime >= audioStatus.duration)
+      ) {
+        await player.seekTo(0);
+      }
+      if (!isActiveRef.current) return;
+      player.play();
+    } catch {
+      setIsPreparing(false);
+      setHasError(true);
+    }
+  };
+
+  return (
+    <Pressable
+      testID="gospel-speech-toggle"
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      accessibilityState={{ disabled: isLoading, busy: isLoading }}
+      disabled={isLoading}
+      onPress={togglePlayback}
+      style={({ pressed }) => [
+        styles.gospelSpeakButton,
+        {
+          backgroundColor: colors.secondary,
+          borderColor: colors.border,
+          opacity: pressed ? 0.78 : 1,
+        },
+      ]}
+    >
+      <HomeIcon
+        name={audioStatus.playing ? 'pause' : 'play'}
+        size={18}
+        color={colors.primary}
+      />
+      <Text style={[styles.gospelSpeakText, { color: colors.primary }]}>{label}</Text>
+    </Pressable>
+  );
+}
+
 export default function HomeScreen() {
   const colors = useColors();
   const router = useRouter();
@@ -210,6 +316,9 @@ export default function HomeScreen() {
   const { isPlaying, isLoading, hasError, toggle } = useHymnPlayer();
   const libraryRailRef = useRef<ScrollView | null>(null);
   const [now, setNow] = useState(() => new Date());
+  const [dailyContentView, setDailyContentView] = useState<'verse' | 'gospel'>('verse');
+  const [gospelModalVisible, setGospelModalVisible] = useState(false);
+  const gospelAudioStopRef = useRef<(() => void) | null>(null);
   const webTopInset = 67;
   const offlineToday = getDailyWidgetContent(now, calendarType);
   const synaxarionParams = { locale: language };
@@ -223,6 +332,21 @@ export default function HomeScreen() {
         : {
             queryFn: ({ signal }: { signal: AbortSignal }) =>
               fetchSynaxarionFromSource(language, signal),
+          }),
+      staleTime: 5 * 60 * 1000,
+      retry: 1,
+      enabled: Platform.OS !== 'web' || Boolean(process.env.EXPO_PUBLIC_DOMAIN),
+    },
+  });
+  const dailyGospelParams = { locale: language };
+  const dailyGospelQuery = useGetSynaxarionDailyGospel(dailyGospelParams, {
+    query: {
+      queryKey: getGetSynaxarionDailyGospelQueryKey(dailyGospelParams),
+      ...(Platform.OS === 'web'
+        ? {}
+        : {
+            queryFn: ({ signal }: { signal: AbortSignal }) =>
+              fetchDailyGospelFromSource(language, signal),
           }),
       staleTime: 5 * 60 * 1000,
       retry: 1,
@@ -270,6 +394,68 @@ export default function HomeScreen() {
     occasionTitle: todayCardTitle,
     occasionDescription: todayCardDescription,
   });
+  const dailyGospel = dailyGospelQuery.data ?? null;
+  const dailyGospelAudioUrl = process.env.EXPO_PUBLIC_DOMAIN
+    ? `https://${process.env.EXPO_PUBLIC_DOMAIN}/api/synaxarion/daily-gospel/audio`
+    : '/api/synaxarion/daily-gospel/audio';
+  const shareDailyContent = async () => {
+    const isVerse = dailyContentView === 'verse';
+    if (!isVerse && !dailyGospel?.text) return;
+
+    const title = isVerse ? t.home.verseTab : dailyGospel?.title ?? t.home.gospelTab;
+    const message = isVerse
+      ? [title, homeDailyContent.verse, homeDailyContent.verseReference, 'OrthoTypikon']
+          .filter(Boolean)
+          .join('\n\n')
+      : [title, dailyGospel?.text, dailyGospel?.sourceUrl]
+          .filter(Boolean)
+          .join('\n\n');
+
+    try {
+      if (Platform.OS === 'web') {
+        const webNavigator =
+          typeof navigator !== 'undefined'
+            ? (navigator as typeof navigator & {
+                share?: (data: { title?: string; text?: string }) => Promise<void>;
+              })
+            : undefined;
+
+        if (webNavigator?.share) {
+          try {
+            await webNavigator.share({ title, text: message });
+            return;
+          } catch (error) {
+            if (error instanceof Error && error.name === 'AbortError') return;
+          }
+        }
+
+        if (webNavigator?.clipboard?.writeText) {
+          await webNavigator.clipboard.writeText(message);
+          Alert.alert(t.home.shareCopiedTitle, t.home.shareCopiedMessage);
+          return;
+        }
+
+        throw new Error('Browser sharing and clipboard are unavailable.');
+      }
+
+      await Share.share({ title, message });
+    } catch (error) {
+      if (error instanceof Error && error.name === 'AbortError') return;
+      Alert.alert(t.home.shareErrorTitle, t.home.shareErrorMessage);
+    }
+  };
+  const openDailyGospel = () => {
+    if (!dailyGospel?.text) {
+      void Linking.openURL(dailyGospel?.sourceUrl ?? DAILY_GOSPEL_SOURCE_URL)
+        .catch(() => router.push('/library'));
+      return;
+    }
+    setGospelModalVisible(true);
+  };
+  const closeGospelModal = () => {
+    gospelAudioStopRef.current?.();
+    setGospelModalVisible(false);
+  };
 
   return (
     <View style={[styles.root, { backgroundColor: colors.background }]}>
@@ -282,9 +468,12 @@ export default function HomeScreen() {
       >
         <View style={styles.header}>
           <View style={styles.identity}>
-            <View style={[styles.brandMark, { backgroundColor: colors.primary }]}>
-              <HomeIcon name="cross" size={20} color={colors.accent} />
-            </View>
+            <Image
+              source={require('../../assets/images/icon.png')}
+              accessibilityLabel="OrthoTypikon"
+              resizeMode="contain"
+              style={styles.brandMark}
+            />
             <View style={styles.identityCopy}>
               <Text style={[styles.brandName, { color: colors.foreground }]}>OrthoTypikon</Text>
               <Text style={[styles.eyebrow, { color: colors.mutedForeground }]}>{currentDate}</Text>
@@ -296,13 +485,47 @@ export default function HomeScreen() {
           </Pressable>
         </View>
 
-        <View style={styles.sectionHeading}>
-          <Text style={[styles.sectionTitle, { color: colors.foreground }]}>{todayVerseHeading}</Text>
-          <View style={styles.sectionActions}>
+        <View style={styles.dailySectionHeading}>
+          <View
+            style={[
+              styles.dailyTabs,
+              { backgroundColor: colors.card, borderColor: colors.border, flexDirection: language === 'ar' ? 'row-reverse' : 'row' },
+            ]}
+          >
+            <Pressable
+              testID="daily-verse-tab"
+              accessibilityRole="tab"
+              accessibilityState={{ selected: dailyContentView === 'verse' }}
+              onPress={() => setDailyContentView('verse')}
+              style={[
+                styles.dailyTab,
+                { backgroundColor: dailyContentView === 'verse' ? colors.primary : 'transparent' },
+              ]}
+            >
+              <Text style={[styles.dailyTabLabel, { color: dailyContentView === 'verse' ? colors.primaryForeground : colors.mutedForeground }]}>
+                {t.home.verseTab}
+              </Text>
+            </Pressable>
+            <Pressable
+              testID="daily-gospel-tab"
+              accessibilityRole="tab"
+              accessibilityState={{ selected: dailyContentView === 'gospel' }}
+              onPress={() => setDailyContentView('gospel')}
+              style={[
+                styles.dailyTab,
+                { backgroundColor: dailyContentView === 'gospel' ? colors.primary : 'transparent' },
+              ]}
+            >
+              <Text style={[styles.dailyTabLabel, { color: dailyContentView === 'gospel' ? colors.primaryForeground : colors.mutedForeground }]}>
+                {t.home.gospelTab}
+              </Text>
+            </Pressable>
+          </View>
+          <View style={styles.hymnActionRow}>
             <Pressable
               testID="morning-hymn-toggle"
               accessibilityRole="button"
-              accessibilityLabel={isPlaying ? t.hymn.stop : t.hymn.play}
+              accessibilityLabel={isPlaying ? t.hymn.stop : t.hymn.title}
               onPress={toggle}
               style={({ pressed }) => [
                 styles.hymnButton,
@@ -315,17 +538,74 @@ export default function HomeScreen() {
             >
               <HomeIcon name={isPlaying ? 'pause' : 'play'} size={14} color={isPlaying ? colors.primaryForeground : colors.primary} />
               <Text style={[styles.hymnButtonText, { color: isPlaying ? colors.primaryForeground : colors.primary }]}>
-                {isLoading ? t.hymn.loading : hasError ? t.hymn.retry : isPlaying ? t.hymn.stop : t.hymn.play}
+                {isLoading ? t.hymn.loading : hasError ? t.hymn.retry : isPlaying ? t.hymn.stop : t.hymn.title}
               </Text>
             </Pressable>
           </View>
         </View>
         <View style={[styles.verseCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
           <View style={[styles.verseAccent, { backgroundColor: colors.accent }]} />
-          <HomeIcon name="cross" size={72} color={colors.muted} style={styles.verseWatermark} />
-          <View style={styles.verseTop}><HomeIcon name="bookmark" size={17} color={colors.accent} /><Text style={[styles.verseLabel, { color: colors.mutedForeground }]}>{homeDailyContent.verseReference}</Text></View>
-          <Text style={[styles.verse, { color: colors.foreground }]}>{homeDailyContent.verse}</Text>
-          <View style={styles.verseBottom}><Text style={[styles.verseAuthor, { color: colors.mutedForeground }]}>{t.home.gospelOfJohn}</Text><Pressable testID="share-verse"><HomeIcon name="share" size={17} color={colors.primary} /></Pressable></View>
+          {dailyContentView === 'verse' ? (
+            <>
+              <View style={styles.verseTop}>
+                <HomeIcon name="bookmark" size={17} color={colors.accent} />
+                <Text style={[styles.verseLabel, { color: colors.mutedForeground }]}>{homeDailyContent.verseReference}</Text>
+              </View>
+                <Text numberOfLines={3} style={[styles.verse, { color: colors.foreground }]}>{homeDailyContent.verse}</Text>
+              <View style={styles.verseBottom}>
+                <Pressable
+                  testID="share-verse"
+                  accessibilityRole="button"
+                  accessibilityLabel={t.home.shareVerse}
+                  onPress={() => void shareDailyContent()}
+                  style={({ pressed }) => [styles.shareButton, { opacity: pressed ? 0.65 : 1 }]}
+                >
+                  <HomeIcon name="share" size={17} color={colors.primary} />
+                </Pressable>
+              </View>
+            </>
+          ) : (
+            <>
+              <View style={styles.verseTop}>
+                <HomeIcon name="book-open" size={17} color={colors.accent} />
+                  <Text numberOfLines={2} style={[styles.verseLabel, { color: colors.foreground }]}>
+                    {dailyGospel?.title ?? (dailyGospelQuery.isLoading ? t.home.gospelLoading : t.home.gospelUnavailable)}
+                </Text>
+              </View>
+                <Text numberOfLines={3} style={[styles.gospelPrompt, { color: colors.foreground }]}>
+                  {dailyGospel?.text ?? (dailyGospelQuery.isLoading ? t.home.gospelLoading : t.home.gospelUnavailable)}
+              </Text>
+              <View style={styles.gospelBottom}>
+                <Pressable
+                  testID="share-gospel"
+                  accessibilityRole="button"
+                  accessibilityLabel={t.home.shareGospel}
+                  accessibilityState={{ disabled: !dailyGospel?.text }}
+                  disabled={!dailyGospel?.text}
+                  onPress={() => void shareDailyContent()}
+                  style={({ pressed }) => [
+                    styles.shareButton,
+                    { opacity: !dailyGospel?.text ? 0.4 : pressed ? 0.65 : 1 },
+                  ]}
+                >
+                  <HomeIcon name="share" size={17} color={colors.primary} />
+                </Pressable>
+                <Pressable
+                  testID="open-daily-gospel"
+                  accessibilityRole={dailyGospel ? 'button' : 'link'}
+                  accessibilityLabel={dailyGospel ? t.home.gospelReadMore : t.home.gospelOpenSource}
+                  onPress={openDailyGospel}
+                  style={({ pressed }) => [
+                    styles.gospelAction,
+                    { backgroundColor: colors.secondary, borderColor: colors.border, opacity: pressed ? 0.76 : 1 },
+                  ]}
+                >
+                  <Text style={[styles.gospelActionLabel, { color: colors.primary }]}>{dailyGospel ? t.home.gospelReadMore : t.home.gospelOpenSource}</Text>
+                  <HomeIcon name={language === 'ar' ? 'arrow-left' : 'arrow-right'} size={16} color={colors.primary} />
+                </Pressable>
+              </View>
+            </>
+          )}
         </View>
 
         <SynaxarionPreview dailyContent={homeDailyContent} />
@@ -345,45 +625,98 @@ export default function HomeScreen() {
           contentContainerStyle={styles.libraryRail}
           style={styles.libraryRailScroll}
         >
-          {exploreItems.map((item, index) => (
-            <Pressable
-              key={item.key}
-              testID={`explore-${item.key}`}
-              onPress={() => router.push(item.route)}
-              style={({ pressed }) => [
-                styles.librarySection,
-                {
-                  backgroundColor: colors.card,
-                  borderColor: colors.border,
-                  opacity: pressed ? 0.76 : 1,
-                },
-              ]}
-            >
-              <View style={[styles.librarySectionArtwork, { backgroundColor: item.color }]}>
-                <LibraryTopicImage
-                  topic={item.imageTopic as LibraryTopicKey}
-                  resizeMode="contain"
-                  style={StyleSheet.absoluteFillObject}
-                />
-                <View style={styles.librarySectionShade} />
+          {Array.from({ length: Math.ceil(exploreItems.length / 2) }, (_, groupIndex) => {
+            const startIndex = groupIndex * 2;
+
+            return (
+              <View key={`explore-group-${groupIndex}`} style={styles.libraryRailGroup}>
+                {exploreItems.slice(startIndex, startIndex + 2).map((item, groupItemIndex) => (
+                  <Pressable
+                    key={item.key}
+                    testID={`explore-${item.key}`}
+                    accessibilityRole="button"
+                    accessibilityLabel={t.home.exploreItems[startIndex + groupItemIndex]}
+                    onPress={() => {
+                      if (item.key === 'prayers') {
+                        router.push({ pathname: '/library', params: { section: 'prayers' } });
+                        return;
+                      }
+                      router.push(item.route);
+                    }}
+                    style={({ pressed }) => [
+                      styles.librarySection,
+                      {
+                        backgroundColor: colors.card,
+                        borderColor: colors.border,
+                        opacity: pressed ? 0.76 : 1,
+                      },
+                    ]}
+                  >
+                    <View style={[styles.librarySectionArtwork, { backgroundColor: item.color }]}>
+                      {'imageSource' in item ? (
+                        <Image
+                          source={item.imageSource}
+                          resizeMode={item.imageResizeMode}
+                          style={styles.librarySectionImage}
+                        />
+                      ) : 'icon' in item ? (
+                        <HomeIcon name={item.icon} color={colors.primaryForeground} size={38} />
+                      ) : null}
+                    </View>
+                    <Text style={[styles.librarySectionLabel, { color: colors.foreground }]} numberOfLines={2}>
+                      {t.home.exploreItems[startIndex + groupItemIndex]}
+                    </Text>
+                  </Pressable>
+                ))}
               </View>
-              <Text style={[styles.librarySectionLabel, { color: colors.foreground }]} numberOfLines={2}>
-                {t.home.exploreItems[index]}
-              </Text>
-              <HomeIcon name={language === 'ar' ? 'arrow-left' : 'arrow-right'} size={16} color={colors.mutedForeground} />
-            </Pressable>
-          ))}
+            );
+          })}
         </ScrollView>
 
         <RegionalNewsSection />
 
-        <View style={styles.sectionHeading}><Text style={[styles.sectionTitle, { color: colors.foreground }]}>{t.home.todayReading}</Text><Pressable onPress={() => router.push('/library')}><Text style={[styles.link, { color: colors.primary }]}>{t.home.openGospel}</Text></Pressable></View>
-        <Pressable onPress={() => router.push('/library')} style={({ pressed }) => [styles.readingCard, { backgroundColor: colors.card, borderColor: colors.border, opacity: pressed ? 0.78 : 1 }]}>
-          <View style={[styles.playCircle, { backgroundColor: colors.secondary }]}><HomeIcon name="play" size={16} color={colors.primary} /></View>
-          <View style={{ flex: 1 }}><Text style={[styles.readingTitle, { color: colors.primary }]}>{t.home.gospelMatthew}</Text><Text style={[styles.readingMeta, { color: colors.mutedForeground }]}>{t.home.chapterDuration}</Text></View>
-          <HomeIcon name="arrow-left" size={20} color={colors.primary} />
-        </Pressable>
       </ScrollView>
+      <Modal
+        visible={gospelModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={closeGospelModal}
+        statusBarTranslucent
+      >
+        <View style={styles.gospelModalBackdrop}>
+          <View style={[styles.gospelModal, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <View style={styles.gospelModalHeader}>
+              <Text style={[styles.gospelModalTitle, { color: colors.foreground }]} numberOfLines={2}>
+                {dailyGospel?.title ?? t.home.gospelTab}
+              </Text>
+              <Pressable
+                testID="close-daily-gospel"
+                accessibilityRole="button"
+                accessibilityLabel={t.home.gospelClose}
+                onPress={closeGospelModal}
+                style={[styles.gospelModalClose, { backgroundColor: colors.secondary }]}
+              >
+                <HomeIcon name="close" size={18} color={colors.primary} />
+              </Pressable>
+            </View>
+            <ScrollView
+              style={styles.gospelModalScroll}
+              contentContainerStyle={styles.gospelModalTextContent}
+              showsVerticalScrollIndicator
+            >
+              <Text style={[styles.gospelFullText, { color: colors.foreground }]}>
+                {dailyGospel?.text ?? t.home.gospelUnavailable}
+              </Text>
+            </ScrollView>
+            {dailyGospel?.text && language === 'ar' ? (
+              <DailyGospelAudioControl
+                sourceUrl={dailyGospelAudioUrl}
+                stopPlayerRef={gospelAudioStopRef}
+              />
+            ) : null}
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -393,34 +726,48 @@ const styles = StyleSheet.create({
   content: { paddingHorizontal: 18, gap: 18 },
   header: { flexDirection: 'row-reverse', justifyContent: 'space-between', alignItems: 'center' },
   identity: { flexDirection: 'row-reverse', alignItems: 'center', gap: 11, flex: 1 },
-  brandMark: { width: 42, height: 42, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
+  brandMark: { width: 42, height: 42, borderRadius: 14, overflow: 'hidden' },
   identityCopy: { alignItems: 'flex-end', flex: 1 },
   brandName: { fontSize: 16, fontWeight: '700', letterSpacing: 0.2 },
   eyebrow: { fontSize: 11, fontWeight: '500', textAlign: 'right', marginTop: 3 },
-  hymnButton: { minHeight: 34, borderRadius: 17, borderWidth: 1, paddingHorizontal: 10, flexDirection: 'row-reverse', alignItems: 'center', gap: 6 },
-  hymnButtonText: { fontSize: 10, fontWeight: '800' },
+  hymnButton: { minHeight: 38, borderRadius: 14, borderWidth: 1, paddingHorizontal: 13, flexDirection: 'row-reverse', alignItems: 'center', gap: 8 },
+  hymnButtonText: { fontSize: 12, fontWeight: '800' },
   iconButton: { width: 44, height: 44, borderRadius: 22, borderWidth: 1, justifyContent: 'center', alignItems: 'center', position: 'relative' },
   dot: { width: 7, height: 7, borderRadius: 4, position: 'absolute', top: 8, right: 9 },
+  dailySectionHeading: { gap: 9, marginTop: 2 },
+  dailyTabs: { borderWidth: 1, borderRadius: 16, padding: 4, gap: 4 },
+  dailyTab: { flex: 1, minHeight: 40, borderRadius: 12, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 8 },
+  dailyTabLabel: { fontSize: 12, fontWeight: '800', textAlign: 'center' },
   sectionHeading: { flexDirection: 'row-reverse', justifyContent: 'space-between', alignItems: 'center', marginTop: 2 },
-  sectionActions: { flexDirection: 'row-reverse', alignItems: 'center', gap: 12 },
+  hymnActionRow: { width: '100%', alignItems: 'flex-end' },
   sectionTitle: { fontSize: 18, fontWeight: '700' },
   link: { fontSize: 12, fontWeight: '600' },
-  verseCard: { borderRadius: 22, borderWidth: 1, padding: 18, gap: 16, overflow: 'hidden', position: 'relative' },
+  verseCard: { height: 196, borderRadius: 22, borderWidth: 1, padding: 18, gap: 8, justifyContent: 'space-between', overflow: 'hidden', position: 'relative' },
   verseAccent: { width: 4, position: 'absolute', top: 18, bottom: 18, right: 0, borderTopLeftRadius: 4, borderBottomLeftRadius: 4 },
-  verseWatermark: { position: 'absolute', left: 13, bottom: -13, opacity: 0.55 },
+  shareButton: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
   verseTop: { flexDirection: 'row-reverse', alignItems: 'center', gap: 8 },
   verseLabel: { fontSize: 12, textAlign: 'right' },
   verse: { fontSize: 19, lineHeight: 31, fontWeight: '500', textAlign: 'right' },
-  verseBottom: { flexDirection: 'row-reverse', justifyContent: 'space-between', alignItems: 'center' },
-  verseAuthor: { fontSize: 11 },
+  verseBottom: { flexDirection: 'row-reverse', justifyContent: 'flex-end', alignItems: 'center' },
+  gospelPrompt: { fontSize: 15, lineHeight: 24, textAlign: 'right' },
+  gospelBottom: { width: '100%', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  gospelAction: { minHeight: 40, borderRadius: 14, borderWidth: 1, paddingHorizontal: 13, flexDirection: 'row-reverse', alignItems: 'center', gap: 8 },
+  gospelActionLabel: { fontSize: 13, fontWeight: '700' },
+  gospelModalBackdrop: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 16, backgroundColor: 'rgba(12, 20, 29, 0.58)' },
+  gospelModal: { width: '100%', maxWidth: 680, height: '82%', maxHeight: '88%', borderRadius: 24, borderWidth: 1, padding: 20, overflow: 'hidden' },
+  gospelModalHeader: { flexDirection: 'row-reverse', alignItems: 'center', gap: 12, paddingBottom: 12, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: 'rgba(100,100,100,0.24)' },
+  gospelModalTitle: { flex: 1, fontSize: 18, fontWeight: '800', textAlign: 'right' },
+  gospelModalClose: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
+  gospelModalScroll: { flex: 1, marginVertical: 14 },
+  gospelModalTextContent: { paddingBottom: 14 },
+  gospelFullText: { fontSize: 17, lineHeight: 32, textAlign: 'right', writingDirection: 'rtl' },
+  gospelSpeakButton: { minHeight: 50, borderRadius: 16, borderWidth: 1, paddingHorizontal: 16, flexDirection: 'row-reverse', alignItems: 'center', justifyContent: 'center', gap: 10 },
+  gospelSpeakText: { fontSize: 15, fontWeight: '800' },
   libraryRailScroll: { marginHorizontal: -18 },
   libraryRail: { flexDirection: 'row-reverse', gap: 10, paddingHorizontal: 18 },
-  librarySection: { width: 258, height: 86, borderRadius: 18, borderWidth: 1, padding: 7, flexDirection: 'row-reverse', alignItems: 'center', gap: 11, overflow: 'hidden' },
-  librarySectionArtwork: { width: 72, height: 72, borderRadius: 13, justifyContent: 'center', alignItems: 'center', overflow: 'hidden' },
-  librarySectionShade: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.16)' },
-  librarySectionLabel: { flex: 1, fontSize: 14, lineHeight: 20, fontWeight: '700', textAlign: 'right' },
-  readingCard: { borderRadius: 20, borderWidth: 1, padding: 16, flexDirection: 'row-reverse', alignItems: 'center', gap: 13 },
-  playCircle: { width: 42, height: 42, borderRadius: 21, justifyContent: 'center', alignItems: 'center' },
-  readingTitle: { textAlign: 'right', fontSize: 15, fontWeight: '700' },
-  readingMeta: { textAlign: 'right', fontSize: 12, marginTop: 4 },
+  libraryRailGroup: { width: 137, flexDirection: 'column', gap: 8 },
+  librarySection: { width: '100%', height: 148, borderRadius: 15, borderWidth: 1, padding: 6, flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-start', gap: 5, overflow: 'hidden' },
+  librarySectionArtwork: { width: '100%', height: 97, borderRadius: 11, justifyContent: 'center', alignItems: 'center', overflow: 'hidden' },
+  librarySectionImage: { width: '100%', height: '100%' },
+  librarySectionLabel: { width: '100%', fontSize: 12, lineHeight: 16, fontWeight: '700', textAlign: 'center' },
 });

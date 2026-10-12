@@ -9,7 +9,7 @@
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "splash": {
-      "image": "./assets/images/icon.png",
+      "image": "./assets/images/brand-logo.png",
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
@@ -38,6 +38,12 @@
       ],
       "expo-font",
       "expo-web-browser",
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Your location is sent to OpenStreetMap to find nearby Greek Orthodox places and is not stored by OrthoTypikon."
+        }
+      ],
       "expo-notifications",
       "@bacons/apple-targets",
       [

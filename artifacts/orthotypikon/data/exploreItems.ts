@@ -1,0 +1,57 @@
+export const exploreItems = [
+  {
+    key: 'audio-gospel',
+    icon: 'book',
+    route: '/bible',
+    color: '#55706B',
+  },
+  {
+    key: 'library',
+    imageSource: require('../assets/images/library-card-cover.jpg'),
+    imageResizeMode: 'stretch',
+    route: '/library',
+    color: '#25394A',
+  },
+  {
+    key: 'prayer',
+    imageSource: require('../assets/images/rosary-card-cover.jpg'),
+    imageResizeMode: 'stretch',
+    route: '/prayer',
+    color: '#8C5948',
+  },
+  {
+    key: 'kitchen',
+    imageSource: require('../assets/images/lenten-kitchen.jpg'),
+    imageResizeMode: 'contain',
+    route: '/fasting',
+    color: '#271A12',
+  },
+  {
+    key: 'learn',
+    imageSource: require('../assets/images/synaxarion-glossary-card-cover.jpg'),
+    imageResizeMode: 'stretch',
+    route: '/learn',
+    color: '#6C7C96',
+  },
+  {
+    key: 'pastoral',
+    imageSource: require('../assets/images/name-days-card-cover.jpg'),
+    imageResizeMode: 'stretch',
+    route: '/pastoral',
+    color: '#8C5948',
+  },
+  {
+    key: 'places',
+    imageSource: require('../assets/images/nearby-orthodox-places-card-cover.jpg'),
+    imageResizeMode: 'stretch',
+    route: '/places',
+    color: '#B47732',
+  },
+  {
+    key: 'prayers',
+    imageSource: require('../assets/images/prayers-card-cover.jpg'),
+    imageResizeMode: 'stretch',
+    route: '/library',
+    color: '#534E50',
+  },
+] as const;

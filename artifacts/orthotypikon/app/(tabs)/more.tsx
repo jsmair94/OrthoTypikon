@@ -1,6 +1,6 @@
 import { Feather } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useColors } from '@/hooks/useColors';
 import { CalendarType, copy, Language, ThemeMode, useI18n, usePreferences } from '@/hooks/usePreferences';
 import { useRouter } from 'expo-router';
@@ -31,16 +31,27 @@ export default function MoreScreen() {
   const more = getMoreContent(language);
   const infoSections = [
     { key: 'privacy', label: more.privacy, icon: 'shield' as const },
-    { key: 'contact', label: more.contact, icon: 'mail' as const },
+    { key: 'terms', label: more.terms, icon: 'file-text' as const },
     { key: 'about', label: more.about, icon: 'info' as const },
-    { key: 'donate', label: more.donate, icon: 'heart' as const },
+    { key: 'contact', label: more.contactTitle, icon: 'mail' as const },
   ];
   const socialItems = [
-    { label: more.socials.facebook, icon: 'thumbs-up' as const },
-    { label: more.socials.instagram, icon: 'instagram' as const },
-    { label: more.socials.whatsapp, icon: 'message-circle' as const },
-    { label: more.socials.telegram, icon: 'send' as const },
+    {
+      id: 'facebook',
+      label: more.socials.facebook,
+      icon: 'thumbs-up' as const,
+      url: 'https://www.facebook.com/profile.php?id=61594816648986',
+    },
+    {
+      id: 'instagram',
+      label: more.socials.instagram,
+      icon: 'instagram' as const,
+      url: 'https://www.instagram.com/ortho_typikon/',
+    },
   ];
+  const openSocialLink = (url: string) => {
+    void Linking.openURL(url).catch(() => Alert.alert(more.sectionTitle, more.socialOpenFailed));
+  };
   return (
     <ScrollView style={{ backgroundColor: colors.background }} contentContainerStyle={[styles.container, { paddingTop: insets.top + 22, paddingBottom: 110 }]} showsVerticalScrollIndicator={false}>
       <Text style={[styles.kicker, { color: colors.primary }]}>OrthoTypikon</Text>
@@ -90,20 +101,48 @@ export default function MoreScreen() {
           </Pressable>
         ))}
       </View>
-      <Text style={[styles.sectionTitle, { color: colors.foreground }]}>{more.followUs}</Text>
+      <Text style={[styles.sectionTitle, { color: colors.foreground }]}>{more.socialTitle}</Text>
       <View style={[styles.socialGroup, { backgroundColor: colors.card, borderColor: colors.border }]}>
-        {socialItems.map((item, index) => (
-          <View
-            key={item.label}
-            style={[styles.socialOption, index > 0 && { borderTopWidth: 1, borderTopColor: colors.border }]}
-          >
-            <View style={[styles.quickIcon, { backgroundColor: colors.muted }]}>
-              <Feather name={item.icon} size={17} color={colors.primary} />
+        {socialItems.map((item, index) => {
+          const rowStyle = [
+            styles.socialOption,
+            index > 0 && { borderTopWidth: 1, borderTopColor: colors.border },
+          ];
+          const rowContent = (
+            <>
+              <View style={[styles.quickIcon, { backgroundColor: colors.muted }]}>
+                <Feather name={item.icon} size={17} color={colors.primary} />
+              </View>
+              <Text style={[styles.quickTitle, { color: colors.foreground }]}>{item.label}</Text>
+              {item.url ? (
+                <Feather name="external-link" size={15} color={colors.mutedForeground} />
+              ) : (
+                <Text style={[styles.socialPending, { color: colors.mutedForeground }]}>{more.socialPending}</Text>
+              )}
+            </>
+          );
+
+          if (item.url) {
+            return (
+              <Pressable
+                key={item.id}
+                testID={`social-${item.id}`}
+                onPress={() => openSocialLink(item.url)}
+                style={({ pressed }) => [rowStyle, pressed && styles.socialPressed]}
+                accessibilityRole="link"
+                accessibilityLabel={item.label}
+              >
+                {rowContent}
+              </Pressable>
+            );
+          }
+
+          return (
+            <View key={item.id} style={rowStyle}>
+              {rowContent}
             </View>
-            <Text style={[styles.quickTitle, { color: colors.foreground }]}>{item.label}</Text>
-            <Text style={[styles.socialPending, { color: colors.mutedForeground }]}>{more.socialPending}</Text>
-          </View>
-        ))}
+          );
+        })}
       </View>
       <Text style={[styles.footer, { color: colors.mutedForeground }]}>{screen.more.version}</Text>
     </ScrollView>
@@ -142,5 +181,6 @@ const styles = StyleSheet.create({
   socialGroup: { borderWidth: 1, borderRadius: 18, overflow: 'hidden' },
   socialOption: { minHeight: 60, padding: 12, flexDirection: 'row-reverse', alignItems: 'center', gap: 11 },
   socialPending: { flex: 1, textAlign: 'left', fontSize: 10 },
+  socialPressed: { opacity: 0.72 },
   footer: { textAlign: 'center', fontSize: 11, marginTop: 14 },
 });

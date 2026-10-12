@@ -91,12 +91,6 @@ function RegionRail({ regionKey }: { regionKey: NewsRegionKey }) {
             {t.news.regions[regionKey]}
           </Text>
         </View>
-        {source?.websiteUrl ? (
-          <Pressable testID={`news-source-${regionKey}`} onPress={openSource} style={styles.sourceButton}>
-            <Text style={[styles.sourceButtonText, { color: colors.primary }]}>{t.news.openSource}</Text>
-            <Feather name="external-link" size={13} color={colors.primary} />
-          </Pressable>
-        ) : null}
       </View>
 
       {isLoading ? (
@@ -150,7 +144,6 @@ export function RegionalNewsSection({ fullPage = false }: { fullPage?: boolean }
     <View style={[styles.container, fullPage && styles.fullPageContainer]}>
       <View style={styles.sectionHeading}>
         <View style={styles.headingCopy}>
-          <Text style={[styles.eyebrow, { color: colors.primary }]}>{t.news.eyebrow}</Text>
           <Text style={[styles.sectionTitle, { color: colors.foreground }]}>{t.news.title}</Text>
         </View>
         {!fullPage ? (
@@ -173,8 +166,7 @@ const styles = StyleSheet.create({
   fullPageContainer: { paddingHorizontal: 20 },
   sectionHeading: { flexDirection: 'row-reverse', justifyContent: 'space-between', alignItems: 'center', gap: 12 },
   headingCopy: { flex: 1, alignItems: 'flex-end' },
-  eyebrow: { fontSize: 11, fontWeight: '600', textAlign: 'right' },
-  sectionTitle: { fontSize: 20, fontWeight: '700', marginTop: 3, textAlign: 'right' },
+  sectionTitle: { fontSize: 20, fontWeight: '700', textAlign: 'right' },
   subtitle: { fontSize: 12, lineHeight: 19, textAlign: 'right' },
   seeAllButton: { flexDirection: 'row-reverse', alignItems: 'center', gap: 5, paddingVertical: 6 },
   seeAllText: { fontSize: 12, fontWeight: '700' },
@@ -183,8 +175,6 @@ const styles = StyleSheet.create({
   regionTitleWrap: { flexDirection: 'row-reverse', alignItems: 'center', gap: 7 },
   regionIcon: { width: 28, height: 28, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
   regionTitle: { fontSize: 16, fontWeight: '700', textAlign: 'right' },
-  sourceButton: { flexDirection: 'row-reverse', alignItems: 'center', gap: 5 },
-  sourceButtonText: { fontSize: 11, fontWeight: '600' },
   articleRailScroll: { marginHorizontal: -20 },
   articleRail: { flexDirection: 'row-reverse', gap: 10, paddingHorizontal: 20 },
   articleCard: { width: 218, minHeight: 142, borderRadius: 17, borderWidth: 1, padding: 13, gap: 9 },

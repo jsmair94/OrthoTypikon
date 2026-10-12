@@ -1,66 +1,145 @@
 import { Feather } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { useMemo, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useState } from 'react';
+import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useColors } from '@/hooks/useColors';
-import { fastLevelLabels, getFastForDate, getRecipesForFast } from '@/data/fasting2026';
-import { shiftDateKey } from '@/data/calendar2026';
-import { useI18n, usePreferences } from '@/hooks/usePreferences';
-
-const initialDate = '2026-08-25';
-const levelColors = { strict: '#8C5948', oil: '#B47732', fish: '#56708B', none: '#55706B' };
+import { getAllRecipes, type Recipe } from '@/data/fasting2026';
+import { useI18n } from '@/hooks/usePreferences';
 
 export default function FastingScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { calendarType } = usePreferences();
   const { t, language } = useI18n();
-  const [date, setDate] = useState(initialDate);
-  const day = useMemo(() => getFastForDate(date, calendarType), [date, calendarType]);
-  const recipes = getRecipesForFast(day.level);
-  const localizedDay = language === 'ar' ? day : {
-    ...day,
-    title: t.fasting.levels[day.level],
-    description: language === 'en' ? 'Live this day with prayer, moderation, and mercy according to the Church calendar.' : 'Ζήστε αυτή την ημέρα με προσευχή, εγκράτεια και έλεος σύμφωνα με το εκκλησιαστικό ημερολόγιο.',
-    note: language === 'en' ? 'Follow your spiritual father’s guidance and your health needs.' : 'Ακολουθήστε την καθοδήγηση του πνευματικού σας και τις ανάγκες της υγείας σας.',
-  };
-  const recipeNames = language === 'en'
-    ? ['Warm lentil soup', 'Vegetable and olive pasta', 'Baked fish with lemon']
-    : ['Ζεστή σούπα φακής', 'Ζυμαρικά με λαχανικά και ελιές', 'Ψητό ψάρι με λεμόνι'];
-  const displayDate = calendarType === 'julian' ? shiftDateKey(date, -13) : date;
-  const adjustDate = (amount: number) => setDate(shiftDateKey(date, amount));
+  const recipes = getAllRecipes();
+  const [selectedRecipe, setSelectedRecipe] = useState<Recipe | null>(null);
+  const selectedCopy = selectedRecipe
+    ? language === 'ar' ? selectedRecipe : selectedRecipe.translations[language]
+    : null;
 
   return (
     <ScrollView style={{ backgroundColor: colors.background }} contentContainerStyle={[styles.container, { paddingTop: insets.top + 18, paddingBottom: insets.bottom + 32 }]} showsVerticalScrollIndicator={false}>
       <View style={styles.topBar}>
         <Pressable onPress={() => router.back()} style={[styles.backButton, { backgroundColor: colors.card, borderColor: colors.border }]} hitSlop={10}><Feather name="arrow-right" size={20} color={colors.primary} /></Pressable>
-         <View style={styles.topCopy}><Text style={[styles.eyebrow, { color: colors.primary }]}>{t.fasting.eyebrow}</Text><Text style={[styles.title, { color: colors.foreground }]}>{t.fasting.title}</Text></View>
+        <View style={styles.topCopy}><Text style={[styles.eyebrow, { color: colors.primary }]}>{t.fasting.eyebrow}</Text><Text style={[styles.title, { color: colors.foreground }]}>{t.fasting.title}</Text></View>
       </View>
 
-      <View style={[styles.datePicker, { backgroundColor: colors.card, borderColor: colors.border }]}>
-        <Pressable onPress={() => adjustDate(1)} hitSlop={10}><Feather name="chevron-right" size={20} color={colors.primary} /></Pressable>
-         <View style={styles.dateCenter}><Text style={[styles.date, { color: colors.foreground }]}>{displayDate}</Text><Text style={[styles.calendarLabel, { color: colors.mutedForeground }]}>{calendarType === 'julian' ? t.fasting.calendarEastern : t.fasting.calendarWestern}</Text></View>
-        <Pressable onPress={() => adjustDate(-1)} hitSlop={10}><Feather name="chevron-left" size={20} color={colors.primary} /></Pressable>
-      </View>
-
-      <View style={[styles.statusCard, { backgroundColor: levelColors[day.level] }]}>
-         <View style={styles.statusTop}><View style={styles.statusIcon}><Feather name={day.level === 'none' ? 'sun' : 'minus-circle'} size={20} color="#FFF" /></View><Text style={styles.statusLevel}>{t.fasting.levels[day.level]}</Text></View>
-         <Text style={styles.statusTitle}>{localizedDay.title}</Text>
-         <Text style={styles.statusDescription}>{localizedDay.description}</Text>
-         {localizedDay.note && <Text style={styles.statusNote}>{localizedDay.note}</Text>}
-      </View>
-
-       <View style={styles.heading}><Text style={[styles.sectionTitle, { color: colors.foreground }]}>{t.fasting.recipesToday}</Text><Text style={[styles.link, { color: colors.primary }]}>{recipes.length} {t.fasting.recipes}</Text></View>
-       {recipes.map((recipe, index) => (
-        <View key={recipe.id} style={[styles.recipeCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
-          <View style={styles.recipeIcon}><Feather name="coffee" size={20} color={colors.primary} /></View>
-           <View style={styles.recipeBody}><Text style={[styles.recipeTitle, { color: colors.foreground }]}>{language === 'ar' ? recipe.title : recipeNames[index]}</Text><Text style={[styles.recipeSubtitle, { color: colors.mutedForeground }]}>{language === 'ar' ? `${recipe.subtitle} · ${recipe.time}` : language === 'en' ? 'A simple fasting recipe · 30 minutes' : 'Απλή νηστίσιμη συνταγή · 30 λεπτά'}</Text>{language === 'ar' ? <><Text style={[styles.recipeIngredients, { color: colors.mutedForeground }]}>{recipe.ingredients.join(' · ')}</Text><Text style={[styles.recipeSteps, { color: colors.foreground }]}>{recipe.steps.join('  ')}</Text></> : <Text style={[styles.recipeSteps, { color: colors.foreground }]}>{language === 'en' ? 'Prepare the ingredients, cook gently, and serve with gratitude.' : 'Ετοιμάστε τα υλικά, μαγειρέψτε απαλά και σερβίρετε με ευγνωμοσύνη.'}</Text>}</View>
+      <View style={styles.heading}>
+        <View style={styles.headingCopy}>
+          <Text style={[styles.sectionTitle, { color: colors.foreground }]}>{t.fasting.recipesToday}</Text>
+          <Text style={[styles.listHint, { color: colors.mutedForeground }]}>{t.fasting.listHint}</Text>
         </View>
-      ))}
+        <Text style={[styles.link, { color: colors.primary }]}>{recipes.length} {t.fasting.recipes}</Text>
+      </View>
 
-       <View style={[styles.guidance, { borderColor: colors.border }]}><Feather name="info" size={17} color={colors.accent} /><Text style={[styles.guidanceText, { color: colors.mutedForeground }]}>{t.fasting.guidance}</Text></View>
+      <View
+        testID="recipe-guidance"
+        style={[
+          styles.guidanceCard,
+          {
+            backgroundColor: colors.card,
+            borderColor: colors.border,
+            flexDirection: language === 'ar' ? 'row-reverse' : 'row',
+          },
+        ]}
+      >
+        <Feather name="info" size={16} color={colors.primary} style={styles.guidanceIcon} />
+        <Text
+          testID="recipe-guidance-text"
+          style={[
+            styles.guidanceText,
+            {
+              color: colors.mutedForeground,
+              textAlign: language === 'ar' ? 'right' : 'left',
+              writingDirection: language === 'ar' ? 'rtl' : 'ltr',
+            },
+          ]}
+        >
+          {t.fasting.guidance}
+        </Text>
+      </View>
+
+      {recipes.map((recipe) => {
+        const copy = language === 'ar' ? recipe : recipe.translations[language];
+        return (
+          <Pressable
+            key={recipe.id}
+            testID={`recipe-card-${recipe.id}`}
+            accessibilityRole="button"
+            accessibilityLabel={`${copy.title}. ${t.fasting.tapForDetails}`}
+            onPress={() => setSelectedRecipe(recipe)}
+            style={({ pressed }) => [
+              styles.recipeCard,
+              { backgroundColor: colors.card, borderColor: colors.border, opacity: pressed ? 0.82 : 1 },
+            ]}
+          >
+            <View style={[styles.recipeIcon, { backgroundColor: colors.secondary }]}><Feather name="coffee" size={20} color={colors.primary} /></View>
+            <View style={styles.recipeBody}>
+              <Text style={[styles.recipeTitle, { color: colors.foreground }]}>{copy.title}</Text>
+              <Text style={[styles.recipeSubtitle, { color: colors.mutedForeground }]}>{copy.subtitle}</Text>
+              <View style={styles.recipeMeta}>
+                <Feather name="clock" size={12} color={colors.mutedForeground} />
+                <Text style={[styles.recipeTime, { color: colors.mutedForeground }]}>{copy.time}</Text>
+              </View>
+            </View>
+            <Feather name={language === 'ar' ? 'chevron-left' : 'chevron-right'} size={18} color={colors.mutedForeground} />
+          </Pressable>
+        );
+      })}
+
+      <Modal
+        visible={selectedRecipe !== null}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setSelectedRecipe(null)}
+      >
+        <View style={styles.modalBackdrop}>
+          <View style={[styles.modalCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            {selectedRecipe && selectedCopy && (
+              <>
+                <View style={styles.modalHeader}>
+                  <Pressable
+                    onPress={() => setSelectedRecipe(null)}
+                    accessibilityRole="button"
+                    accessibilityLabel={t.fasting.closeDetails}
+                    hitSlop={10}
+                    style={[styles.closeButton, { backgroundColor: colors.secondary }]}
+                  >
+                    <Feather name="x" size={20} color={colors.foreground} />
+                  </Pressable>
+                  <View style={styles.modalTitleGroup}>
+                    <Text style={[styles.modalTitle, { color: colors.foreground }]}>{selectedCopy.title}</Text>
+                    <Text style={[styles.modalSubtitle, { color: colors.mutedForeground }]}>{selectedCopy.subtitle} · {selectedCopy.time}</Text>
+                  </View>
+                </View>
+                <ScrollView style={styles.detailScroll} contentContainerStyle={styles.detailContent} showsVerticalScrollIndicator={false}>
+                  <View style={styles.detailSection}>
+                    <Text style={[styles.detailHeading, { color: colors.foreground }]}>{t.fasting.ingredients}</Text>
+                    {selectedCopy.ingredients.map((ingredient, index) => (
+                      <View key={`${selectedRecipe.id}-ingredient-${index}`} style={styles.detailRow}>
+                        <View style={[styles.bullet, { backgroundColor: colors.accent }]} />
+                        <Text style={[styles.detailText, { color: colors.mutedForeground }]}>{ingredient}</Text>
+                      </View>
+                    ))}
+                  </View>
+                  <View style={styles.detailSection}>
+                    <Text style={[styles.detailHeading, { color: colors.foreground }]}>{t.fasting.preparation}</Text>
+                    {selectedCopy.steps.map((step, index) => (
+                      <View key={`${selectedRecipe.id}-step-${index}`} style={styles.stepRow}>
+                        <View style={[styles.stepNumber, { backgroundColor: colors.secondary }]}>
+                          <Text style={[styles.stepNumberText, { color: colors.primary }]}>{index + 1}</Text>
+                        </View>
+                        <Text style={[styles.detailText, styles.stepText, { color: colors.foreground }]}>{step}</Text>
+                      </View>
+                    ))}
+                  </View>
+                </ScrollView>
+              </>
+            )}
+          </View>
+        </View>
+      </Modal>
     </ScrollView>
   );
 }
@@ -71,28 +150,38 @@ const styles = StyleSheet.create({
   topCopy: { flex: 1, alignItems: 'flex-end' },
   backButton: { width: 42, height: 42, borderRadius: 21, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
   eyebrow: { fontSize: 12, fontWeight: '600' },
-  title: { fontSize: 28, fontWeight: '700', marginTop: 4 },
-  datePicker: { borderWidth: 1, borderRadius: 16, padding: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  dateCenter: { alignItems: 'center', gap: 4 },
-  date: { fontSize: 15, fontWeight: '700' },
-  calendarLabel: { fontSize: 10 },
-  statusCard: { borderRadius: 23, padding: 20, alignItems: 'flex-end', gap: 9 },
-  statusTop: { width: '100%', flexDirection: 'row-reverse', alignItems: 'center', gap: 10 },
-  statusIcon: { width: 38, height: 38, borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.16)', alignItems: 'center', justifyContent: 'center' },
-  statusLevel: { color: '#FFF', fontSize: 12, fontWeight: '700' },
-  statusTitle: { color: '#FFF', fontSize: 20, fontWeight: '700', textAlign: 'right', marginTop: 5 },
-  statusDescription: { color: '#F3EEE5', fontSize: 13, lineHeight: 21, textAlign: 'right' },
-  statusNote: { color: '#E8DED1', fontSize: 11, lineHeight: 18, textAlign: 'right' },
+  title: { fontSize: 28, fontWeight: '700', marginTop: 4, textAlign: 'right' },
   heading: { flexDirection: 'row-reverse', justifyContent: 'space-between', alignItems: 'center', marginTop: 2 },
+  headingCopy: { flex: 1, alignItems: 'flex-end', gap: 4 },
   sectionTitle: { fontSize: 18, fontWeight: '700' },
+  listHint: { fontSize: 11, textAlign: 'right', lineHeight: 17 },
   link: { fontSize: 12, fontWeight: '600' },
-  recipeCard: { borderWidth: 1, borderRadius: 18, padding: 15, flexDirection: 'row-reverse', alignItems: 'flex-start', gap: 12 },
-  recipeIcon: { width: 40, height: 40, borderRadius: 13, backgroundColor: '#E8E1D4', alignItems: 'center', justifyContent: 'center' },
-  recipeBody: { flex: 1, alignItems: 'flex-end', gap: 5 },
+  guidanceCard: { borderWidth: 1, borderRadius: 16, paddingHorizontal: 14, paddingVertical: 12, alignItems: 'flex-start', gap: 10 },
+  guidanceIcon: { paddingTop: 1 },
+  guidanceText: { flex: 1, fontSize: 11, lineHeight: 18 },
+  recipeCard: { minHeight: 82, borderWidth: 1, borderRadius: 18, padding: 14, flexDirection: 'row-reverse', alignItems: 'center', gap: 12 },
+  recipeIcon: { width: 40, height: 40, borderRadius: 13, alignItems: 'center', justifyContent: 'center' },
+  recipeBody: { flex: 1, alignItems: 'flex-end', gap: 4 },
   recipeTitle: { fontSize: 15, fontWeight: '700', textAlign: 'right' },
   recipeSubtitle: { fontSize: 11, textAlign: 'right' },
-  recipeIngredients: { fontSize: 10, lineHeight: 17, textAlign: 'right' },
-  recipeSteps: { fontSize: 11, lineHeight: 18, textAlign: 'right', marginTop: 3 },
-  guidance: { borderWidth: 1, borderRadius: 16, padding: 15, flexDirection: 'row-reverse', gap: 10, alignItems: 'flex-start' },
-  guidanceText: { flex: 1, fontSize: 11, lineHeight: 18, textAlign: 'right' },
+  recipeMeta: { flexDirection: 'row-reverse', alignItems: 'center', gap: 5 },
+  recipeTime: { fontSize: 10 },
+  modalBackdrop: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 18, paddingVertical: 24, backgroundColor: 'rgba(10, 17, 25, 0.68)' },
+  modalCard: { width: '100%', maxWidth: 560, height: '82%', maxHeight: 680, borderWidth: 1, borderRadius: 24, padding: 18, overflow: 'hidden' },
+  modalHeader: { flexDirection: 'row-reverse', alignItems: 'center', gap: 12, paddingBottom: 14, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: 'rgba(100, 100, 100, 0.25)' },
+  closeButton: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
+  modalTitleGroup: { flex: 1, alignItems: 'flex-end', gap: 4 },
+  modalTitle: { fontSize: 19, fontWeight: '800', textAlign: 'right' },
+  modalSubtitle: { fontSize: 11, textAlign: 'right' },
+  detailScroll: { flex: 1, marginTop: 12 },
+  detailContent: { gap: 22, paddingBottom: 16 },
+  detailSection: { gap: 12 },
+  detailHeading: { fontSize: 16, fontWeight: '800', textAlign: 'right', marginBottom: 2 },
+  detailRow: { flexDirection: 'row-reverse', alignItems: 'center', gap: 10 },
+  bullet: { width: 7, height: 7, borderRadius: 4 },
+  detailText: { flex: 1, fontSize: 14, lineHeight: 23, textAlign: 'right' },
+  stepRow: { flexDirection: 'row-reverse', alignItems: 'flex-start', gap: 10 },
+  stepNumber: { width: 25, height: 25, borderRadius: 13, alignItems: 'center', justifyContent: 'center' },
+  stepNumberText: { fontSize: 12, fontWeight: '800' },
+  stepText: { paddingTop: 1 },
 });

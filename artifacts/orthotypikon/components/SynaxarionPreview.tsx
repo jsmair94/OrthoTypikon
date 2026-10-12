@@ -1,6 +1,5 @@
 import { Feather } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { Image, Modal, Platform, Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import {
@@ -20,11 +19,11 @@ type SynaxarionPreviewProps = {
 
 export function SynaxarionPreview({ dailyContent }: SynaxarionPreviewProps) {
   const colors = useColors();
-  const router = useRouter();
   const { language, t } = useI18n();
   const { calendarType } = usePreferences();
   const { width: windowWidth, height: windowHeight } = useWindowDimensions();
   const [isImageOpen, setIsImageOpen] = useState(false);
+  const [expandedArticleKey, setExpandedArticleKey] = useState<string | null>(null);
   const isRtl = language === 'ar';
   const offlineToday = getDailyWidgetContent(new Date(), calendarType);
   const synaxarionParams = { locale: language };
@@ -48,19 +47,27 @@ export function SynaxarionPreview({ dailyContent }: SynaxarionPreviewProps) {
   const saints = dailyContent.occasionDescription;
   const occasion = dailyContent.occasionTitle;
   const dateLabel = source?.dateLabel ?? (language === 'ar' ? offlineToday.displayDate : t.synaxarion.today);
+  const articleKey = `${dateLabel}:${occasion}`;
+  const isArticleExpanded = expandedArticleKey === articleKey;
+  const canExpandArticle = saints.trim().length > 100;
   const closeImageLabel =
     language === 'ar' ? 'إغلاق الصورة' : language === 'el' ? 'Κλείσιμο εικόνας' : 'Close image';
 
   return (
     <View style={styles.container}>
+      <Text
+        style={[
+          styles.sectionTitle,
+          { color: colors.foreground, textAlign: isRtl ? 'right' : 'left' },
+        ]}
+      >
+        {t.synaxarion.title}
+      </Text>
       <LinearGradient
         colors={[colors.heroStart, colors.heroEnd]}
         start={{ x: 1, y: 0 }}
         end={{ x: 0, y: 1 }}
-        style={[
-          styles.featureCard,
-          { flexDirection: isRtl ? 'row-reverse' : 'row' },
-        ]}
+        style={styles.featureCard}
       >
         <View
           style={[
@@ -68,17 +75,6 @@ export function SynaxarionPreview({ dailyContent }: SynaxarionPreviewProps) {
             { alignItems: isRtl ? 'flex-end' : 'flex-start' },
           ]}
         >
-          <View
-            style={[
-              styles.occasionBadge,
-              { flexDirection: isRtl ? 'row-reverse' : 'row' },
-            ]}
-          >
-            <Feather name="plus" size={14} color={colors.accent} />
-            <Text style={[styles.badgeText, { color: colors.heroForeground }]}>
-              {t.home.todayOccasion}
-            </Text>
-          </View>
           <View
             style={[
               styles.dateRow,
@@ -124,49 +120,36 @@ export function SynaxarionPreview({ dailyContent }: SynaxarionPreviewProps) {
                   textAlign: isRtl ? 'right' : 'left',
                 },
               ]}
+              numberOfLines={isArticleExpanded ? undefined : 3}
             >
               {saints}
             </Text>
           </View>
-          <View
-            style={[
-              styles.actionRow,
-              { flexDirection: isRtl ? 'row-reverse' : 'row' },
-            ]}
-          >
+          {canExpandArticle && (
             <Pressable
-              testID="today-calendar-link"
+              testID="synaxarion-article-toggle"
               accessibilityRole="button"
-              accessibilityLabel={t.home.viewCalendar}
-              onPress={() => router.push('/calendar')}
+              accessibilityLabel={isArticleExpanded ? t.synaxarion.showLess : t.synaxarion.showMore}
+              accessibilityState={{ expanded: isArticleExpanded }}
+              onPress={() => setExpandedArticleKey(isArticleExpanded ? null : articleKey)}
               style={[
-                styles.featureLink,
-                { flexDirection: isRtl ? 'row-reverse' : 'row' },
+                styles.articleToggle,
+                {
+                  flexDirection: isRtl ? 'row-reverse' : 'row',
+                  alignSelf: isRtl ? 'flex-end' : 'flex-start',
+                },
               ]}
             >
-              <Text style={[styles.featureLinkText, { color: colors.accent }]}>
-                {t.home.viewCalendar}
+              <Text style={[styles.articleToggleText, { color: colors.accent }]}>
+                {isArticleExpanded ? t.synaxarion.showLess : t.synaxarion.showMore}
               </Text>
               <Feather
-                name={isRtl ? 'arrow-left' : 'arrow-right'}
-                size={15}
+                name={isArticleExpanded ? 'chevron-up' : 'chevron-down'}
+                size={14}
                 color={colors.accent}
               />
             </Pressable>
-            <Pressable
-              testID="synaxarion-see-all"
-              accessibilityRole="button"
-              onPress={() => router.push('/learn')}
-              style={[
-                styles.featureLink,
-                { flexDirection: isRtl ? 'row-reverse' : 'row' },
-              ]}
-            >
-              <Text style={[styles.featureLinkText, { color: colors.accent }]}>
-                {t.synaxarion.showAll}
-              </Text>
-            </Pressable>
-          </View>
+          )}
         </View>
         <View style={styles.heroArtwork}>
           <View style={[styles.heroHalo, { borderColor: colors.accent }]} />
@@ -248,18 +231,16 @@ export function SynaxarionPreview({ dailyContent }: SynaxarionPreviewProps) {
 
 const styles = StyleSheet.create({
   container: { gap: 12 },
-  featureCard: { minHeight: 190, borderRadius: 26, padding: 18, alignItems: 'center', gap: 12, overflow: 'hidden' },
+  sectionTitle: { fontSize: 18, lineHeight: 26, fontWeight: '700' },
+  featureCard: { minHeight: 180, borderRadius: 26, padding: 18, flexDirection: 'row', alignItems: 'center', gap: 12, overflow: 'hidden' },
   featureContent: { flex: 1, minWidth: 0, justifyContent: 'center', gap: 7 },
-  occasionBadge: { alignItems: 'center', gap: 6, backgroundColor: 'rgba(255,255,255,0.10)', borderRadius: 20, paddingHorizontal: 10, paddingVertical: 6 },
-  badgeText: { fontSize: 11, fontWeight: '600' },
   dateRow: { alignItems: 'center', gap: 6 },
   dateLabel: { flexShrink: 1, fontSize: 10, fontWeight: '600' },
   occasion: { fontSize: 20, lineHeight: 28, fontWeight: '800', marginTop: 2 },
   saintRow: { alignItems: 'flex-start', gap: 6 },
   saintName: { flex: 1, minWidth: 0, fontSize: 12, lineHeight: 19, opacity: 0.84 },
-  actionRow: { width: '100%', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 6, marginTop: 2 },
-  featureLink: { alignItems: 'center', gap: 5, paddingVertical: 4 },
-  featureLinkText: { fontSize: 11, fontWeight: '700' },
+  articleToggleText: { fontSize: 11, fontWeight: '700' },
+  articleToggle: { alignItems: 'center', gap: 4, paddingVertical: 2 },
   heroArtwork: { width: 100, height: 132, alignItems: 'center', justifyContent: 'center', position: 'relative' },
   heroHalo: { position: 'absolute', width: 92, height: 92, borderRadius: 46, borderWidth: 1, opacity: 0.35 },
   imageFrame: { width: 90, height: 120, flexShrink: 0, borderRadius: 15, overflow: 'hidden', alignItems: 'center', justifyContent: 'center', position: 'relative' },

@@ -2,6 +2,8 @@ import type { SynaxarionHomepagePayload } from "@workspace/api-client-react";
 
 const WORDPRESS_PAGE_API =
   "https://orthodoxjo.tv/wp-json/wp/v2/pages/32376?_fields=content,link,modified";
+const DAILY_GOSPEL_PAGE =
+  "https://orthodoxjo.tv/%d8%b1%d8%b3%d8%a7%d9%84%d8%a9-%d9%88-%d8%a5%d9%86%d8%ac%d9%8a%d9%84-%d8%a7%d9%84%d9%8a%d9%88%d9%85/";
 const TRANSLATION_API = "https://translate.googleapis.com/translate_a/single";
 const SOURCE_HOME = "https://orthodoxjo.tv/";
 
@@ -66,6 +68,39 @@ export function parseVerse(value: string) {
     text: verseText.replace(/^[«“”"‘’]+|[»“”"‘’]+$/g, "").trim(),
     reference: citationMatch?.[1].trim() ?? null,
   };
+}
+
+export function parseDailyGospelPage(html: string) {
+  const headingPattern =
+    /<h2\b[^>]*class=["'][^"']*\bdaily-message-title\b[^"']*["'][^>]*>([\s\S]*?)<\/h2>/gi;
+
+  for (const heading of html.matchAll(headingPattern)) {
+    const title = stripHtml(heading[1]);
+    if (!title.startsWith("الإنجيل")) continue;
+
+    const headingEnd = (heading.index ?? 0) + heading[0].length;
+    const followingMarkup = html.slice(headingEnd);
+    const nextHeading = followingMarkup.search(headingPattern);
+    const gospelItem = nextHeading < 0
+      ? followingMarkup
+      : followingMarkup.slice(0, nextHeading);
+    const bodyMatch = gospelItem.match(
+      /<div\b[^>]*class=["'][^"']*\bdaily-message-body\b[^"']*["'][^>]*>\s*<p\b[^>]*>([\s\S]*?)<\/p>/i,
+    );
+    const text = bodyMatch ? stripHtml(bodyMatch[1]) : "";
+
+    if (!text) {
+      throw new Error("Orthodox Jordan daily Gospel paragraph was not found.");
+    }
+
+    return {
+      title,
+      text,
+      sourceUrl: DAILY_GOSPEL_PAGE,
+    };
+  }
+
+  throw new Error("Orthodox Jordan daily Gospel heading was not found.");
 }
 
 function parseHomepage(payload: WordPressHomepage): SynaxarionHomepagePayload {
@@ -228,4 +263,57 @@ export async function fetchSynaxarionFromSource(
     clearTimeout(timeout);
     callerSignal.removeEventListener("abort", abortFromCaller);
   }
+}
+
+export async function fetchDailyGospelFromSource(
+  locale: SynaxarionLocale,
+  callerSignal: AbortSignal,
+) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 20_000);
+  const abortFromCaller = () => controller.abort();
+  callerSignal.addEventListener("abort", abortFromCaller, { once: true });
+
+  try {
+    const response = await fetch(DAILY_GOSPEL_PAGE, {
+      headers: { accept: "text/html" },
+      signal: controller.signal,
+    });
+    if (!response.ok) {
+      throw new Error(`Orthodox Jordan Gospel page returned HTTP ${response.status}.`);
+    }
+    const payload = parseDailyGospelPage(await response.text());
+    if (locale === "ar") return payload;
+
+    try {
+      return await translateDailyGospelPayload(
+        payload,
+        locale,
+        controller.signal,
+      );
+    } catch (error) {
+      if (callerSignal.aborted) throw error;
+      return payload;
+    }
+  } catch (error) {
+    if (callerSignal.aborted) throw error;
+    console.warn("Orthodox Jordan daily Gospel could not be loaded.", error);
+    return null;
+  } finally {
+    clearTimeout(timeout);
+    callerSignal.removeEventListener("abort", abortFromCaller);
+  }
+}
+
+export async function translateDailyGospelPayload(
+  source: ReturnType<typeof parseDailyGospelPage>,
+  locale: SynaxarionTranslationLocale,
+  signal: AbortSignal,
+  translator: SynaxarionTextTranslator = translateText,
+) {
+  const [title, text] = await Promise.all([
+    translator(source.title, locale, signal),
+    translator(source.text, locale, signal),
+  ]);
+  return { ...source, title, text };
 }

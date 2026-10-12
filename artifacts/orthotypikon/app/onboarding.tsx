@@ -1,6 +1,6 @@
 import { Feather } from '@expo/vector-icons';
 import { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useColors } from '@/hooks/useColors';
 import { CalendarType, copy, Language, screenCopy, usePreferences } from '@/hooks/usePreferences';
@@ -45,10 +45,12 @@ export default function OnboardingScreen() {
       contentContainerStyle={[styles.container, { paddingTop: insets.top + 28, paddingBottom: insets.bottom + 28 }]}
       showsVerticalScrollIndicator={false}
     >
-      <View style={[styles.brandMark, { backgroundColor: colors.primary }]}>
-        <Feather name="plus" size={28} color={colors.accent} />
-      </View>
-      <Text style={[styles.eyebrow, { color: colors.primary }]}>{selectedCopy.eyebrow}</Text>
+      <Image
+        source={require('../assets/images/brand-logo.png')}
+        accessibilityLabel="OrthoTypikon"
+        resizeMode="contain"
+        style={styles.brandLogo}
+      />
       <Text style={[styles.title, { color: colors.foreground }]}>{selectedCopy.title}</Text>
       <Text style={[styles.subtitle, { color: colors.mutedForeground }]}>{selectedCopy.subtitle}</Text>
 
@@ -114,8 +116,7 @@ export default function OnboardingScreen() {
 
 const styles = StyleSheet.create({
   container: { paddingHorizontal: 20, alignItems: 'stretch', gap: 14 },
-  brandMark: { width: 58, height: 58, borderRadius: 20, alignItems: 'center', justifyContent: 'center', alignSelf: 'center', marginBottom: 2 },
-  eyebrow: { textAlign: 'center', fontSize: 12, fontWeight: '700', marginTop: 2 },
+  brandLogo: { width: 138, height: 138, alignSelf: 'center', marginBottom: 2 },
   title: { textAlign: 'center', fontSize: 30, fontWeight: '700', marginTop: 2 },
   subtitle: { textAlign: 'center', fontSize: 13, lineHeight: 21, marginHorizontal: 12, marginBottom: 10 },
   sectionTitle: { textAlign: 'right', fontSize: 17, fontWeight: '700', marginTop: 6 },

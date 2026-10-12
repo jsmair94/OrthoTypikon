@@ -5,6 +5,7 @@ import { KeyboardProvider } from 'react-native-keyboard-controller';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { Platform } from 'react-native';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
+import { Amiri_400Regular, Amiri_700Bold } from '@expo-google-fonts/amiri';
 import {
   Inter_400Regular,
   Inter_500Medium,
@@ -37,10 +38,13 @@ function RootLayoutNav() {
       <Stack.Protected guard={hasCompletedSetup}>
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="prayer" options={{ headerShown: false }} />
+        <Stack.Screen name="prayer-collection" options={{ headerShown: false }} />
+        <Stack.Screen name="bible" options={{ headerShown: false }} />
         <Stack.Screen name="compass" options={{ headerShown: false }} />
         <Stack.Screen name="fasting" options={{ headerShown: false }} />
         <Stack.Screen name="learn" options={{ headerShown: false }} />
         <Stack.Screen name="pastoral" options={{ headerShown: false }} />
+        <Stack.Screen name="places" options={{ headerShown: false }} />
         <Stack.Screen name="news" options={{ headerShown: false }} />
         <Stack.Screen name="widget" options={{ headerShown: false }} />
         <Stack.Screen name="prayer-mode" options={{ headerShown: false }} />
@@ -57,6 +61,8 @@ export default function RootLayout() {
     Platform.OS === 'web'
       ? {}
       : {
+          Amiri_400Regular,
+          Amiri_700Bold,
           Inter_400Regular,
           Inter_500Medium,
           Inter_600SemiBold,
