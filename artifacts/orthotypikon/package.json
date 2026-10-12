@@ -8,6 +8,8 @@
     "build": "node scripts/build.js",
     "build:apk": "node scripts/build-apk.js",
     "serve": "node server/serve.js",
+    "web:build": "expo export --platform web --output-dir web-build",
+    "web:serve": "node server/serve-web.js",
     "test": "node --experimental-transform-types --experimental-loader ../api-server/test/extensionless-ts-loader.mjs --test test/*.test.mjs",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "android": "expo run:android",
