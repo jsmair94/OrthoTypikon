@@ -3,7 +3,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { KeyboardProvider } from 'react-native-keyboard-controller';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { Platform } from 'react-native';
+import { Platform, StyleSheet, View } from 'react-native';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { Amiri_400Regular, Amiri_700Bold } from '@expo-google-fonts/amiri';
 import {
@@ -86,7 +86,13 @@ export default function RootLayout() {
             <GestureHandlerRootView>
               <KeyboardProvider>
                 <HymnPlayerProvider>
-                  <RootLayoutNav />
+                      {Platform.OS === 'web' ? (
+                        <View style={styles.webViewport}>
+                          <RootLayoutNav />
+                        </View>
+                      ) : (
+                        <RootLayoutNav />
+                      )}
                 </HymnPlayerProvider>
               </KeyboardProvider>
             </GestureHandlerRootView>
@@ -96,3 +102,13 @@ export default function RootLayout() {
     </SafeAreaProvider>
   );
 }
+
+const styles = StyleSheet.create({
+  webViewport: {
+    flex: 1,
+    width: '100%',
+    maxWidth: 1180,
+    alignSelf: 'center',
+    backgroundColor: '#FBF9F4',
+  },
+});

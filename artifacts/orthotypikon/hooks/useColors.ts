@@ -1,5 +1,5 @@
-import { useColorScheme } from 'react-native';
-import colors from '@/constants/colors';
+import { Platform, useColorScheme } from 'react-native';
+import colors, { webColors } from '@/constants/colors';
 import { usePreferences } from '@/hooks/usePreferences';
 
 /**
@@ -19,8 +19,12 @@ export function useColors() {
   const { themeMode } = usePreferences();
   const scheme = themeMode === 'system' ? systemScheme : themeMode;
   const palette =
-    scheme === 'dark' && 'dark' in colors
-      ? (colors as unknown as Record<string, typeof colors.light>).dark
-      : colors.light;
-  return { ...palette, radius: colors.radius };
+    Platform.OS === 'web'
+      ? scheme === 'dark'
+        ? webColors.dark
+        : webColors.light
+      : scheme === 'dark' && 'dark' in colors
+        ? (colors as unknown as Record<string, typeof colors.light>).dark
+        : colors.light;
+  return { ...palette, radius: Platform.OS === 'web' ? 10 : colors.radius };
 }
