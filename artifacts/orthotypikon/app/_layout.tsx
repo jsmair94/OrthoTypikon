@@ -16,6 +16,7 @@ import {
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { PreferencesProvider, useI18n, usePreferences } from '@/hooks/usePreferences';
+import { useColors } from '@/hooks/useColors';
 import { HymnPlayerProvider } from '@/hooks/useHymnPlayer';
 import { configurePrayerCommunityApi } from '@/lib/prayerCommunitySession';
 
@@ -54,6 +55,18 @@ function RootLayoutNav() {
   );
 }
 
+function RootLayoutContent() {
+  const colors = useColors();
+
+  return Platform.OS === 'web' ? (
+    <View style={[styles.webViewport, { backgroundColor: colors.background }]}>
+      <RootLayoutNav />
+    </View>
+  ) : (
+    <RootLayoutNav />
+  );
+}
+
 export default function RootLayout() {
   // Expo web can hang in FontFaceObserver while loading bundled Google fonts.
   // The app does not assign a custom font family, so use the platform font on web.
@@ -86,13 +99,7 @@ export default function RootLayout() {
             <GestureHandlerRootView>
               <KeyboardProvider>
                 <HymnPlayerProvider>
-                      {Platform.OS === 'web' ? (
-                        <View style={styles.webViewport}>
-                          <RootLayoutNav />
-                        </View>
-                      ) : (
-                        <RootLayoutNav />
-                      )}
+                      <RootLayoutContent />
                 </HymnPlayerProvider>
               </KeyboardProvider>
             </GestureHandlerRootView>
@@ -109,6 +116,5 @@ const styles = StyleSheet.create({
     width: '100%',
     maxWidth: 1180,
     alignSelf: 'center',
-    backgroundColor: '#FBF9F4',
   },
 });
