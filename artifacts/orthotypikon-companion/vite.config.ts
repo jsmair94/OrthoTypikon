@@ -29,6 +29,9 @@ if (!basePath) {
 
 export default defineConfig({
   base: basePath,
+  define: {
+    'process.env.EXPO_PUBLIC_DOMAIN': 'undefined',
+  },
   plugins: [
     react(),
     tailwindcss(),
