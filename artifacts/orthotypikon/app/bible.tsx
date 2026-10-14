@@ -287,11 +287,11 @@ export default function BibleScreen() {
   useEffect(() => {
     setRemoteChapter(null);
     setRemoteChapterError(false);
-    if (selectedSection !== 'matthew' || selectedChapter === null) return;
+    if (selectedSection !== 'book-matthew' || selectedChapter === null) return;
     let active = true;
     setRemoteChapterLoading(true);
-    const domain = process.env.EXPO_PUBLIC_DOMAIN?.trim();
-    const origin = domain ? (/^https?:\/\//i.test(domain) ? domain : `https://${domain}`).replace(/\/+$/, '') : '';
+    const configuredApiBase = process.env.EXPO_PUBLIC_BIBLE_API_BASE_URL?.trim() || 'https://www.orthotypikon.org';
+    const origin = (/^https?:\/\//i.test(configuredApiBase) ? configuredApiBase : `https://${configuredApiBase}`).replace(/\/+$/, '');
     fetch(`${origin}/api/bible/matthew/${selectedChapter}`)
       .then(async (response) => {
         if (!response.ok) throw new Error('Chapter unavailable');
@@ -452,7 +452,7 @@ export default function BibleScreen() {
                     })}
                   </View>
                   {selectedChapter && (
-                    selectedSection === 'matthew' ? (
+                    selectedSection === 'book-matthew' ? (
                       remoteChapterLoading ? (
                         <Text testID="bible-chapter-loading" style={[styles.chapterPending, { color: colors.mutedForeground }]}>{isRTL ? 'جارٍ تحميل الإصحاح…' : 'Loading chapter…'}</Text>
                       ) : remoteChapterError ? (
