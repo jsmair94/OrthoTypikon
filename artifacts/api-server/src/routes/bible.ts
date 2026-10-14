@@ -106,7 +106,7 @@ router.get("/bible/matthew/:chapter", async (req, res): Promise<void> => {
     }
 
     const textKey = `${prefix}${chapter}.txt`;
-    const audioKey = `${prefix}${chapter}.mp3`;
+    const audioKey = `${prefix}${chapter}.MP3`;
     await config.client.send(new HeadObjectCommand({
       Bucket: config.bucket,
       Key: audioKey,
