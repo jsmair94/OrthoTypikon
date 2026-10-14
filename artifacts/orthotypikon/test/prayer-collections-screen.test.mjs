@@ -150,13 +150,13 @@ const libraryScreenMocks = {
   },
   '@/data/exploreItems': {
     exploreItems: [
-      { key: 'library', imageSource: { uri: 'library-cover' }, imageResizeMode: 'stretch', route: '/library', color: '#25394A' },
-      { key: 'prayer', imageSource: { uri: 'rosary-cover' }, imageResizeMode: 'stretch', route: '/prayer', color: '#8C5948' },
-      { key: 'kitchen', imageSource: { uri: 'kitchen-cover' }, imageResizeMode: 'contain', route: '/fasting', color: '#271A12' },
-      { key: 'learn', imageSource: { uri: 'learning-cover' }, imageResizeMode: 'stretch', route: '/learn', color: '#6C7C96' },
-      { key: 'pastoral', imageSource: { uri: 'name-days-cover' }, imageResizeMode: 'stretch', route: '/pastoral', color: '#8C5948' },
-      { key: 'places', imageSource: { uri: 'places-cover' }, imageResizeMode: 'stretch', route: '/places', color: '#B47732' },
-      { key: 'prayers', imageSource: { uri: 'prayers-cover' }, imageResizeMode: 'stretch', route: '/library', color: '#534E50' },
+      { key: 'library', imageUrl: 'https://api.example/api/explore-images/library', imageResizeMode: 'stretch', route: '/library', color: '#25394A' },
+      { key: 'prayer', imageUrl: 'https://api.example/api/explore-images/prayer', imageResizeMode: 'stretch', route: '/prayer', color: '#8C5948' },
+      { key: 'kitchen', imageUrl: 'https://api.example/api/explore-images/kitchen', imageResizeMode: 'contain', route: '/fasting', color: '#271A12' },
+      { key: 'learn', imageUrl: 'https://api.example/api/explore-images/learn', imageResizeMode: 'stretch', route: '/learn', color: '#6C7C96' },
+      { key: 'pastoral', imageUrl: 'https://api.example/api/explore-images/pastoral', imageResizeMode: 'stretch', route: '/pastoral', color: '#8C5948' },
+      { key: 'places', imageUrl: 'https://api.example/api/explore-images/places', imageResizeMode: 'stretch', route: '/places', color: '#B47732' },
+      { key: 'prayers', imageUrl: 'https://api.example/api/explore-images/prayers', imageResizeMode: 'stretch', route: '/library', color: '#534E50' },
     ],
   },
 };
@@ -253,7 +253,7 @@ test('matching spiritual tools reuse Explore covers and card measurements', () =
     const groupLayers = styleLayers(card.parent.props.style);
 
     assert.ok(exploreItem, `Explore should include the ${route} destination`);
-    assert.equal(image.props.source, exploreItem.imageSource);
+    assert.deepEqual(image.props.source, { uri: exploreItem.imageUrl });
     assert.equal(image.props.resizeMode, exploreItem.imageResizeMode);
     assert.ok(imageFrame, `${route} should use the Explore artwork dimensions`);
     assert.ok(cardLayers.some((layer) => layer.width === '100%' && layer.height === 148));

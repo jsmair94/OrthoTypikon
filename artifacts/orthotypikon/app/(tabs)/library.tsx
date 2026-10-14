@@ -2,7 +2,7 @@ import { Feather } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Image, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import type { ImageResizeMode, ImageSourcePropType } from 'react-native';
+import type { ImageResizeMode } from 'react-native';
 import { useEffect, useRef, useState, type ComponentProps } from 'react';
 import { useColors } from '@/hooks/useColors';
 import { useI18n } from '@/hooks/usePreferences';
@@ -48,7 +48,7 @@ type LibraryRailItem = {
   icon?: FeatherIconName;
   route?: (typeof tools)[number]['route'];
   prayerCollection?: PrayerCollectionId;
-  imageSource?: ImageSourcePropType;
+  imageUrl?: string;
   imageResizeMode?: ImageResizeMode;
 };
 
@@ -102,7 +102,7 @@ function LibraryRail({
               const artwork = (
                 <View style={[
                   styles.artwork,
-                  item.topic || item.imageSource ? styles.wideArtwork : undefined,
+                  item.topic || item.imageUrl ? styles.wideArtwork : undefined,
                   { backgroundColor: item.color },
                 ]}>
                   {item.topic ? (
@@ -111,9 +111,9 @@ function LibraryRail({
                       resizeMode="contain"
                       style={StyleSheet.absoluteFillObject}
                     />
-                  ) : item.imageSource ? (
+                  ) : item.imageUrl ? (
                     <Image
-                      source={item.imageSource}
+                      source={{ uri: item.imageUrl }}
                       resizeMode={item.imageResizeMode ?? 'stretch'}
                       style={styles.exploreImage}
                     />
@@ -195,8 +195,8 @@ export default function LibraryScreen() {
       key: tool.route,
       title: t.library.toolTitles[index],
       color: matchingExploreItem?.color ?? tool.color,
-      imageSource: matchingExploreItem && 'imageSource' in matchingExploreItem
-        ? matchingExploreItem.imageSource
+      imageUrl: matchingExploreItem && 'imageUrl' in matchingExploreItem
+        ? matchingExploreItem.imageUrl
         : undefined,
       imageResizeMode: matchingExploreItem && 'imageResizeMode' in matchingExploreItem
         ? matchingExploreItem.imageResizeMode

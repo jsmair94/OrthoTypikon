@@ -5,6 +5,7 @@ import contentRouter from "./content";
 import adminRouter from "./admin";
 import placesRouter from "./places";
 import bibleRouter from "./bible";
+import exploreImagesRouter from "./explore-images";
 
 const router: IRouter = Router();
 
@@ -13,6 +14,7 @@ router.use(prayerCommunityRouter);
 router.use(contentRouter);
 router.use(placesRouter);
 router.use(bibleRouter);
+router.use(exploreImagesRouter);
 router.use(adminRouter);
 
 export default router;

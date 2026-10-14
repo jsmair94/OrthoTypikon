@@ -1,3 +1,7 @@
+const apiHost = process.env.EXPO_PUBLIC_DOMAIN?.replace(/^https?:\/\//, '').replace(/\/+$/, '')
+  || 'api.orthotypikon.org';
+const exploreImage = (id: string) => `https://${apiHost}/api/explore-images/${id}`;
+
 export const exploreItems = [
   {
     key: 'audio-gospel',
@@ -7,49 +11,49 @@ export const exploreItems = [
   },
   {
     key: 'library',
-    imageSource: require('../assets/images/library-card-cover.jpg'),
+    imageUrl: exploreImage('library'),
     imageResizeMode: 'stretch',
     route: '/library',
     color: '#25394A',
   },
   {
     key: 'prayer',
-    imageSource: require('../assets/images/rosary-card-cover.jpg'),
+    imageUrl: exploreImage('prayer'),
     imageResizeMode: 'stretch',
     route: '/prayer',
     color: '#8C5948',
   },
   {
     key: 'kitchen',
-    imageSource: require('../assets/images/lenten-kitchen.jpg'),
+    imageUrl: exploreImage('kitchen'),
     imageResizeMode: 'contain',
     route: '/fasting',
     color: '#271A12',
   },
   {
     key: 'learn',
-    imageSource: require('../assets/images/synaxarion-glossary-card-cover.jpg'),
+    imageUrl: exploreImage('learn'),
     imageResizeMode: 'stretch',
     route: '/learn',
     color: '#6C7C96',
   },
   {
     key: 'pastoral',
-    imageSource: require('../assets/images/name-days-card-cover.jpg'),
+    imageUrl: exploreImage('pastoral'),
     imageResizeMode: 'stretch',
     route: '/pastoral',
     color: '#8C5948',
   },
   {
     key: 'places',
-    imageSource: require('../assets/images/nearby-orthodox-places-card-cover.jpg'),
+    imageUrl: exploreImage('places'),
     imageResizeMode: 'stretch',
     route: '/places',
     color: '#B47732',
   },
   {
     key: 'prayers',
-    imageSource: require('../assets/images/prayers-card-cover.jpg'),
+    imageUrl: exploreImage('prayers'),
     imageResizeMode: 'stretch',
     route: '/library',
     color: '#534E50',

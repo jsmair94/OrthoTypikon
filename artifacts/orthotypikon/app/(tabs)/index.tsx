@@ -653,9 +653,9 @@ export default function HomeScreen() {
                     ]}
                   >
                     <View style={[styles.librarySectionArtwork, { backgroundColor: item.color }]}>
-                      {'imageSource' in item ? (
+                      {'imageUrl' in item ? (
                         <Image
-                          source={item.imageSource}
+                          source={{ uri: item.imageUrl }}
                           resizeMode={item.imageResizeMode}
                           style={styles.librarySectionImage}
                         />
