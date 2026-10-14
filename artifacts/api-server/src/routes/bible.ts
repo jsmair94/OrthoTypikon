@@ -5,7 +5,11 @@ import { Router, type IRouter } from "express";
 const router: IRouter = Router();
 const matthewChapterCount = 28;
 const signedUrlLifetimeSeconds = 60 * 60;
-let cachedMatthewPrefix: { bucket: string; prefix: string; expiresAt: number } | null = null;
+let cachedMatthewFolders: {
+  bucket: string;
+  folders: { prefix: string; assets: string[] }[];
+  expiresAt: number;
+} | null = null;
 
 function getS3Config() {
   const bucket = process.env.AWS_S3_BUCKET_NAME ?? process.env.BUCKET;
@@ -31,54 +35,53 @@ function getS3Config() {
   };
 }
 
-async function findMatthewPrefix(client: S3Client, bucket: string): Promise<string | null> {
+async function findMatthewPrefix(client: S3Client, bucket: string, chapter: number): Promise<string | null> {
   if (process.env.BIBLE_MATTHEW_PREFIX) {
     return `${process.env.BIBLE_MATTHEW_PREFIX.replace(/^\/+|\/+$/g, "")}/`;
   }
-  if (cachedMatthewPrefix?.bucket === bucket && cachedMatthewPrefix.expiresAt > Date.now()) {
-    return cachedMatthewPrefix.prefix;
+  if (!cachedMatthewFolders || cachedMatthewFolders.bucket !== bucket || cachedMatthewFolders.expiresAt <= Date.now()) {
+    const candidates = new Map<string, Set<string>>();
+    let continuationToken: string | undefined;
+
+    do {
+      const page = await client.send(new ListObjectsV2Command({
+        Bucket: bucket,
+        ContinuationToken: continuationToken,
+      }));
+
+      for (const item of page.Contents ?? []) {
+        if (!item.Key) continue;
+        const match = item.Key.match(/(?:^|\/)(?:متى|Matthew)\/(\d+)\.(txt|mp3)$/i);
+        if (!match) continue;
+        const suffix = `${match[1]}.${match[2].toLowerCase()}`;
+        const prefix = item.Key.slice(0, -suffix.length);
+        const assets = candidates.get(prefix) ?? new Set<string>();
+        assets.add(suffix);
+        candidates.set(prefix, assets);
+      }
+      continuationToken = page.IsTruncated ? page.NextContinuationToken : undefined;
+    } while (continuationToken);
+
+    cachedMatthewFolders = {
+      bucket,
+      folders: [...candidates.entries()].map(([prefix, assets]) => ({
+        prefix,
+        assets: [...assets],
+      })),
+      expiresAt: Date.now() + 5 * 60_000,
+    };
   }
 
-  const candidates = new Map<string, Set<string>>();
-  let continuationToken: string | undefined;
-
-  do {
-    const page = await client.send(new ListObjectsV2Command({
-      Bucket: bucket,
-      ContinuationToken: continuationToken,
-    }));
-
-    for (const item of page.Contents ?? []) {
-      if (!item.Key) continue;
-      const match = item.Key.match(/(?:^|\/)(?:متى|Matthew)\/(\d+)\.(txt|mp3)$/i);
-      if (!match) continue;
-      const suffix = `${match[1]}.${match[2].toLowerCase()}`;
-      const prefix = item.Key.slice(0, -suffix.length);
-      const assets = candidates.get(prefix) ?? new Set<string>();
-      assets.add(suffix);
-      candidates.set(prefix, assets);
-    }
-    continuationToken = page.IsTruncated ? page.NextContinuationToken : undefined;
-  } while (continuationToken);
-
-  const complete = [...candidates.entries()]
-    .filter(([, assets]) => Array.from({ length: matthewChapterCount }, (_, i) =>
-      assets.has(`${i + 1}.txt`) && assets.has(`${i + 1}.mp3`),
-    ).every(Boolean))
-    .map(([prefix]) => prefix);
-
-  if (complete.length === 1) {
-    cachedMatthewPrefix = { bucket, prefix: complete[0], expiresAt: Date.now() + 5 * 60_000 };
-    return complete[0];
+  const matching = cachedMatthewFolders.folders.filter(({ prefix, assets }) =>
+    /(?:^|\/)(?:متى|Matthew)\/$/i.test(prefix) &&
+    assets.includes(`${chapter}.txt`) &&
+    assets.includes(`${chapter}.mp3`),
+  );
+  if (matching.length === 1) return matching[0].prefix;
+  if (matching.length > 1) {
+    throw new Error("More than one Matthew folder was found. Set BIBLE_MATTHEW_PREFIX.");
   }
-  if (complete.length > 1) {
-    throw new Error("More than one complete Matthew folder was found. Set BIBLE_MATTHEW_PREFIX.");
-  }
-
-  const partial = [...candidates.entries()].sort((a, b) => b[1].size - a[1].size);
-  if (!partial.length) return null;
-  cachedMatthewPrefix = { bucket, prefix: partial[0][0], expiresAt: Date.now() + 5 * 60_000 };
-  return partial[0][0];
+  return null;
 }
 
 router.get("/bible/matthew/:chapter", async (req, res): Promise<void> => {
@@ -96,7 +99,7 @@ router.get("/bible/matthew/:chapter", async (req, res): Promise<void> => {
   }
 
   try {
-    const prefix = await findMatthewPrefix(config.client, config.bucket);
+    const prefix = await findMatthewPrefix(config.client, config.bucket, chapter);
     if (!prefix) {
       res.status(404).json({ error: "Matthew chapter files were not found in the connected bucket." });
       return;
