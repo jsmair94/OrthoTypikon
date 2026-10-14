@@ -1,6 +1,7 @@
 import { Feather } from '@expo/vector-icons';
+import { useAudioPlayer, useAudioPlayerStatus } from 'expo-audio';
 import { useRouter } from 'expo-router';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useColors } from '@/hooks/useColors';
@@ -10,6 +11,43 @@ import { getPrayerCollection } from '@/data/prayerCollections';
 type Testament = 'old' | 'new';
 type Language = 'ar' | 'en' | 'el';
 type BibleSection = { id: string; icon: React.ComponentProps<typeof Feather>['name']; book?: boolean };
+type RemoteBibleChapter = { text: string; audioUrl: string };
+
+function BibleAudioControl({ url, isRTL }: { url: string; isRTL: boolean }) {
+  const colors = useColors();
+  const player = useAudioPlayer(null, { keepAudioSessionActive: true });
+  const status = useAudioPlayerStatus(player);
+  const [loadedUrl, setLoadedUrl] = useState('');
+
+  useEffect(() => {
+    player.pause();
+    setLoadedUrl('');
+  }, [player, url]);
+
+  const toggle = () => {
+    if (status.playing) {
+      player.pause();
+      return;
+    }
+    if (loadedUrl !== url) {
+      player.replace({ uri: url });
+      setLoadedUrl(url);
+    }
+    player.play();
+  };
+
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={isRTL ? 'تشغيل أو إيقاف صوت الإصحاح' : 'Play or pause chapter audio'}
+      onPress={toggle}
+      style={{ marginTop: 12, padding: 12, borderRadius: 12, backgroundColor: colors.secondary, flexDirection: isRTL ? 'row-reverse' : 'row', alignItems: 'center', gap: 8 }}
+    >
+      <Feather name={status.playing ? 'pause' : 'play'} size={16} color={colors.primary} />
+      <Text style={{ color: colors.foreground, fontWeight: '700' }}>{status.playing ? (isRTL ? 'إيقاف' : 'Pause') : (isRTL ? 'استماع إلى الإصحاح' : 'Listen to chapter')}</Text>
+    </Pressable>
+  );
+}
 
 const sections: Record<Testament, BibleSection[]> = {
   old: [
@@ -123,6 +161,16 @@ const gospelEntryForBook: Record<string, string> = {
   'book-john': 'gospel-john',
 };
 
+const bibleChapterCounts: Record<string, number> = {
+  'book-matthew': 28, 'book-mark': 16, 'book-luke': 24, 'book-john': 21,
+  'book-acts': 28, 'book-romans': 16, 'book-1-corinthians': 16, 'book-2-corinthians': 13,
+  'book-galatians': 6, 'book-ephesians': 6, 'book-philippians': 4, 'book-colossians': 4,
+  'book-1-thessalonians': 5, 'book-2-thessalonians': 3, 'book-1-timothy': 6,
+  'book-2-timothy': 4, 'book-titus': 3, 'book-philemon': 1, 'book-hebrews': 13,
+  'book-james': 5, 'book-1-peter': 5, 'book-2-peter': 3, 'book-1-john': 5,
+  'book-2-john': 1, 'book-3-john': 1, 'book-jude': 1, 'book-revelation': 22,
+};
+
 const copy: Record<Language, {
   eyebrow: string;
   title: string;
@@ -232,6 +280,29 @@ export default function BibleScreen() {
   const webBottomInset = Platform.OS === 'web' ? 34 : 0;
   const [testament, setTestament] = useState<Testament>('new');
   const [selectedSection, setSelectedSection] = useState<string | null>(null);
+  const [selectedChapter, setSelectedChapter] = useState<number | null>(null);
+  const [remoteChapter, setRemoteChapter] = useState<RemoteBibleChapter | null>(null);
+  const [remoteChapterLoading, setRemoteChapterLoading] = useState(false);
+  const [remoteChapterError, setRemoteChapterError] = useState(false);
+  useEffect(() => {
+    setRemoteChapter(null);
+    setRemoteChapterError(false);
+    if (selectedSection !== 'matthew' || selectedChapter === null) return;
+    let active = true;
+    setRemoteChapterLoading(true);
+    const domain = process.env.EXPO_PUBLIC_DOMAIN?.trim();
+    const origin = domain ? (/^https?:\/\//i.test(domain) ? domain : `https://${domain}`).replace(/\/+$/, '') : '';
+    fetch(`${origin}/api/bible/matthew/${selectedChapter}`)
+      .then(async (response) => {
+        if (!response.ok) throw new Error('Chapter unavailable');
+        return response.json() as Promise<RemoteBibleChapter>;
+      })
+      .then((data) => { if (active) setRemoteChapter(data); })
+      .catch(() => { if (active) setRemoteChapterError(true); })
+      .finally(() => { if (active) setRemoteChapterLoading(false); });
+    return () => { active = false; };
+  }, [selectedSection, selectedChapter]);
+  const selectedChapterCount = selectedSection ? bibleChapterCounts[selectedSection] : undefined;
   const selectedGospelEntryId = selectedSection ? gospelEntryForBook[selectedSection] : undefined;
   const selectedGospelEntries = gospelCollection?.entries.filter(
     (entry) => entry.id === selectedGospelEntryId,
@@ -277,6 +348,7 @@ export default function BibleScreen() {
               onPress={() => {
                 setTestament(value);
                 setSelectedSection(null);
+                setSelectedChapter(null);
               }}
               style={[
                 styles.testamentTab,
@@ -314,43 +386,92 @@ export default function BibleScreen() {
             ? newTestamentBookNames[language][section.id]
             : text.sectionNames[section.id];
           return (
-            <Pressable
-              key={section.id}
-              testID={`bible-section-${section.id}`}
-              accessibilityRole="button"
-              accessibilityLabel={sectionName}
-              accessibilityState={{ expanded: active }}
-              onPress={() => setSelectedSection(active ? null : section.id)}
-              style={({ pressed }) => [
-                styles.sectionCard,
-                {
-                  flexDirection: isRTL ? 'row-reverse' : 'row',
-                  backgroundColor: colors.card,
-                  borderColor: active ? colors.primary : colors.border,
-                  opacity: pressed ? 0.82 : 1,
-                },
-              ]}
-            >
-              <View style={[styles.sectionIcon, { backgroundColor: active ? colors.primary : colors.secondary }]}>
-                <Feather name={section.icon} size={18} color={active ? colors.primaryForeground : colors.primary} />
-              </View>
-              <View style={[styles.sectionCopy, { alignItems: isRTL ? 'flex-end' : 'flex-start' }]}>
-                <Text style={[styles.sectionTitle, { color: colors.foreground, textAlign: isRTL ? 'right' : 'left' }]}>
-                  {sectionName}
-                </Text>
+            <View key={section.id}>
+              <Pressable
+                testID={`bible-section-${section.id}`}
+                accessibilityRole="button"
+                accessibilityLabel={sectionName}
+                accessibilityState={{ expanded: active }}
+                onPress={() => {
+                  setSelectedSection(active ? null : section.id);
+                  setSelectedChapter(null);
+                }}
+                style={({ pressed }) => [
+                  styles.sectionCard,
+                  {
+                    flexDirection: isRTL ? 'row-reverse' : 'row',
+                    backgroundColor: colors.card,
+                    borderColor: active ? colors.primary : colors.border,
+                    opacity: pressed ? 0.82 : 1,
+                  },
+                ]}
+              >
+                <View style={[styles.sectionIcon, { backgroundColor: active ? colors.primary : colors.secondary }]}>
+                  <Feather name={section.icon} size={18} color={active ? colors.primaryForeground : colors.primary} />
+                </View>
+                <View style={[styles.sectionCopy, { alignItems: isRTL ? 'flex-end' : 'flex-start' }]}>
+                  <Text style={[styles.sectionTitle, { color: colors.foreground, textAlign: isRTL ? 'right' : 'left' }]}>
+                    {sectionName}
+                  </Text>
+                  {!section.book && (
+                    <Text style={[styles.sectionDescription, { color: colors.mutedForeground, textAlign: isRTL ? 'right' : 'left' }]}>
+                      {text.sectionDescriptions[section.id]}
+                    </Text>
+                  )}
+                </View>
                 {!section.book && (
-                  <Text style={[styles.sectionDescription, { color: colors.mutedForeground, textAlign: isRTL ? 'right' : 'left' }]}>
-                    {text.sectionDescriptions[section.id]}
+                  <Text style={[styles.sectionNumber, { color: colors.mutedForeground }]}>
+                    {String(index + 1).padStart(2, '0')}
                   </Text>
                 )}
-              </View>
-              {!section.book && (
-                <Text style={[styles.sectionNumber, { color: colors.mutedForeground }]}>
-                  {String(index + 1).padStart(2, '0')}
-                </Text>
+                <Feather name={active ? 'chevron-up' : isRTL ? 'chevron-left' : 'chevron-right'} size={17} color={colors.mutedForeground} />
+              </Pressable>
+              {active && selectedChapterCount && (
+                <View testID={`bible-chapters-${section.id}`} style={styles.chapterPanel}>
+                  <Text style={[styles.chapterPanelTitle, { color: colors.foreground, textAlign: isRTL ? 'right' : 'left' }]}>
+                    {language === 'ar' ? `إصحاحات ${sectionName}` : language === 'el' ? `Κεφάλαια · ${sectionName}` : `Chapters · ${sectionName}`}
+                  </Text>
+                  <View style={styles.chapterGrid}>
+                    {Array.from({ length: selectedChapterCount }, (_, chapterIndex) => {
+                      const chapterNumber = chapterIndex + 1;
+                      const chapterActive = selectedChapter === chapterNumber;
+                      return (
+                        <Pressable
+                          key={chapterNumber}
+                          testID={`bible-chapter-${section.id}-${chapterNumber}`}
+                          accessibilityRole="button"
+                          accessibilityState={{ selected: chapterActive }}
+                          onPress={() => setSelectedChapter(chapterNumber)}
+                          style={[styles.chapterButton, { backgroundColor: chapterActive ? colors.primary : colors.card, borderColor: chapterActive ? colors.primary : colors.border }]}
+                        >
+                          <Text style={{ color: chapterActive ? colors.primaryForeground : colors.foreground, fontWeight: '700', fontSize: 13 }}>
+                            {chapterNumber}
+                          </Text>
+                        </Pressable>
+                      );
+                    })}
+                  </View>
+                  {selectedChapter && (
+                    selectedSection === 'matthew' ? (
+                      remoteChapterLoading ? (
+                        <Text testID="bible-chapter-loading" style={[styles.chapterPending, { color: colors.mutedForeground }]}>{isRTL ? 'جارٍ تحميل الإصحاح…' : 'Loading chapter…'}</Text>
+                      ) : remoteChapterError ? (
+                        <Text testID="bible-chapter-error" style={[styles.chapterPending, { color: colors.mutedForeground }]}>{isRTL ? 'تعذر تحميل النص أو التسجيل من التخزين.' : 'Could not load the text or audio from storage.'}</Text>
+                      ) : remoteChapter ? (
+                        <View style={{ marginTop: 12, padding: 12, borderRadius: 12, borderWidth: 1, backgroundColor: colors.card, borderColor: colors.border }}>
+                          <Text testID="bible-chapter-text" style={{ color: colors.foreground, textAlign: isRTL ? 'right' : 'left', writingDirection: isRTL ? 'rtl' : 'ltr', fontSize: 17, lineHeight: 30 }}>{remoteChapter.text}</Text>
+                          <BibleAudioControl url={remoteChapter.audioUrl} isRTL={isRTL} />
+                        </View>
+                      ) : null
+                    ) : (
+                      <Text testID="bible-chapter-pending" style={[styles.chapterPending, { color: colors.mutedForeground, textAlign: isRTL ? 'right' : 'left' }]}>
+                        {language === 'ar' ? `الإصحاح ${selectedChapter}: ستظهر القراءة والتسجيل الصوتي هنا بعد رفع الملفات.` : language === 'el' ? `Κεφάλαιο ${selectedChapter}: το κείμενο και η ηχογράφηση θα εμφανιστούν εδώ όταν προστεθούν τα αρχεία.` : `Chapter ${selectedChapter}: its reading and audio will appear here when the files are added.`}
+                      </Text>
+                    )
+                  )}
+                </View>
               )}
-              <Feather name={active ? 'chevron-up' : isRTL ? 'chevron-left' : 'chevron-right'} size={17} color={colors.mutedForeground} />
-            </Pressable>
+            </View>
           );
         })}
       </View>
@@ -399,7 +520,7 @@ export default function BibleScreen() {
         </View>
       )}
 
-      {selectedSection && selectedGospelEntries.length === 0 && (
+      {selectedSection && !selectedChapterCount && selectedGospelEntries.length === 0 && (
         <View
           testID="bible-content-pending"
           style={[styles.pendingCard, { backgroundColor: colors.card, borderColor: colors.border }]}
@@ -442,6 +563,11 @@ const styles = StyleSheet.create({
   sectionTitle: { fontSize: 14, fontWeight: '700' },
   sectionDescription: { fontSize: 11, lineHeight: 15 },
   sectionNumber: { fontSize: 10, fontWeight: '700' },
+  chapterPanel: { gap: 12, marginTop: 9, marginBottom: 5, padding: 13, borderRadius: 15, backgroundColor: 'rgba(127,127,127,0.06)' },
+  chapterPanelTitle: { fontSize: 13, fontWeight: '800' },
+  chapterGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  chapterButton: { width: 42, height: 42, borderWidth: 1, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+  chapterPending: { fontSize: 11, lineHeight: 17 },
   gospelList: { gap: 10 },
   gospelListTitle: { fontSize: 17, fontWeight: '800' },
   gospelListDescription: { fontSize: 12, lineHeight: 18, marginTop: -5 },
