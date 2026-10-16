@@ -18,7 +18,8 @@ export const moreContent = {
     socialPending: 'سيتم إضافة الروابط قريبًا',
     socialOpenFailed: 'تعذّر فتح رابط التواصل. حاول مرة أخرى.',
     contactForm: {
-      intro: 'هذا النموذج غير مربوط بخدمة إرسال بعد. يمكنك تعبئة الحقول، لكن المعلومات لن تُرسل أو تُحفظ.',
+      intro: 'أرسل رسالتك إلينا باستخدام النموذج، وستصل إلى فريق OrthoTypikon عبر البريد الإلكتروني.',
+      emailOpenFailed: 'تعذّر فتح تطبيق البريد. حاول مرة أخرى.',
       name: 'الاسم',
       email: 'البريد الإلكتروني',
       country: 'الدولة',
@@ -36,7 +37,9 @@ export const moreContent = {
       closeDialCodePicker: 'إغلاق اختيار رمز البلد',
       message: 'ماذا تريد أن تخبرنا؟',
       submit: 'إرسال',
-      submitNotice: 'لم يُرسل النموذج بعد؛ لم تُرسل بياناتك أو تُحفظ. سيتم تفعيل الإرسال لاحقًا.',
+      sending: 'جارٍ الإرسال…',
+      submitNotice: 'تم إرسال رسالتك بنجاح. شكرًا لتواصلك معنا.',
+      sendFailed: 'تعذّر إرسال رسالتك. حاول مرة أخرى أو راسلنا عبر البريد الإلكتروني.',
       required: 'هذا الحقل مطلوب.',
       invalidEmail: 'أدخل بريدًا إلكترونيًا صحيحًا.',
       invalidPhone: 'أدخل رقم هاتف صحيحًا.',
@@ -84,14 +87,14 @@ export const moreContent = {
         {
           title: 'التغييرات والتواصل',
           body:
-            'قد نحدّث هذه السياسة عندما تتغير ميزات التطبيق. نموذج التواصل الظاهر في التطبيق غير مربوط بخدمة إرسال حاليًا؛ لذلك لا تُرسل البيانات المدخلة فيه ولا تُحفظ. سنحدّث السياسة قبل تفعيل الإرسال.',
+            'قد نحدّث هذه السياسة عندما تتغير ميزات التطبيق. تُرسل البيانات التي تدخلها في نموذج التواصل عبر Resend إلى info@orthotypikon.org لتصل إلى فريق الدعم. لا يحفظ التطبيق الرسائل في قاعدة بياناته، لكن مزود البريد يعالجها لتسليمها.',
         },
       ] satisfies LegalSection[],
     },
     termsPage: {
       title: 'الشروط والأحكام',
       disclaimer:
-        'هذه مسودة عامة للمعلومات وليست مشورة قانونية. الجهة الناشرة المعلنة: OrthoTypikon؛ لم تُحدد الدولة أو القانون الحاكم أو بريد التواصل القانوني. راجعها مع محامٍ مؤهل واستكمل البيانات قبل الاعتماد الرسمي. نموذج التواصل داخل التطبيق غير متصل بخدمة إرسال حاليًا.',
+        'هذه مسودة عامة للمعلومات وليست مشورة قانونية. الجهة الناشرة المعلنة: OrthoTypikon؛ لم تُحدد الدولة أو القانون الحاكم أو جهة الاختصاص. بريد الدعم هو info@orthotypikon.org. راجعها مع محامٍ مؤهل واستكمل البيانات قبل الاعتماد الرسمي. تُرسل رسائل نموذج التواصل عبر Resend إلى بريد الدعم ولا يحفظها التطبيق في قاعدة بياناته.',
       intro:
         'توضح هذه الشروط قواعد استخدام OrthoTypikon وميزاته. باستخدام التطبيق، فإنك توافق على هذه الشروط وعلى سياسة الخصوصية.',
       updated: 'آخر تحديث: ٢ تشرين الأول ٢٠٢٦',
@@ -139,7 +142,7 @@ export const moreContent = {
         {
           title: 'المسؤولية والقانون والتواصل',
           body:
-            'إلى الحد الذي يسمح به القانون، لا يكون OrthoTypikon مسؤولًا عن الأضرار غير المباشرة الناجمة عن تعذر استخدام التطبيق أو الاعتماد على محتوى غير رسمي؛ ولا تحد هذه الشروط من الحقوق أو المسؤوليات التي لا يسمح القانون باستبعادها. لم تُحدد بعد الدولة أو المحكمة المختصة أو وسيلة التواصل القانونية. يجب استكمالها ومراجعة هذه المسودة محليًا قبل اعتمادها. نموذج التواصل داخل التطبيق لا يرسل البيانات أو يحفظها حاليًا.',
+            'إلى الحد الذي يسمح به القانون، لا يكون OrthoTypikon مسؤولًا عن الأضرار غير المباشرة الناجمة عن تعذر استخدام التطبيق أو الاعتماد على محتوى غير رسمي؛ ولا تحد هذه الشروط من الحقوق أو المسؤوليات التي لا يسمح القانون باستبعادها. لم تُحدد بعد الدولة أو المحكمة المختصة، ويجب استكمالها ومراجعة هذه المسودة محليًا قبل اعتمادها. تُرسل رسائل نموذج التواصل عبر Resend إلى info@orthotypikon.org ولا يحفظها التطبيق في قاعدة بياناته.',
         },
       ] satisfies LegalSection[],
     },
@@ -154,7 +157,8 @@ export const moreContent = {
     socialPending: 'Links will be added soon',
     socialOpenFailed: 'Could not open this social link. Please try again.',
     contactForm: {
-      intro: 'This form is not connected to a sending service yet. You can fill it in, but your information will not be sent or saved.',
+      intro: 'Send us a message using this form. It will be delivered to the OrthoTypikon team by email.',
+      emailOpenFailed: 'Could not open your email app. Please try again.',
       name: 'Name',
       email: 'Email address',
       country: 'Country',
@@ -172,7 +176,9 @@ export const moreContent = {
       closeDialCodePicker: 'Close country code picker',
       message: 'What would you like to tell us?',
       submit: 'Submit',
-      submitNotice: 'The form is not connected yet; your information was not sent or saved. Sending will be enabled later.',
+      sending: 'Sending…',
+      submitNotice: 'Your message was sent successfully. Thank you for contacting us.',
+      sendFailed: 'We could not send your message. Please try again or email us directly.',
       required: 'This field is required.',
       invalidEmail: 'Enter a valid email address.',
       invalidPhone: 'Enter a valid phone number.',
@@ -220,14 +226,14 @@ export const moreContent = {
         {
           title: 'Changes and contact',
           body:
-            'We may update this policy when app features change. The last-updated date appears at the top of this page. The contact form is not connected to a sending service yet, so information entered there is not sent or saved. We will update this policy before sending is enabled.',
+            'We may update this policy when app features change. The last-updated date appears at the top of this page. Contact form details are sent through Resend to info@orthotypikon.org for the support team. The app does not store submissions in its database; the email provider processes them for delivery.',
         },
       ] satisfies LegalSection[],
     },
     termsPage: {
       title: 'Terms and conditions',
       disclaimer:
-        'This is a general informational draft, not legal advice. The stated publisher name is OrthoTypikon; no country, governing law, or legal contact email has been provided. Have a qualified lawyer review and complete it before formal adoption. The in-app contact form is not connected to a sending service.',
+        'This is a general informational draft, not legal advice. The stated publisher name is OrthoTypikon; the country and governing law have not been specified. The support email is info@orthotypikon.org. Have a qualified lawyer review and complete it before formal adoption. Contact form submissions are sent through Resend to the support email and are not stored in the app database.',
       intro:
         'These terms describe the rules for using OrthoTypikon and its features. By using the app, you agree to these terms and the Privacy Policy.',
       updated: 'Last updated: October 2, 2026',
@@ -275,7 +281,7 @@ export const moreContent = {
         {
           title: 'Liability, governing law, and contact',
           body:
-            'To the extent permitted by law, OrthoTypikon is not liable for indirect harm arising from inability to use the app or reliance on unofficial content. These terms do not limit rights or liabilities that applicable law does not allow to be excluded. The country, competent courts, and legal contact method have not yet been specified and must be completed and locally reviewed before these terms are formally adopted. The in-app contact form does not currently send or save submissions.',
+            'To the extent permitted by law, OrthoTypikon is not liable for indirect harm arising from inability to use the app or reliance on unofficial content. These terms do not limit rights or liabilities that applicable law does not allow to be excluded. The country and competent courts have not yet been specified and must be completed and locally reviewed before these terms are formally adopted. Contact form submissions are sent through Resend to info@orthotypikon.org and are not stored in the app database.',
         },
       ] satisfies LegalSection[],
     },
@@ -290,7 +296,8 @@ export const moreContent = {
     socialPending: 'Οι σύνδεσμοι θα προστεθούν σύντομα',
     socialOpenFailed: 'Δεν ήταν δυνατό να ανοίξει αυτός ο σύνδεσμος. Δοκιμάστε ξανά.',
     contactForm: {
-      intro: 'Η φόρμα δεν είναι ακόμη συνδεδεμένη με υπηρεσία αποστολής. Μπορείτε να τη συμπληρώσετε, αλλά οι πληροφορίες σας δεν θα σταλούν ούτε θα αποθηκευτούν.',
+      intro: 'Στείλτε μας μήνυμα από αυτή τη φόρμα και θα παραδοθεί στην ομάδα OrthoTypikon μέσω email.',
+      emailOpenFailed: 'Δεν ήταν δυνατό να ανοίξει η εφαρμογή email. Δοκιμάστε ξανά.',
       name: 'Όνομα',
       email: 'Διεύθυνση email',
       country: 'Χώρα',
@@ -308,7 +315,9 @@ export const moreContent = {
       closeDialCodePicker: 'Κλείσιμο επιλογής κωδικού χώρας',
       message: 'Τι θέλετε να μας πείτε;',
       submit: 'Υποβολή',
-      submitNotice: 'Η φόρμα δεν είναι ακόμη συνδεδεμένη· οι πληροφορίες σας δεν στάλθηκαν ούτε αποθηκεύτηκαν. Η αποστολή θα ενεργοποιηθεί αργότερα.',
+      sending: 'Αποστολή…',
+      submitNotice: 'Το μήνυμά σας στάλθηκε με επιτυχία. Ευχαριστούμε.',
+      sendFailed: 'Δεν ήταν δυνατή η αποστολή. Δοκιμάστε ξανά ή στείλτε μας email.',
       required: 'Αυτό το πεδίο είναι υποχρεωτικό.',
       invalidEmail: 'Εισαγάγετε μια έγκυρη διεύθυνση email.',
       invalidPhone: 'Εισαγάγετε έναν έγκυρο αριθμό τηλεφώνου.',
@@ -356,14 +365,14 @@ export const moreContent = {
         {
           title: 'Αλλαγές και επικοινωνία',
           body:
-            'Μπορεί να ενημερώνουμε αυτή την πολιτική όταν αλλάζουν οι λειτουργίες της εφαρμογής. Η ημερομηνία τελευταίας ενημέρωσης εμφανίζεται στην κορυφή της σελίδας. Η φόρμα επικοινωνίας δεν είναι ακόμη συνδεδεμένη με υπηρεσία αποστολής, επομένως οι πληροφορίες που εισάγονται δεν αποστέλλονται ούτε αποθηκεύονται. Η πολιτική θα ενημερωθεί πριν ενεργοποιηθεί η αποστολή.',
+            'Μπορεί να ενημερώνουμε αυτή την πολιτική όταν αλλάζουν οι λειτουργίες της εφαρμογής. Η ημερομηνία τελευταίας ενημέρωσης εμφανίζεται στην κορυφή της σελίδας. Τα στοιχεία της φόρμας επικοινωνίας αποστέλλονται μέσω Resend στο info@orthotypikon.org για την ομάδα υποστήριξης. Η εφαρμογή δεν αποθηκεύει τις υποβολές στη βάση δεδομένων της· ο πάροχος email τις επεξεργάζεται για την παράδοση.',
         },
       ] satisfies LegalSection[],
     },
     termsPage: {
       title: 'Όροι και προϋποθέσεις',
       disclaimer:
-        'Αυτό είναι ένα γενικό ενημερωτικό προσχέδιο και δεν αποτελεί νομική συμβουλή. Η δηλωμένη επωνυμία του εκδότη είναι OrthoTypikon· δεν έχουν δοθεί χώρα, εφαρμοστέο δίκαιο ή νομικό email επικοινωνίας. Ζητήστε έλεγχο από εξειδικευμένο δικηγόρο και συμπληρώστε τα στοιχεία πριν από την επίσημη υιοθέτηση. Η φόρμα επικοινωνίας της εφαρμογής δεν συνδέεται με υπηρεσία αποστολής.',
+        'Αυτό είναι ένα γενικό ενημερωτικό προσχέδιο και δεν αποτελεί νομική συμβουλή. Η δηλωμένη επωνυμία του εκδότη είναι OrthoTypikon· δεν έχουν καθοριστεί χώρα και εφαρμοστέο δίκαιο. Το email υποστήριξης είναι info@orthotypikon.org. Ζητήστε έλεγχο από εξειδικευμένο δικηγόρο και συμπληρώστε τα στοιχεία πριν από την επίσημη υιοθέτηση. Τα μηνύματα της φόρμας αποστέλλονται μέσω Resend στο email υποστήριξης και δεν αποθηκεύονται στη βάση δεδομένων της εφαρμογής.',
       intro:
         'Οι όροι αυτοί περιγράφουν τους κανόνες χρήσης του OrthoTypikon και των λειτουργιών του. Με τη χρήση της εφαρμογής αποδέχεστε τους όρους και την Πολιτική απορρήτου.',
       updated: 'Τελευταία ενημέρωση: 2 Οκτωβρίου 2026',
@@ -411,7 +420,7 @@ export const moreContent = {
         {
           title: 'Ευθύνη, εφαρμοστέο δίκαιο και επικοινωνία',
           body:
-            'Στον βαθμό που το επιτρέπει ο νόμος, το OrthoTypikon δεν ευθύνεται για έμμεση ζημία που προκύπτει από αδυναμία χρήσης της εφαρμογής ή από την εμπιστοσύνη σε μη επίσημο περιεχόμενο. Οι όροι αυτοί δεν περιορίζουν δικαιώματα ή ευθύνες που δεν επιτρέπεται να αποκλειστούν από την εφαρμοστέα νομοθεσία. Η χώρα, τα αρμόδια δικαστήρια και ο νομικός τρόπος επικοινωνίας δεν έχουν ακόμη οριστεί και πρέπει να συμπληρωθούν και να ελεγχθούν τοπικά πριν από την επίσημη υιοθέτηση. Η φόρμα επικοινωνίας της εφαρμογής δεν αποστέλλει ούτε αποθηκεύει υποβολές.',
+            'Στον βαθμό που το επιτρέπει ο νόμος, το OrthoTypikon δεν ευθύνεται για έμμεση ζημία που προκύπτει από αδυναμία χρήσης της εφαρμογής ή από την εμπιστοσύνη σε μη επίσημο περιεχόμενο. Οι όροι αυτοί δεν περιορίζουν δικαιώματα ή ευθύνες που δεν επιτρέπεται να αποκλειστούν από την εφαρμοστέα νομοθεσία. Η χώρα και τα αρμόδια δικαστήρια δεν έχουν ακόμη οριστεί και πρέπει να συμπληρωθούν και να ελεγχθούν τοπικά πριν από την επίσημη υιοθέτηση. Τα μηνύματα της φόρμας αποστέλλονται μέσω Resend στο info@orthotypikon.org και δεν αποθηκεύονται στη βάση δεδομένων της εφαρμογής.',
         },
       ] satisfies LegalSection[],
     },

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import {
   ArrowLeft, ArrowRight, BookOpen, CalendarDays, ChevronLeft, ChevronRight,
@@ -17,6 +17,7 @@ import {
   useListCalendarByMonth,
   useListLearningEntries,
   useListSaints,
+  useSubmitContactMessage,
 } from '@workspace/api-client-react';
 import type { CalendarType, LearningCategory } from '@workspace/api-client-react';
 import { ErrorBoundary } from '@/components/error-boundary';
@@ -457,10 +458,44 @@ function InformationPage() {
   const app = useApp(), params = useParams<{ section: string }>(), en = app.locale === 'en', data = getMoreContent(app.locale), section = params.section;
   const page = section === 'privacy' ? data.privacyPage : section === 'terms' ? data.termsPage : null;
   const title = section === 'privacy' ? data.privacy : section === 'terms' ? data.terms : section === 'contact' ? data.contactTitle : data.about;
-  const [submitted, setSubmitted] = useState(false);
   return <><Meta title={title} description={title} /><PageIntro eyebrow={en ? 'Information' : 'معلومات'} title={title} description={section === 'contact' ? data.contactForm.intro : en ? 'OrthoTypikon web companion' : 'رفيق أرثوذكس تيبيكون'} icon={section === 'privacy' ? ShieldCheck : section === 'contact' ? Mail : Info} />
-    {page ? <article className="max-w-3xl rounded-[26px] border border-border bg-card p-6 sm:p-9"><h2 className="font-display text-2xl font-bold text-primary">{page.title}</h2><p className="mt-3 text-sm leading-7 text-muted-foreground">{page.intro}</p><p className="mt-3 text-xs text-muted-foreground">{page.updated}</p><div className="mt-7 space-y-6">{page.sections.map((item, i) => <section key={`${item.title}-${i}`} data-testid={`section-info-${i}`} className="border-t border-border pt-5"><h3 className="font-display text-lg font-bold text-foreground">{item.title}</h3><p className="mt-2 text-sm leading-7 text-muted-foreground">{item.body}</p></section>)}</div></article> : section === 'contact' ? <form className="grid max-w-2xl gap-4 rounded-[26px] border border-border bg-card p-6" onSubmit={(event) => { event.preventDefault(); setSubmitted(true); }}><p className="text-sm leading-6 text-muted-foreground">{data.contactForm.intro}</p>{[[data.contactForm.name, 'text'], [data.contactForm.email, 'email']].map(([label, type]) => <label key={label} className="grid gap-2 text-sm font-semibold">{label}<input required type={type} data-testid={`input-contact-${type}`} className="rounded-xl border border-border bg-background px-4 py-3 font-normal" /></label>)}<label className="grid gap-2 text-sm font-semibold">{data.contactForm.message}<textarea required rows={5} data-testid="input-contact-message" className="resize-y rounded-xl border border-border bg-background px-4 py-3 font-normal" /></label><button data-testid="button-contact-submit" className="w-fit rounded-xl bg-primary px-5 py-3 text-sm font-bold text-primary-foreground">{data.contactForm.submit}</button>{submitted && <p role="status" data-testid="status-contact-local" className="rounded-xl bg-secondary p-4 text-sm leading-6 text-primary">{data.contactForm.submitNotice}</p>}</form> : <section className="max-w-2xl rounded-[26px] border border-border bg-card p-7"><h2 className="font-display text-2xl font-bold text-primary">OrthoTypikon</h2><p className="mt-3 text-sm leading-7 text-muted-foreground">{en ? 'A companion for the church day, with a liturgical calendar, fasting guidance, saint biographies, learning entries, Scripture excerpts, prayer collections, and live broadcasts.' : 'رفيق لليوم الكنسي، يضم الرزنامة الليتورجية وإرشادات الصوم وسير القديسين ومداخل تعليمية ومقتطفات كتابية ومجموعات صلاة وبثًا مباشرًا.'}</p></section>}
+    {section === 'contact' && <a href={`mailto:${ORTHOTYPIKON_CONTACT_EMAIL}`} className="mb-5 inline-block font-semibold text-primary underline underline-offset-4">{ORTHOTYPIKON_CONTACT_EMAIL}</a>}
+    {page ? <article className="max-w-3xl rounded-[26px] border border-border bg-card p-6 sm:p-9"><h2 className="font-display text-2xl font-bold text-primary">{page.title}</h2><p className="mt-3 text-sm leading-7 text-muted-foreground">{page.intro}</p><p className="mt-3 text-xs text-muted-foreground">{page.updated}</p><div className="mt-7 space-y-6">{page.sections.map((item, i) => <section key={`${item.title}-${i}`} data-testid={`section-info-${i}`} className="border-t border-border pt-5"><h3 className="font-display text-lg font-bold text-foreground">{item.title}</h3><p className="mt-2 text-sm leading-7 text-muted-foreground">{item.body}</p></section>)}</div></article> : section === 'contact' ? <ContactPageForm locale={app.locale} /> : <section className="max-w-2xl rounded-[26px] border border-border bg-card p-7"><h2 className="font-display text-2xl font-bold text-primary">OrthoTypikon</h2><p className="mt-3 text-sm leading-7 text-muted-foreground">{en ? 'A companion for the church day, with a liturgical calendar, fasting guidance, saint biographies, learning entries, Scripture excerpts, prayer collections, and live broadcasts.' : 'رفيق لليوم الكنسي، يضم الرزنامة الليتورجية وإرشادات الصوم وسير القديسين ومداخل تعليمية ومقتطفات كتابية ومجموعات صلاة وبثًا مباشرًا.'}</p></section>}
   </>;
+}
+
+function ContactPageForm({ locale }: { locale: Locale }) {
+  const data = getMoreContent(locale);
+  const mutation = useSubmitContactMessage();
+  const [status, setStatus] = useState('');
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const form = event.currentTarget;
+    const values = new FormData(form);
+    setStatus('');
+    try {
+      await mutation.mutateAsync({ data: {
+        name: String(values.get('name') ?? '').trim(),
+        email: String(values.get('email') ?? '').trim(),
+        country: String(values.get('country') ?? '').trim() || undefined,
+        phone: String(values.get('phone') ?? '').trim() || undefined,
+        message: String(values.get('message') ?? '').trim(),
+      } });
+      setStatus(data.contactForm.submitNotice);
+      form.reset();
+    } catch {
+      setStatus(data.contactForm.sendFailed);
+    }
+  };
+  return <form className="grid max-w-2xl gap-4 rounded-[26px] border border-border bg-card p-6" onSubmit={handleSubmit}>
+    <label className="grid gap-2 text-sm font-semibold">{data.contactForm.name}<input name="name" required maxLength={120} data-testid="input-contact-text" className="rounded-xl border border-border bg-background px-4 py-3 font-normal" /></label>
+    <label className="grid gap-2 text-sm font-semibold">{data.contactForm.email}<input name="email" required type="email" maxLength={254} data-testid="input-contact-email" className="rounded-xl border border-border bg-background px-4 py-3 font-normal" /></label>
+    <label className="grid gap-2 text-sm font-semibold">{data.contactForm.country} ({data.contactForm.optional})<input name="country" maxLength={100} data-testid="input-contact-country" className="rounded-xl border border-border bg-background px-4 py-3 font-normal" /></label>
+    <label className="grid gap-2 text-sm font-semibold">{data.contactForm.phone} ({data.contactForm.optional})<input name="phone" type="tel" maxLength={32} data-testid="input-contact-phone" className="rounded-xl border border-border bg-background px-4 py-3 font-normal" /></label>
+    <label className="grid gap-2 text-sm font-semibold">{data.contactForm.message}<textarea name="message" required maxLength={2000} rows={5} data-testid="input-contact-message" className="resize-y rounded-xl border border-border bg-background px-4 py-3 font-normal" /></label>
+    <button disabled={mutation.isPending} data-testid="button-contact-submit" className="w-fit rounded-xl bg-primary px-5 py-3 text-sm font-bold text-primary-foreground disabled:opacity-60">{mutation.isPending ? data.contactForm.sending : data.contactForm.submit}</button>
+    {status && <p role="status" data-testid="status-contact" className="rounded-xl bg-secondary p-4 text-sm leading-6 text-primary">{status}</p>}
+  </form>;
 }
 
 function Router() {

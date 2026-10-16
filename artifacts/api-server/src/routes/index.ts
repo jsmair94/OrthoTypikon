@@ -7,6 +7,7 @@ import placesRouter from "./places";
 import bibleRouter from "./bible";
 import exploreImagesRouter from "./explore-images";
 import audioRouter from "./audio";
+import contactRouter from "./contact";
 
 const router: IRouter = Router();
 
@@ -17,6 +18,7 @@ router.use(placesRouter);
 router.use(bibleRouter);
 router.use(exploreImagesRouter);
 router.use(audioRouter);
+router.use(contactRouter);
 router.use(adminRouter);
 
 export default router;

@@ -15,6 +15,8 @@ import { useColors } from '@/hooks/useColors';
 import { useI18n } from '@/hooks/usePreferences';
 import { filterCountryOptions, getCountryOptions } from '@/data/countries';
 import { getMoreContent } from '@/data/moreContent';
+import { ORTHOTYPIKON_CONTACT_EMAIL } from '@/data/moreContent';
+import { useSubmitContactMessage } from '@workspace/api-client-react';
 import {
   countryDialCodes,
   filterCountryDialCodes,
@@ -40,6 +42,7 @@ export function ContactForm() {
   const { language } = useI18n();
   const content = getMoreContent(language).contactForm;
   const isArabic = language === 'ar';
+  const submitMutation = useSubmitContactMessage();
   const [values, setValues] = useState<ContactFormValues>({
     name: '',
     email: '',
@@ -148,7 +151,7 @@ export function ContactForm() {
     setCountrySearch('');
   };
 
-  const submitForm = () => {
+  const submitForm = async () => {
     const nextErrors = validateContactForm(values);
     setErrors(nextErrors);
     if (Object.keys(nextErrors).length > 0) {
@@ -156,7 +159,21 @@ export function ContactForm() {
       return;
     }
     Keyboard.dismiss();
-    setNotice(content.submitNotice);
+    try {
+      await submitMutation.mutateAsync({
+        data: {
+          name: values.name.trim(),
+          email: values.email.trim(),
+          country: selectedCountry?.name ?? values.country,
+          phone: [values.dialCode, values.phone.trim()].filter(Boolean).join(' '),
+          message: values.message.trim(),
+        },
+      });
+      setNotice(content.submitNotice);
+      setValues({ name: '', email: '', country: '', phone: '', message: '', dialCode: '' });
+    } catch {
+      setNotice(content.sendFailed);
+    }
   };
 
   return (
@@ -300,13 +317,16 @@ export function ContactForm() {
         testID="contact-submit"
         accessibilityRole="button"
         onPress={submitForm}
+        disabled={submitMutation.isPending}
         style={({ pressed }) => [
           styles.submitButton,
-          { backgroundColor: colors.primary, opacity: pressed ? 0.82 : 1 },
+          { backgroundColor: colors.primary, opacity: submitMutation.isPending ? 0.65 : pressed ? 0.82 : 1 },
         ]}
       >
         <Feather name="send" size={17} color={colors.primaryForeground} />
-        <Text style={[styles.submitText, { color: colors.primaryForeground }]}>{content.submit}</Text>
+        <Text style={[styles.submitText, { color: colors.primaryForeground }]}>
+          {submitMutation.isPending ? content.sending : content.submit}
+        </Text>
       </Pressable>
 
       <Modal

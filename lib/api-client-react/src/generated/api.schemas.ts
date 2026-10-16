@@ -5,6 +5,58 @@
  * OrthoTypikon content API
  * OpenAPI spec version: 0.1.0
  */
+export type BibleChapterVersesItem = {
+  number: number;
+  text: string;
+  startTime: number;
+  endTime: number;
+};
+
+export interface BibleChapter {
+  book: string;
+  chapter: number;
+  text: string;
+  /** @nullable */
+  audioUrl: string | null;
+  audioUrlExpiresIn: number;
+  verses?: BibleChapterVersesItem[];
+}
+
+export interface BibleChapterError {
+  error: string;
+}
+
+export interface ContactMessageInput {
+  /**
+   * @minLength 1
+   * @maxLength 120
+   */
+  name: string;
+  /**
+   * @maxLength 254
+   * @pattern ^[^\s@]+@[^\s@]+\.[^\s@]+$
+   */
+  email: string;
+  /** @maxLength 100 */
+  country?: string;
+  /** @maxLength 32 */
+  phone?: string;
+  /**
+   * @minLength 1
+   * @maxLength 2000
+   */
+  message: string;
+}
+
+export const ContactMessageResponseValue = {
+  accepted: true,
+} as const;
+export type ContactMessageResponse = typeof ContactMessageResponseValue;
+
+export interface ContactMessageError {
+  error: string;
+}
+
 export type OrthodoxPlaceCategory =
   (typeof OrthodoxPlaceCategory)[keyof typeof OrthodoxPlaceCategory];
 

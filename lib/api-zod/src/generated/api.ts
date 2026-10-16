@@ -8,6 +8,37 @@
 import * as zod from "zod";
 
 /**
+ * @summary Send contact form message to support
+ */
+export const submitContactMessageBodyNameMax = 120;
+
+export const submitContactMessageBodyEmailMax = 254;
+
+export const submitContactMessageBodyEmailRegExp = new RegExp(
+  "^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$",
+);
+export const submitContactMessageBodyCountryMax = 100;
+
+export const submitContactMessageBodyPhoneMax = 32;
+
+export const submitContactMessageBodyMessageMax = 2000;
+
+export const SubmitContactMessageBody = zod.object({
+  name: zod.string().min(1).max(submitContactMessageBodyNameMax),
+  email: zod
+    .string()
+    .max(submitContactMessageBodyEmailMax)
+    .regex(submitContactMessageBodyEmailRegExp),
+  country: zod.string().max(submitContactMessageBodyCountryMax).optional(),
+  phone: zod.string().max(submitContactMessageBodyPhoneMax).optional(),
+  message: zod.string().min(1).max(submitContactMessageBodyMessageMax),
+});
+
+export const SubmitContactMessageResponse = zod.object({
+  accepted: zod.literal(true),
+});
+
+/**
  * @summary Health check
  */
 export const HealthCheckResponse = zod.object({

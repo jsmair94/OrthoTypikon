@@ -47,6 +47,9 @@ import type {
   BadRequestResponse,
   CalendarEntry,
   ConflictResponse,
+  ContactMessageError,
+  ContactMessageInput,
+  ContactMessageResponse,
   DailyGospelReading,
   DailyHomePayload,
   DatabaseUnavailableResponse,
@@ -115,6 +118,92 @@ const withQueryKey = <T extends object, K>(
     });
   }
   return result;
+};
+
+export const getSubmitContactMessageUrl = () => {
+  return `/api/contact`;
+};
+
+/**
+ * @summary Send contact form message to support
+ */
+export const submitContactMessage = async (
+  contactMessageInput: ContactMessageInput,
+  options?: Parameters<typeof customFetch>[1],
+): Promise<ContactMessageResponse> => {
+  return customFetch<ContactMessageResponse>(getSubmitContactMessageUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(contactMessageInput),
+  });
+};
+
+export const getSubmitContactMessageMutationOptions = <
+  TError = ErrorType<ContactMessageError>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof submitContactMessage>>,
+    TError,
+    { data: BodyType<ContactMessageInput> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof submitContactMessage>>,
+  TError,
+  { data: BodyType<ContactMessageInput> },
+  TContext
+> => {
+  const mutationKey = ["submitContactMessage"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof submitContactMessage>>,
+    { data: BodyType<ContactMessageInput> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return submitContactMessage(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type SubmitContactMessageMutationResult = NonNullable<
+  Awaited<ReturnType<typeof submitContactMessage>>
+>;
+export type SubmitContactMessageMutationBody = BodyType<ContactMessageInput>;
+export type SubmitContactMessageMutationError = ErrorType<ContactMessageError>;
+
+/**
+ * @summary Send contact form message to support
+ */
+export const useSubmitContactMessage = <
+  TError = ErrorType<ContactMessageError>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof submitContactMessage>>,
+    TError,
+    { data: BodyType<ContactMessageInput> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof submitContactMessage>>,
+  TError,
+  { data: BodyType<ContactMessageInput> },
+  TContext
+> => {
+  return useMutation(getSubmitContactMessageMutationOptions(options));
 };
 
 export const getHealthCheckUrl = () => {

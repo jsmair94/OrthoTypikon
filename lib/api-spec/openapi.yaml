@@ -30,6 +30,43 @@ tags:
   - name: places
     description: Verified Orthodox places directory
 paths:
+  /contact:
+    post:
+      operationId: submitContactMessage
+      tags:
+        - contact
+      summary: Send contact form message to support
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ContactMessageInput"
+      responses:
+        "202":
+          description: Accepted for delivery
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ContactMessageResponse"
+        "400":
+          description: Invalid contact form data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ContactMessageError"
+        "429":
+          description: Rate limit exceeded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ContactMessageError"
+        "502":
+          description: Email service failed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ContactMessageError"
   /healthz:
     get:
       operationId: healthCheck
@@ -1588,6 +1625,101 @@ components:
           schema:
             $ref: "#/components/schemas/Problem"
   schemas:
+    BibleChapter:
+      type: object
+      additionalProperties: false
+      required:
+        - book
+        - chapter
+        - text
+        - audioUrl
+        - audioUrlExpiresIn
+      properties:
+        book:
+          type: string
+        chapter:
+          type: number
+          multipleOf: 1
+        text:
+          type: string
+        audioUrl:
+          type:
+            - string
+            - "null"
+        audioUrlExpiresIn:
+          type: number
+          multipleOf: 1
+        verses:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            required:
+              - number
+              - text
+              - startTime
+              - endTime
+            properties:
+              number:
+                type: number
+                multipleOf: 1
+              text:
+                type: string
+              startTime:
+                type: number
+              endTime:
+                type: number
+    BibleChapterError:
+      type: object
+      additionalProperties: false
+      required:
+        - error
+      properties:
+        error:
+          type: string
+    ContactMessageInput:
+      type: object
+      additionalProperties: false
+      required:
+        - name
+        - email
+        - message
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 120
+        email:
+          type: string
+          pattern: '^[^\s@]+@[^\s@]+\.[^\s@]+$'
+          maxLength: 254
+        country:
+          type: string
+          maxLength: 100
+        phone:
+          type: string
+          maxLength: 32
+        message:
+          type: string
+          minLength: 1
+          maxLength: 2000
+    ContactMessageResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - accepted
+      properties:
+        accepted:
+          type: boolean
+          const: true
+    ContactMessageError:
+      type: object
+      additionalProperties: false
+      required:
+        - error
+      properties:
+        error:
+          type: string
     OrthodoxPlaceCategory:
       type: string
       enum:
