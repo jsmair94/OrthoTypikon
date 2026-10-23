@@ -1,7 +1,13 @@
-import { boolean, integer, pgTable, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
+import { boolean, integer, jsonb, pgTable, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
 
 export * from "./content";
 export * from "./places";
+
+export const managedContentTable = pgTable("managed_content", {
+  key: text("key").primaryKey(),
+  content: jsonb("content").$type<Record<string, unknown>>().notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
 
 export const prayerRequestsTable = pgTable("prayer_requests", {
   id: text("id").primaryKey(),

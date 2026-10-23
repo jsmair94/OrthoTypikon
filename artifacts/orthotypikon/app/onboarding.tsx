@@ -106,8 +106,8 @@ export default function OnboardingScreen() {
         disabled={saving}
         style={({ pressed }) => [styles.continueButton, { backgroundColor: colors.accent, opacity: saving ? 0.6 : pressed ? 0.84 : 1 }]}
       >
-        <Text style={[styles.continueText, { color: colors.primary }]}>{saving ? selectedCopy.saving : selectedCopy.continue}</Text>
-        <Feather name={selectedLanguage === 'ar' ? 'arrow-left' : 'arrow-right'} size={19} color={colors.primary} />
+        <Text style={[styles.continueText, { color: colors.accentForeground }]}>{saving ? selectedCopy.saving : selectedCopy.continue}</Text>
+        <Feather name={selectedLanguage === 'ar' ? 'arrow-left' : 'arrow-right'} size={19} color={colors.accentForeground} />
       </Pressable>
       <Text style={[styles.footnote, { color: colors.mutedForeground }]}>{labels.saved}</Text>
     </ScrollView>

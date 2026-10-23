@@ -46,7 +46,7 @@ The JSON sidecar records the file size, SHA-256 checksum, Android package, and
 signing note. The APK can be downloaded from the generated workspace asset card
 after a successful build.
 
-## Live daily content and optional app API
+## Live daily content and Android API configuration
 
 On Android and iOS, the daily Verse and Occasion card fetches the current
 Synaxarion page directly from Orthodox Jordan over HTTPS. This does not require
@@ -55,8 +55,8 @@ Greek, and French text is translated by Google Translate; if translation is
 unavailable, the source Arabic is shown. If the source site cannot be reached,
 the app keeps its local fallback content.
 
-Other app API features remain optional. To enable the community API in an
-installed build, pass a reachable HTTPS hostname or URL:
+Android release builds require a reachable HTTPS API hostname or URL so the
+installed contact form can reach support:
 
 ```bash
 EXPO_PUBLIC_DOMAIN=your-public-api.example \
@@ -65,13 +65,13 @@ EXPO_PUBLIC_DOMAIN=your-public-api.example \
 
 The build rejects `localhost`, loopback addresses, `0.0.0.0`, and
 `*.replit.dev` so a developer-only endpoint cannot be embedded accidentally.
-Do not put credentials in the command or in tracked files. The direct
-Synaxarion fetch does not use this option.
+It also checks the packaged Android bundle for the configured HTTPS host and
+the `/api/contact` route. Do not put credentials in the command or in tracked
+files. The direct Synaxarion fetch does not use this API.
 
 React Native's generic error text contains a dormant `localhost:8081` Metro
 example even in production bundles. The installed app does not use it: the
-packaged Expo configuration contains no API domain unless the validated
-`EXPO_PUBLIC_DOMAIN` option above is supplied.
+release build embeds the validated `EXPO_PUBLIC_DOMAIN` option above.
 
 ## Requirements
 

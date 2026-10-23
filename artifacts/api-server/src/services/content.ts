@@ -27,7 +27,7 @@ import {
   type CalendarType,
 } from "../lib/dates";
 
-export type Locale = "ar" | "en" | "fr";
+export type Locale = "ar" | "en" | "el";
 
 async function queryDatabase<T>(
   operation: (database: NonNullable<typeof db>) => Promise<T>,

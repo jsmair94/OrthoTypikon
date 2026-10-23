@@ -2,6 +2,8 @@ import type { Language } from '@/hooks/usePreferences';
 
 export type MoreSection = 'privacy' | 'terms' | 'about' | 'contact';
 
+export const ORTHOTYPIKON_CONTACT_EMAIL = 'info@orthotypikon.org';
+
 type LegalSection = {
   title: string;
   body: string;
@@ -13,6 +15,8 @@ export const moreContent = {
     privacy: 'سياسة الخصوصية',
     terms: 'الشروط والأحكام',
     about: 'من نحن',
+    aboutBody:
+      'نحن سنكون رفيقك اليومي في الحياة الأرثوذكسية. نجمع لك التقويم الكنسي وقراءات اليوم والصلوات وسِيَر القديسين وإرشادات الصوم، إلى جانب مواد تساعدك على التعلّم ومتابعة تراث الكنيسة. صمّمنا لك هذا التطبيق لتعيش الأرثوذكسية في حياتك اليومية، ويعينك على الصلاة والنمو في الإيمان. نسأل أن يكون نافعًا لك ولعائلتك.',
     contactTitle: 'تواصل معنا',
     socialTitle: 'قنواتنا',
     socialPending: 'سيتم إضافة الروابط قريبًا',
@@ -38,8 +42,9 @@ export const moreContent = {
       message: 'ماذا تريد أن تخبرنا؟',
       submit: 'إرسال',
       sending: 'جارٍ الإرسال…',
-      submitNotice: 'تم إرسال رسالتك بنجاح. شكرًا لتواصلك معنا.',
+      submitNotice: 'وصلتنا رسالتك وأرسلنا رسالة تأكيد إلى بريدك الإلكتروني. شكرًا لتواصلك معنا.',
       sendFailed: 'تعذّر إرسال رسالتك. حاول مرة أخرى أو راسلنا عبر البريد الإلكتروني.',
+      confirmationFailed: 'وصلت رسالتك إلينا، لكن تعذّر إرسال رسالة التأكيد. يُرجى عدم إرسال النموذج مرة أخرى.',
       required: 'هذا الحقل مطلوب.',
       invalidEmail: 'أدخل بريدًا إلكترونيًا صحيحًا.',
       invalidPhone: 'أدخل رقم هاتف صحيحًا.',
@@ -152,6 +157,8 @@ export const moreContent = {
     privacy: 'Privacy policy',
     terms: 'Terms and conditions',
     about: 'About us',
+    aboutBody:
+      "We will be your daily companion in Orthodox life. We bring together the Church calendar, the day's readings, prayers, the lives of the saints, and fasting guidance, along with resources to help you learn and follow the Church's heritage. We designed this app to help you live Orthodoxy in your daily life and grow in prayer and faith. May it be helpful to you and your family.",
     contactTitle: 'Contact us',
     socialTitle: 'Our channels',
     socialPending: 'Links will be added soon',
@@ -177,8 +184,9 @@ export const moreContent = {
       message: 'What would you like to tell us?',
       submit: 'Submit',
       sending: 'Sending…',
-      submitNotice: 'Your message was sent successfully. Thank you for contacting us.',
+      submitNotice: 'We received your message and sent a confirmation email to your address. Thank you for contacting us.',
       sendFailed: 'We could not send your message. Please try again or email us directly.',
+      confirmationFailed: 'Your message reached us, but we could not send a confirmation email. Please do not submit the form again.',
       required: 'This field is required.',
       invalidEmail: 'Enter a valid email address.',
       invalidPhone: 'Enter a valid phone number.',
@@ -291,6 +299,8 @@ export const moreContent = {
     privacy: 'Πολιτική απορρήτου',
     terms: 'Όροι και προϋποθέσεις',
     about: 'Σχετικά με εμάς',
+    aboutBody:
+      'Θα είμαστε ο καθημερινός σας συνοδοιπόρος στην ορθόδοξη ζωή. Συγκεντρώνουμε για εσάς το εκκλησιαστικό ημερολόγιο, τα αναγνώσματα της ημέρας, προσευχές, βίους αγίων και οδηγίες για τη νηστεία, μαζί με υλικό που σας βοηθά να μαθαίνετε και να γνωρίζετε την παράδοση της Εκκλησίας. Σχεδιάσαμε αυτή την εφαρμογή για να ζείτε την Ορθοδοξία στην καθημερινότητά σας και να ενισχύεστε στην προσευχή και την πίστη. Ευχόμαστε να είναι ωφέλιμη για εσάς και την οικογένειά σας.',
     contactTitle: 'Επικοινωνήστε μαζί μας',
     socialTitle: 'Τα κανάλια μας',
     socialPending: 'Οι σύνδεσμοι θα προστεθούν σύντομα',
@@ -316,8 +326,9 @@ export const moreContent = {
       message: 'Τι θέλετε να μας πείτε;',
       submit: 'Υποβολή',
       sending: 'Αποστολή…',
-      submitNotice: 'Το μήνυμά σας στάλθηκε με επιτυχία. Ευχαριστούμε.',
+      submitNotice: 'Λάβαμε το μήνυμά σας και στείλαμε email επιβεβαίωσης στη διεύθυνσή σας. Ευχαριστούμε.',
       sendFailed: 'Δεν ήταν δυνατή η αποστολή. Δοκιμάστε ξανά ή στείλτε μας email.',
+      confirmationFailed: 'Λάβαμε το μήνυμά σας, αλλά δεν μπορέσαμε να στείλουμε email επιβεβαίωσης. Μην υποβάλετε ξανά τη φόρμα.',
       required: 'Αυτό το πεδίο είναι υποχρεωτικό.',
       invalidEmail: 'Εισαγάγετε μια έγκυρη διεύθυνση email.',
       invalidPhone: 'Εισαγάγετε έναν έγκυρο αριθμό τηλεφώνου.',
@@ -429,4 +440,10 @@ export const moreContent = {
 
 export function getMoreContent(language: Language) {
   return moreContent[language];
+}
+
+export function resolveAboutBody(language: Language, savedBody?: unknown) {
+  return typeof savedBody === 'string' && savedBody.trim()
+    ? savedBody
+    : moreContent[language].aboutBody;
 }

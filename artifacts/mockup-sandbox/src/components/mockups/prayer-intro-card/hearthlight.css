@@ -1,0 +1,191 @@
+.hearthlight-stage {
+  min-height: 100dvh;
+  width: 100%;
+  display: grid;
+  place-items: center;
+  box-sizing: border-box;
+  overflow: hidden;
+  padding: 12px;
+  color: #51443a;
+  background:
+    radial-gradient(ellipse at 50% 0%, rgba(255, 253, 246, .9), transparent 58%),
+    #eee6d8;
+  font-family: "Noto Naskh Arabic", "Geeza Pro", "Times New Roman", serif;
+}
+
+.hearthlight-card {
+  position: relative;
+  isolation: isolate;
+  width: min(100%, 520px);
+  min-height: 218px;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 14px 23px 13px;
+  overflow: hidden;
+  border: 1px solid #e2d3c1;
+  border-inline-start: 3px solid #b88967;
+  border-radius: 20px;
+  background:
+    radial-gradient(ellipse at 48% 20%, rgba(255, 255, 250, .95), transparent 66%),
+    linear-gradient(142deg, #fffdf7 0%, #faf4e9 57%, #f4eadb 100%);
+  box-shadow:
+    0 14px 32px rgba(94, 69, 47, .085),
+    0 2px 7px rgba(94, 69, 47, .035),
+    inset 0 1px 0 rgba(255, 255, 255, .96);
+  animation: hearthlight-arrive 700ms cubic-bezier(.2,.75,.25,1) both;
+}
+
+.hearthlight-card::before {
+  position: absolute;
+  z-index: -1;
+  inset: 8px;
+  content: "";
+  border: 1px solid rgba(190, 153, 119, .28);
+  border-radius: 13px;
+  pointer-events: none;
+}
+
+.hearthlight-card::after {
+  position: absolute;
+  z-index: -1;
+  content: "";
+  width: 176px;
+  height: 176px;
+  left: -112px;
+  bottom: -123px;
+  border: 1px solid rgba(187, 142, 113, .13);
+  border-radius: 50%;
+  box-shadow: 0 0 0 13px rgba(187, 142, 113, .035), 0 0 0 26px rgba(187, 142, 113, .022);
+}
+
+.hearthlight-topline,
+.hearthlight-bottom {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.hearthlight-kicker {
+  color: #997251;
+  font-family: "DM Sans", sans-serif;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: .14em;
+}
+
+.hearthlight-mark {
+  display: grid;
+  width: 26px;
+  height: 26px;
+  place-items: center;
+  border: 1px solid rgba(190, 146, 112, .32);
+  border-radius: 50%;
+  color: #a87956;
+  background: rgba(255, 251, 242, .76);
+}
+
+.hearthlight-copy {
+  padding: 0;
+  text-align: center;
+}
+
+.hearthlight-title {
+  margin: 0;
+  color: #4f4239;
+  font-size: clamp(24px, 7vw, 32px);
+  font-weight: 600;
+  line-height: 1.38;
+  letter-spacing: -.035em;
+  text-wrap: balance;
+}
+
+.hearthlight-rule {
+  display: flex;
+  width: 88px;
+  margin: 7px auto 6px;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: #ae805e;
+}
+
+.hearthlight-rule i {
+  display: block;
+  height: 1px;
+  flex: 1;
+  background: linear-gradient(90deg, transparent, #c4a284);
+}
+
+.hearthlight-rule i:last-child {
+  transform: scaleX(-1);
+}
+
+.hearthlight-subtitle {
+  max-width: 340px;
+  margin: 0 auto;
+  color: #77675a;
+  font-size: clamp(16px, 4vw, 18px);
+  font-weight: 400;
+  line-height: 1.65;
+}
+
+.hearthlight-bottom {
+  justify-content: center;
+  gap: 9px;
+  color: #9a806b;
+  font-size: 11px;
+  letter-spacing: .015em;
+}
+
+.hearthlight-dot {
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: #c59c7b;
+}
+
+.hearthlight-corner {
+  position: absolute;
+  width: 17px;
+  height: 17px;
+  border-color: rgba(183, 140, 108, .5);
+  border-style: solid;
+}
+
+.hearthlight-corner-one {
+  top: 14px;
+  right: 14px;
+  border-width: 1px 1px 0 0;
+  border-radius: 0 6px 0 0;
+}
+
+.hearthlight-corner-two {
+  bottom: 14px;
+  left: 14px;
+  border-width: 0 0 1px 1px;
+  border-radius: 0 0 0 6px;
+}
+
+@keyframes hearthlight-arrive {
+  from { opacity: 0; transform: translateY(9px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@media (max-width: 520px) {
+  .hearthlight-stage { padding: 12px; }
+  .hearthlight-card { min-height: 218px; padding: 14px 20px 13px; }
+}
+
+@media (max-height: 300px) {
+  .hearthlight-stage { padding: 10px 14px; }
+  .hearthlight-card { min-height: 204px; padding: 10px 20px 9px; }
+  .hearthlight-rule { margin: 4px auto; }
+  .hearthlight-subtitle { font-size: 16px; line-height: 1.48; }
+  .hearthlight-bottom { font-size: 10px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hearthlight-card { animation: none; }
+}

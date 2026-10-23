@@ -17,7 +17,7 @@ import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { PreferencesProvider, useI18n, usePreferences } from '@/hooks/usePreferences';
 import { useColors } from '@/hooks/useColors';
-import { HymnPlayerProvider } from '@/hooks/useHymnPlayer';
+import { AppAudioProvider } from '@/hooks/useAppAudio';
 import { configurePrayerCommunityApi } from '@/lib/prayerCommunitySession';
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
@@ -41,6 +41,7 @@ function RootLayoutNav() {
         <Stack.Screen name="prayer" options={{ headerShown: false }} />
         <Stack.Screen name="prayer-collection" options={{ headerShown: false }} />
         <Stack.Screen name="bible" options={{ headerShown: false }} />
+        <Stack.Screen name="bible-reader" options={{ headerShown: false }} />
         <Stack.Screen name="compass" options={{ headerShown: false }} />
         <Stack.Screen name="fasting" options={{ headerShown: false }} />
         <Stack.Screen name="learn" options={{ headerShown: false }} />
@@ -98,9 +99,9 @@ export default function RootLayout() {
           <QueryClientProvider client={queryClient}>
             <GestureHandlerRootView>
               <KeyboardProvider>
-                <HymnPlayerProvider>
-                      <RootLayoutContent />
-                </HymnPlayerProvider>
+                <AppAudioProvider>
+                  <RootLayoutContent />
+                </AppAudioProvider>
               </KeyboardProvider>
             </GestureHandlerRootView>
           </QueryClientProvider>

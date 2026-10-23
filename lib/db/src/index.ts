@@ -1,3 +1,3 @@
 export { db, isDatabaseConfigured, pool } from "./client";
-export { applyDatabaseMigrations } from "./migrate";
+export { applyDatabaseMigrations, validateCurrentDatabaseSchema } from "./migrate";
 export * from "./schema";

@@ -10,6 +10,7 @@ import {
   PRAYER_COLLECTION_IDS,
   prayerCollections,
 } from '../data/prayerCollections.ts';
+import { findActiveBibleVerse } from '../lib/bibleTimings.ts';
 
 const packageRequire = createRequire(import.meta.url);
 const preferencesSource = readFileSync(
@@ -42,14 +43,21 @@ const localizedCollectionUi = {
   },
 };
 const localizedCategoryLabels = {
-  ar: ['الإنجيل المسموع', 'صلوات يومية', 'صلوات متنوعة', 'ابتهالات', 'كنوز الرسائل'],
-  en: ['Audio Gospel', 'Daily prayers', 'Various prayers', 'Supplications', 'Treasures of the Epistles'],
-  el: ['Ακουστό Ευαγγέλιο', 'Καθημερινές προσευχές', 'Διάφορες προσευχές', 'Δεήσεις', 'Θησαυροί των Επιστολών'],
+  ar: ['الإنجيل المسموع', 'صلوات يومية', 'صلوات متنوعة', 'ابتهالات', 'كنوز الرسائل', 'موسيقى استرخاء'],
+  en: ['Audio Gospel', 'Daily prayers', 'Various prayers', 'Supplications', 'Treasures of the Epistles', 'Relaxation music'],
+  el: ['Ακουστό Ευαγγέλιο', 'Καθημερινές προσευχές', 'Διάφορες προσευχές', 'Δεήσεις', 'Θησαυροί των Επιστολών', 'Μουσική χαλάρωσης'],
 };
 
 let currentLanguage = 'en';
 let currentCollection = 'gospels';
 let pushedRoutes = [];
+let readerParamUpdates = [];
+let readerPausedTracks = [];
+let requestedBibleChapter = null;
+let remoteBibleChapterData;
+let currentBibleChapter = 2;
+let readerActiveAudioId = 'bible:book-mark:2';
+let readerAudioTime = 0;
 
 function localizedPrayerSections(language) {
   const copyStart = preferencesSource.indexOf('export const screenCopy = {');
@@ -166,7 +174,7 @@ const PrayerCollectionLibraryScreen = buildScreen(
   libraryScreenMocks,
 );
 
-test('the moved Gospel card is absent from Prayers and the remaining cards keep their collections', () => {
+test('the Gospel stays out of Prayers, prayer collections keep their routes, and relaxation music opens its player', () => {
   for (const language of languages) {
     currentLanguage = language;
     pushedRoutes = [];
@@ -174,12 +182,6 @@ test('the moved Gospel card is absent from Prayers and the remaining cards keep 
     act(() => {
       renderer = TestRenderer.create(React.createElement(PrayerCollectionLibraryScreen));
     });
-
-    assert.equal(
-      renderer.root.findAllByProps({ testID: 'library-prayers-rail-4' }).length,
-      0,
-      'Prayers should no longer contain the moved Gospel card',
-    );
 
     for (const [index, collection] of PRAYER_COLLECTION_IDS.filter((id) => id !== 'gospels').entries()) {
       const card = renderer.root.findByProps({ testID: `library-prayers-rail-${index}` });
@@ -193,6 +195,11 @@ test('the moved Gospel card is absent from Prayers and the remaining cards keep 
         params: { collection },
       });
     }
+
+    const relaxationMusicCard = renderer.root.findByProps({ testID: 'library-prayers-rail-4' });
+    assert.equal(relaxationMusicCard.props.accessibilityLabel, localizedCategoryLabels[language][5]);
+    act(() => relaxationMusicCard.props.onPress());
+    assert.equal(pushedRoutes.at(-1), '/relaxation-music');
 
     act(() => renderer.unmount());
   }
@@ -293,14 +300,30 @@ test('Learn and Prayers cards match Explore card dimensions', () => {
 
 const BibleScreen = buildScreen('../app/bible.tsx', {
   '@expo/vector-icons': { Feather: ({ name, ...props }) => React.createElement('Feather', { ...props, name }) },
-  'expo-router': { useRouter: () => ({ back: () => {} }) },
+  'expo-router': { useRouter: () => ({ back: () => {}, push: (route) => pushedRoutes.push(route) }) },
   'react-native': mockNative,
   'react-native-safe-area-context': { useSafeAreaInsets: () => ({ top: 0, bottom: 0 }) },
+  '@/components/BibleAudioControl': { BibleAudioControl: mockHost('BibleAudioControl') },
   '@/hooks/useColors': { useColors: () => ({ ...mockColors, heroStart: '#123', heroForeground: '#fff', accentForeground: '#123' }) },
   '@/hooks/usePreferences': {
     useI18n: () => ({
       language: currentLanguage,
       t: {},
+    }),
+  },
+  '@/hooks/useAppAudio': {
+    useAppAudio: () => ({
+      player: { pause() {}, play() {}, seekTo: async () => {} },
+      status: {
+        currentTime: 0,
+        duration: 0,
+        didJustFinish: false,
+        playing: false,
+        isLoaded: false,
+      },
+      activeId: null,
+      play: async () => {},
+      pause: () => {},
     }),
   },
   '@/data/prayerCollections': {
@@ -375,8 +398,229 @@ test('the New Testament lists all 27 books without folder numbering and keeps Go
       }
     }
 
+    pushedRoutes = [];
+    act(() => renderer.root.findByProps({ testID: 'bible-section-book-matthew' }).props.onPress());
+    act(() => renderer.root.findByProps({ testID: 'bible-chapter-book-matthew-1' }).props.onPress());
+    assert.deepEqual(pushedRoutes.at(-1), {
+      pathname: '/bible-reader',
+      params: { book: 'book-matthew', chapter: '1', testament: 'new' },
+    });
+    assert.equal(renderer.root.findAllByProps({ testID: 'bible-chapter-text' }).length, 0);
+
     act(() => renderer.unmount());
   }
+});
+
+test('the Old Testament lists all 39 individual books and opens Genesis chapters', () => {
+  currentLanguage = 'ar';
+  const oldBookIds = [
+    'genesis', 'exodus', 'leviticus', 'numbers', 'deuteronomy', 'joshua', 'judges', 'ruth',
+    '1-samuel', '2-samuel', '1-kings', '2-kings', '1-chronicles', '2-chronicles',
+    'ezra', 'nehemiah', 'esther', 'job', 'psalms', 'proverbs', 'ecclesiastes',
+    'song-of-solomon', 'isaiah', 'jeremiah', 'lamentations', 'ezekiel', 'daniel',
+    'hosea', 'joel', 'amos', 'obadiah', 'jonah', 'micah', 'nahum', 'habakkuk',
+    'zephaniah', 'haggai', 'zechariah', 'malachi',
+  ];
+  let renderer;
+  act(() => { renderer = TestRenderer.create(React.createElement(BibleScreen)); });
+  act(() => renderer.root.findByProps({ testID: 'bible-testament-old' }).props.onPress());
+  const bookCards = new Set(renderer.root.findAll(
+    (node) => typeof node.props.testID === 'string' && node.props.testID.startsWith('bible-section-book-'),
+  ).map((node) => node.props.testID));
+  assert.equal(oldBookIds.length, 39);
+  assert.equal(bookCards.size, 39);
+  for (const bookId of oldBookIds) {
+    assert.ok(renderer.root.findByProps({ testID: `bible-section-book-${bookId}` }));
+  }
+  assert.equal(
+    renderer.root.findByProps({ testID: 'bible-section-book-genesis' }).props.accessibilityLabel,
+    'التكوين',
+  );
+  act(() => renderer.root.findByProps({ testID: 'bible-section-book-genesis' }).props.onPress());
+  assert.ok(renderer.root.findAllByProps({ testID: 'bible-chapter-book-genesis-50' }).length > 0);
+  pushedRoutes = [];
+  act(() => renderer.root.findByProps({ testID: 'bible-chapter-book-genesis-1' }).props.onPress());
+  assert.deepEqual(pushedRoutes.at(-1), {
+    pathname: '/bible-reader',
+    params: { book: 'book-genesis', chapter: '1', testament: 'old' },
+  });
+  act(() => renderer.unmount());
+});
+
+const BibleReaderScreen = buildScreen('../app/bible-reader.tsx', {
+  '@workspace/api-client-react': {
+    getGetBibleChapterQueryKey: (book, chapter) => [`/api/bible/${book}/${chapter}`],
+    useGetBibleChapter: (book, chapter) => {
+      requestedBibleChapter = { book, chapter };
+      return {
+        data: remoteBibleChapterData,
+        isPending: !remoteBibleChapterData,
+        isError: false,
+        error: null,
+      };
+    },
+  },
+  '@expo/vector-icons': { Feather: ({ name, ...props }) => React.createElement('Feather', { ...props, name }) },
+  'expo-router': {
+    useLocalSearchParams: () => ({ book: 'book-mark', chapter: String(currentBibleChapter), testament: 'new' }),
+    useRouter: () => ({
+      back: () => {},
+      push: () => {},
+      setParams: (params) => {
+        readerParamUpdates.push(params);
+        if (params.chapter) currentBibleChapter = Number(params.chapter);
+      },
+    }),
+  },
+  'react-native': mockNative,
+  'react-native-safe-area-context': { useSafeAreaInsets: () => ({ top: 0, bottom: 0 }) },
+  '@/components/BibleAudioControl': { BibleAudioControl: mockHost('BibleAudioControl') },
+  '@/hooks/useColors': { useColors: () => mockColors },
+  '@/hooks/usePreferences': { useI18n: () => ({ language: currentLanguage }) },
+  '@/hooks/useAppAudio': {
+    useAppAudio: () => ({
+      activeId: readerActiveAudioId,
+      pause: (id) => readerPausedTracks.push(id),
+      status: { currentTime: readerAudioTime },
+    }),
+  },
+  '@/lib/bibleTimings': { findActiveBibleVerse },
+});
+
+test('Bible chapter reader opens with chapter navigation that replaces the current chapter', () => {
+  currentLanguage = 'ar';
+  readerParamUpdates = [];
+  readerPausedTracks = [];
+  requestedBibleChapter = null;
+  remoteBibleChapterData = undefined;
+  currentBibleChapter = 2;
+  readerActiveAudioId = 'bible:book-mark:2';
+  readerAudioTime = 0;
+  let renderer;
+  act(() => {
+    renderer = TestRenderer.create(React.createElement(BibleReaderScreen));
+  });
+  assert.deepEqual(requestedBibleChapter, { book: 'mark', chapter: 2 });
+  assert.ok(renderer.root.findAllByProps({ testID: 'bible-reader-heading' }).length > 0);
+  assert.ok(renderer.root.findAllByProps({ testID: 'bible-reader-loading' }).length > 0);
+  act(() => renderer.root.findByProps({ testID: 'bible-reader-previous' }).props.onPress());
+  act(() => renderer.root.findByProps({ testID: 'bible-reader-next' }).props.onPress());
+  assert.deepEqual(readerParamUpdates, [{ chapter: '1' }, { chapter: '3' }]);
+  assert.deepEqual(readerPausedTracks, ['bible:book-mark:2', 'bible:book-mark:2']);
+  act(() => renderer.unmount());
+});
+
+test('Bible reader displays the returned chapter and sends its matching recording to the shared player control', () => {
+  currentLanguage = 'en';
+  currentBibleChapter = 2;
+  readerActiveAudioId = 'bible:book-mark:2';
+  readerAudioTime = 0;
+  remoteBibleChapterData = {
+    book: 'mark',
+    chapter: 2,
+    text: 'This chapter is loaded from the supplied text file.',
+    audioUrl: 'https://storage.example/mark-2',
+    audioUrlExpiresIn: 3600,
+  };
+
+  let renderer;
+  act(() => {
+    renderer = TestRenderer.create(React.createElement(BibleReaderScreen));
+  });
+
+  assert.equal(
+    renderer.root.findByProps({ testID: 'bible-reader-text' }).props.children,
+    remoteBibleChapterData.text,
+  );
+  assert.deepEqual(requestedBibleChapter, { book: 'mark', chapter: 2 });
+  const playerControl = renderer.root.findByType('BibleAudioControl');
+  assert.equal(playerControl.props.url, remoteBibleChapterData.audioUrl);
+  assert.equal(playerControl.props.audioId, 'bible:book-mark:2');
+
+  act(() => renderer.unmount());
+  remoteBibleChapterData = undefined;
+});
+
+test('Bible reader keeps supplied chapter text visible when its recording is not available yet', () => {
+  currentLanguage = 'en';
+  currentBibleChapter = 2;
+  readerActiveAudioId = 'bible:book-mark:2';
+  readerAudioTime = 0;
+  remoteBibleChapterData = {
+    book: 'mark',
+    chapter: 2,
+    text: 'The text is ready before the recording.',
+    audioUrl: null,
+    audioUrlExpiresIn: 0,
+  };
+
+  let renderer;
+  act(() => {
+    renderer = TestRenderer.create(React.createElement(BibleReaderScreen));
+  });
+
+  assert.equal(
+    renderer.root.findByProps({ testID: 'bible-reader-text' }).props.children,
+    remoteBibleChapterData.text,
+  );
+  assert.equal(renderer.root.findAllByType('BibleAudioControl').length, 0);
+
+  act(() => renderer.unmount());
+  remoteBibleChapterData = undefined;
+});
+
+test('Bible reader follows verse boundaries and clears the old highlight when changing chapters', () => {
+  currentLanguage = 'en';
+  currentBibleChapter = 2;
+  readerActiveAudioId = 'bible:book-mark:2';
+  readerAudioTime = 1.5;
+  readerParamUpdates = [];
+  readerPausedTracks = [];
+  remoteBibleChapterData = {
+    book: 'mark',
+    chapter: 2,
+    text: 'Two timed verses.',
+    audioUrl: 'https://storage.example/mark-2',
+    audioUrlExpiresIn: 3600,
+    verses: [
+      { number: 1, text: 'First verse', startTime: 0, endTime: 1 },
+      { number: 2, text: 'Second verse', startTime: 1, endTime: 2 },
+    ],
+  };
+
+  let renderer;
+  act(() => {
+    renderer = TestRenderer.create(React.createElement(BibleReaderScreen));
+  });
+  const activeVerseText = (number) => {
+    const highlighted = renderer.root
+      .findByProps({ testID: `bible-reader-verse-${number}` })
+      .findAllByProps({ testID: 'bible-reader-active-text' });
+    return highlighted[0]?.props.children;
+  };
+  const assertActiveVerse = (verseNumber) => {
+    for (const number of [1, 2]) {
+      assert.equal(
+        activeVerseText(number),
+        number === verseNumber ? (number === 1 ? 'First verse' : 'Second verse') : undefined,
+      );
+    }
+  };
+
+  assertActiveVerse(2);
+
+  readerAudioTime = 0.5;
+  act(() => renderer.update(React.createElement(BibleReaderScreen)));
+  assertActiveVerse(1);
+
+  act(() => renderer.root.findByProps({ testID: 'bible-reader-next' }).props.onPress());
+  act(() => renderer.update(React.createElement(BibleReaderScreen)));
+  assert.deepEqual(requestedBibleChapter, { book: 'mark', chapter: 3 });
+  assert.deepEqual(readerPausedTracks, ['bible:book-mark:2']);
+  assertActiveVerse(null);
+
+  act(() => renderer.unmount());
+  remoteBibleChapterData = undefined;
 });
 
 const prayerCollectionScreenMocks = {

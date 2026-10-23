@@ -1,5 +1,6 @@
 import { useMemo, useState, type FormEvent } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
+import { translateCurrentAdminText } from '@/lib/admin-locale';
 import {
   AlertCircle, Archive, Check, CheckCircle2, Church, ExternalLink,
   MapPin, Pencil, Plus, RotateCcw, Search, ShieldCheck, X,
@@ -187,7 +188,7 @@ export default function OrthodoxPlacesPage() {
     }
   };
   const retirePlace = (place: AdminOrthodoxPlace) => {
-    if (!window.confirm(`Retire “${place.name}” from the active directory? You can restore it by editing its status.`)) return;
+    if (!window.confirm(translateCurrentAdminText(`Retire “${place.name}” from the active directory? You can restore it by editing its status.`))) return;
     retire.mutate({ id: place.id }, {
       onSuccess: () => { void invalidatePlaces(); notify(`${place.name} retired. Restore it by editing its status to active.`); },
       onError: () => notify('Could not retire this listing. Please try again.'),

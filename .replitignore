@@ -7,3 +7,5 @@
 # Local Android toolchain and Gradle caches; production bundles are built with Metro.
 artifacts/orthotypikon/.android-sdk
 artifacts/orthotypikon/.gradle-home
+artifacts/orthotypikon/android
+artifacts/orthotypikon/dist

@@ -27,7 +27,10 @@ function cleanCueText(value: string): string {
 }
 
 export function parseBibleWebVtt(source: string): TimedBibleVerse[] {
-  const blocks = source.replace(/^\uFEFF/, "").replace(/\r/g, "").split(/\n{2,}/);
+  const normalizedSource = source.replace(/^\uFEFF/, "").replace(/\r/g, "").trim();
+  if (!/^WEBVTT(?:[ \t].*)?(?:\n|$)/.test(normalizedSource)) return [];
+
+  const blocks = normalizedSource.split(/\n[ \t]*\n+/);
   const verses: TimedBibleVerse[] = [];
 
   for (const block of blocks) {
@@ -35,16 +38,35 @@ export function parseBibleWebVtt(source: string): TimedBibleVerse[] {
     if (!lines.length || lines[0] === "WEBVTT" || /^(NOTE|STYLE|REGION)(\s|$)/.test(lines[0])) continue;
 
     const timingIndex = lines.findIndex((line) => line.includes("-->"));
-    if (timingIndex < 0) continue;
+    if (timingIndex < 0) {
+      // The first block may contain WEBVTT header metadata after the signature.
+      if (verses.length === 0 && lines[0].startsWith("WEBVTT")) continue;
+      return [];
+    }
+    if (timingIndex > 1) return [];
+
     const timing = lines[timingIndex].match(/^(.+?)\s+-->\s+(.+?)(?:\s+.*)?$/);
-    if (!timing) continue;
+    if (!timing) return [];
 
     const startTime = parseTimestamp(timing[1]);
     const endTime = parseTimestamp(timing[2]);
     const text = cleanCueText(lines.slice(timingIndex + 1).join("\n"));
-    if (startTime === null || endTime === null || endTime <= startTime || !text) continue;
+    if (
+      startTime === null ||
+      endTime === null ||
+      endTime <= startTime ||
+      !text ||
+      (verses.length > 0 && startTime < verses[verses.length - 1].endTime)
+    ) {
+      return [];
+    }
 
-    verses.push({ number: verses.length + 1, text, startTime, endTime });
+    const cueId = timingIndex === 1 ? lines[0] : undefined;
+    const cueVerseNumber = cueId && /^\d+$/.test(cueId) ? Number(cueId) : undefined;
+    const nextVerseNumber = verses.length + 1;
+    if (cueVerseNumber !== undefined && cueVerseNumber !== nextVerseNumber) return [];
+
+    verses.push({ number: nextVerseNumber, text, startTime, endTime });
   }
 
   return verses;
@@ -65,7 +87,7 @@ export function alignBibleWebVttToChapterText(
     }
   }
 
-  if (!sourceVerses.length) return timedVerses.length ? timedVerses : null;
+  if (!sourceVerses.length) return null;
   if (
     sourceVerses.length !== timedVerses.length ||
     sourceVerses.some(

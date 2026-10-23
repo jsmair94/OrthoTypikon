@@ -1,0 +1,146 @@
+.prayer-intro-stage {
+  box-sizing: border-box;
+  display: flex;
+  min-height: 250px;
+  width: 100%;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: #101a24;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+.prayer-intro-stage *,
+.prayer-intro-stage *::before,
+.prayer-intro-stage *::after {
+  box-sizing: border-box;
+}
+
+.prayer-intro-copy {
+  min-width: 0;
+  flex: 1;
+  text-align: right;
+}
+
+.prayer-intro-title {
+  margin: 0;
+  color: #fff;
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 1.4;
+}
+
+.prayer-intro-subtitle {
+  margin: 7px 0 0;
+  color: #d9e0e3;
+  font-size: 13px;
+  line-height: 1.65;
+}
+
+.prayer-intro-current {
+  display: flex;
+  width: 100%;
+  max-width: 360px;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 9px;
+  border-radius: 24px;
+  padding: 22px;
+  background: #d5a95b;
+}
+
+.prayer-intro-current-icon {
+  display: grid;
+  width: 46px;
+  height: 46px;
+  place-items: center;
+  border-radius: 50%;
+  background: rgb(228 185 103 / 18%);
+  color: #e4b967;
+}
+
+.prayer-intro-current .prayer-intro-title {
+  font-size: 21px;
+}
+
+.prayer-intro-current .prayer-intro-subtitle {
+  margin-top: 0;
+}
+
+.prayer-intro-redesign {
+  position: relative;
+  display: flex;
+  width: 100%;
+  max-width: 360px;
+  min-height: 142px;
+  flex-direction: row-reverse;
+  align-items: center;
+  gap: 16px;
+  overflow: hidden;
+  border: 1px solid #304453;
+  border-inline-end: 3px solid #e4b967;
+  border-radius: 24px;
+  padding: 20px;
+  background: #152c3f;
+  box-shadow: 0 12px 28px rgb(0 0 0 / 20%);
+}
+
+.prayer-intro-redesign::before {
+  position: absolute;
+  top: -54px;
+  left: -44px;
+  width: 148px;
+  height: 148px;
+  border: 1px solid rgb(228 185 103 / 13%);
+  border-radius: 50%;
+  content: "";
+  pointer-events: none;
+}
+
+.prayer-intro-redesign::after {
+  position: absolute;
+  top: -39px;
+  left: -29px;
+  width: 118px;
+  height: 118px;
+  border: 1px solid rgb(228 185 103 / 9%);
+  border-radius: 50%;
+  content: "";
+  pointer-events: none;
+}
+
+.prayer-intro-redesign .prayer-intro-title {
+  font-size: 22px;
+}
+
+.prayer-intro-redesign .prayer-intro-subtitle {
+  max-width: 252px;
+  color: #c3cdd0;
+}
+
+.prayer-intro-accent {
+  width: 30px;
+  height: 2px;
+  margin-top: 8px;
+  border-radius: 2px;
+  background: #e4b967;
+}
+
+.prayer-intro-emblem {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  width: 54px;
+  height: 54px;
+  flex: 0 0 54px;
+  place-items: center;
+  border: 1px solid rgb(228 185 103 / 36%);
+  border-radius: 50%;
+  background: rgb(228 185 103 / 11%);
+  color: #e4b967;
+}
+
+.prayer-intro-copy {
+  position: relative;
+  z-index: 1;
+}

@@ -45,6 +45,8 @@ import type {
   AdminSession,
   AdminSessionLogin,
   BadRequestResponse,
+  BibleChapter,
+  BibleChapterError,
   CalendarEntry,
   ConflictResponse,
   ContactMessageError,
@@ -273,6 +275,101 @@ export function useHealthCheck<
   request?: SecondParameter<typeof customFetch>;
 }): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
   const queryOptions = getHealthCheckQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getGetBibleChapterUrl = (book: string, chapter: number) => {
+  return `/api/bible/${book}/${chapter}`;
+};
+
+/**
+ * @summary Get a Bible chapter and its matching audio recording
+ */
+export const getBibleChapter = async (
+  book: string,
+  chapter: number,
+  options?: Parameters<typeof customFetch>[1],
+): Promise<BibleChapter> => {
+  return customFetch<BibleChapter>(getGetBibleChapterUrl(book, chapter), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetBibleChapterQueryKey = (book: string, chapter: number) => {
+  return [`/api/bible/${book}/${chapter}`] as const;
+};
+
+export const getGetBibleChapterQueryOptions = <
+  TData = Awaited<ReturnType<typeof getBibleChapter>>,
+  TError = ErrorType<BibleChapterError>,
+>(
+  book: string,
+  chapter: number,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getBibleChapter>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getGetBibleChapterQueryKey(book, chapter);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getBibleChapter>>> = ({
+    signal,
+  }) => getBibleChapter(book, chapter, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled:
+      book !== null &&
+      book !== undefined &&
+      chapter !== null &&
+      chapter !== undefined,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof getBibleChapter>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetBibleChapterQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getBibleChapter>>
+>;
+export type GetBibleChapterQueryError = ErrorType<BibleChapterError>;
+
+/**
+ * @summary Get a Bible chapter and its matching audio recording
+ */
+
+export function useGetBibleChapter<
+  TData = Awaited<ReturnType<typeof getBibleChapter>>,
+  TError = ErrorType<BibleChapterError>,
+>(
+  book: string,
+  chapter: number,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getBibleChapter>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetBibleChapterQueryOptions(book, chapter, options);
 
   const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
     queryKey: QueryKey;

@@ -1,6 +1,5 @@
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
-import { existsSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import test from "node:test";
@@ -42,12 +41,7 @@ test("the API stays available in no-database mode", async () => {
   }
 });
 
-test("a failed database migration is reported and prevents API startup", async () => {
-  assert.ok(
-    existsSync(path.join(apiDirectory, "dist", "migrations", "meta", "_journal.json")),
-    "the API build must include the Drizzle migration journal",
-  );
-
+test("production database validation failure is reported and prevents API startup", async () => {
   const port = 20_000 + (process.pid % 40_000);
   const child = spawn(
     process.execPath,
@@ -93,5 +87,6 @@ test("a failed database migration is reported and prevents API startup", async (
     output,
     /Database migration or schema validation failed; API server will not start: .*ECONNREFUSED/,
   );
+  assert.doesNotMatch(output, /Applying pending database migrations/);
   assert.doesNotMatch(output, /postgres:\/\/migration:local/);
 });

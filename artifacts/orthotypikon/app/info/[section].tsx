@@ -1,12 +1,14 @@
 import { Feather } from '@expo/vector-icons';
+import { useEffect, useState } from 'react';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useColors } from '@/hooks/useColors';
 import { useI18n } from '@/hooks/usePreferences';
-import { getMoreContent, type MoreSection } from '@/data/moreContent';
+import { getMoreContent, resolveAboutBody, type MoreSection } from '@/data/moreContent';
 import { ContactForm } from '@/components/ContactForm';
 import { KeyboardAwareScrollViewCompat } from '@/components/KeyboardAwareScrollViewCompat';
+import { fetchManagedContent } from '@/lib/managedContent';
 
 const sectionKeys: MoreSection[] = ['privacy', 'terms', 'about', 'contact'];
 
@@ -17,10 +19,22 @@ export default function MoreInfoScreen() {
   const { language } = useI18n();
   const { section } = useLocalSearchParams<{ section?: string }>();
   const content = getMoreContent(language);
+  const [managedAboutBody, setManagedAboutBody] = useState<string | null>(null);
   const textAlign = language === 'ar' ? 'right' : 'left';
   const activeSection = sectionKeys.includes(section as MoreSection)
     ? (section as MoreSection)
     : 'privacy';
+  useEffect(() => {
+    let active = true;
+    setManagedAboutBody(null);
+    void fetchManagedContent<Record<string, { aboutBody?: string }>>('about').then((managed) => {
+      const body = managed?.[language]?.aboutBody;
+      if (active && typeof body === 'string' && body.trim()) setManagedAboutBody(body);
+    });
+    return () => {
+      active = false;
+    };
+  }, [language]);
   const isPrivacy = activeSection === 'privacy';
   const isTerms = activeSection === 'terms';
   const title = isPrivacy
@@ -121,6 +135,19 @@ export default function MoreInfoScreen() {
               </Text>
             </View>
           ))}
+        </View>
+      ) : null}
+      {activeSection === 'about' ? (
+        <View style={[styles.introCard, { backgroundColor: colors.primary }]}>
+          <Feather name="info" size={22} color={colors.accent} />
+          <Text
+            style={[
+              styles.intro,
+              { color: colors.primaryForeground, textAlign },
+            ]}
+          >
+            {resolveAboutBody(language, managedAboutBody)}
+          </Text>
         </View>
       ) : null}
       {activeSection === 'contact' ? <ContactForm /> : null}

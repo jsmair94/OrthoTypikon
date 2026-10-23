@@ -1,61 +1,24 @@
 import { Feather } from '@expo/vector-icons';
-import { useAudioPlayer, useAudioPlayerStatus } from 'expo-audio';
 import { useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useColors } from '@/hooks/useColors';
 import { useI18n } from '@/hooks/usePreferences';
 import { getPrayerCollection } from '@/data/prayerCollections';
+import { BibleAudioControl } from '@/components/BibleAudioControl';
 
 type Testament = 'old' | 'new';
 type Language = 'ar' | 'en' | 'el';
 type BibleSection = { id: string; icon: React.ComponentProps<typeof Feather>['name']; book?: boolean };
-type RemoteBibleChapter = { text: string; audioUrl: string };
-
-function BibleAudioControl({ url, isRTL }: { url: string; isRTL: boolean }) {
-  const colors = useColors();
-  const player = useAudioPlayer(null, { keepAudioSessionActive: true });
-  const status = useAudioPlayerStatus(player);
-  const [loadedUrl, setLoadedUrl] = useState('');
-
-  useEffect(() => {
-    player.pause();
-    setLoadedUrl('');
-  }, [player, url]);
-
-  const toggle = () => {
-    if (status.playing) {
-      player.pause();
-      return;
-    }
-    if (loadedUrl !== url) {
-      player.replace({ uri: url });
-      setLoadedUrl(url);
-    }
-    player.play();
-  };
-
-  return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityLabel={isRTL ? 'تشغيل أو إيقاف صوت الإصحاح' : 'Play or pause chapter audio'}
-      onPress={toggle}
-      style={{ marginTop: 12, padding: 12, borderRadius: 12, backgroundColor: colors.secondary, flexDirection: isRTL ? 'row-reverse' : 'row', alignItems: 'center', gap: 8 }}
-    >
-      <Feather name={status.playing ? 'pause' : 'play'} size={16} color={colors.primary} />
-      <Text style={{ color: colors.foreground, fontWeight: '700' }}>{status.playing ? (isRTL ? 'إيقاف' : 'Pause') : (isRTL ? 'استماع إلى الإصحاح' : 'Listen to chapter')}</Text>
-    </Pressable>
-  );
-}
-
 const sections: Record<Testament, BibleSection[]> = {
   old: [
-    { id: 'history', icon: 'archive' },
-    { id: 'poetry', icon: 'book' },
-    { id: 'prophets', icon: 'sun' },
-    { id: 'torah', icon: 'book-open' },
-  ],
+    'genesis', 'exodus', 'leviticus', 'numbers', 'deuteronomy', 'joshua', 'judges', 'ruth',
+    '1-samuel', '2-samuel', '1-kings', '2-kings', '1-chronicles', '2-chronicles', 'ezra',
+    'nehemiah', 'esther', 'job', 'psalms', 'proverbs', 'ecclesiastes', 'song-of-solomon',
+    'isaiah', 'jeremiah', 'lamentations', 'ezekiel', 'daniel', 'hosea', 'joel', 'amos',
+    'obadiah', 'jonah', 'micah', 'nahum', 'habakkuk', 'zephaniah', 'haggai', 'zechariah', 'malachi',
+  ].map((id) => ({ id: `book-${id}`, icon: 'book-open', book: true })),
   new: [
     'matthew', 'mark', 'luke', 'john', 'acts', 'romans', '1-corinthians', '2-corinthians',
     'galatians', 'ephesians', 'philippians', 'colossians', '1-thessalonians',
@@ -64,8 +27,20 @@ const sections: Record<Testament, BibleSection[]> = {
   ].map((id) => ({ id: `book-${id}`, icon: 'book-open', book: true })),
 };
 
-const newTestamentBookNames: Record<Language, Record<string, string>> = {
+const bibleBookNames: Record<Language, Record<string, string>> = {
   ar: {
+    'book-genesis': 'التكوين', 'book-exodus': 'الخروج', 'book-leviticus': 'اللاويين',
+    'book-numbers': 'العدد', 'book-deuteronomy': 'التثنية', 'book-joshua': 'يشوع',
+    'book-judges': 'القضاة', 'book-ruth': 'راعوث', 'book-1-samuel': 'صموئيل الأول',
+    'book-2-samuel': 'صموئيل الثاني', 'book-1-kings': 'الملوك الأول', 'book-2-kings': 'الملوك الثاني',
+    'book-1-chronicles': 'أخبار الأيام الأول', 'book-2-chronicles': 'أخبار الأيام الثاني',
+    'book-ezra': 'عزرا', 'book-nehemiah': 'نحميا', 'book-esther': 'أستير', 'book-job': 'أيوب',
+    'book-psalms': 'المزامير', 'book-proverbs': 'الأمثال', 'book-ecclesiastes': 'الجامعة',
+    'book-song-of-solomon': 'نشيد الأنشاد', 'book-isaiah': 'إشعياء', 'book-jeremiah': 'إرميا',
+    'book-lamentations': 'مراثي إرميا', 'book-ezekiel': 'حزقيال', 'book-daniel': 'دانيال',
+    'book-hosea': 'هوشع', 'book-joel': 'يوئيل', 'book-amos': 'عاموس', 'book-obadiah': 'عوبديا',
+    'book-jonah': 'يونان', 'book-micah': 'ميخا', 'book-nahum': 'ناحوم', 'book-habakkuk': 'حبقوق',
+    'book-zephaniah': 'صفنيا', 'book-haggai': 'حجي', 'book-zechariah': 'زكريا', 'book-malachi': 'ملاخي',
     'book-matthew': 'متى',
     'book-mark': 'مرقس',
     'book-luke': 'لوقا',
@@ -95,6 +70,18 @@ const newTestamentBookNames: Record<Language, Record<string, string>> = {
     'book-revelation': 'رؤيا يوحنا',
   },
   en: {
+    'book-genesis': 'Genesis', 'book-exodus': 'Exodus', 'book-leviticus': 'Leviticus',
+    'book-numbers': 'Numbers', 'book-deuteronomy': 'Deuteronomy', 'book-joshua': 'Joshua',
+    'book-judges': 'Judges', 'book-ruth': 'Ruth', 'book-1-samuel': 'First Samuel',
+    'book-2-samuel': 'Second Samuel', 'book-1-kings': 'First Kings', 'book-2-kings': 'Second Kings',
+    'book-1-chronicles': 'First Chronicles', 'book-2-chronicles': 'Second Chronicles',
+    'book-ezra': 'Ezra', 'book-nehemiah': 'Nehemiah', 'book-esther': 'Esther', 'book-job': 'Job',
+    'book-psalms': 'Psalms', 'book-proverbs': 'Proverbs', 'book-ecclesiastes': 'Ecclesiastes',
+    'book-song-of-solomon': 'Song of Solomon', 'book-isaiah': 'Isaiah', 'book-jeremiah': 'Jeremiah',
+    'book-lamentations': 'Lamentations', 'book-ezekiel': 'Ezekiel', 'book-daniel': 'Daniel',
+    'book-hosea': 'Hosea', 'book-joel': 'Joel', 'book-amos': 'Amos', 'book-obadiah': 'Obadiah',
+    'book-jonah': 'Jonah', 'book-micah': 'Micah', 'book-nahum': 'Nahum', 'book-habakkuk': 'Habakkuk',
+    'book-zephaniah': 'Zephaniah', 'book-haggai': 'Haggai', 'book-zechariah': 'Zechariah', 'book-malachi': 'Malachi',
     'book-matthew': 'Matthew',
     'book-mark': 'Mark',
     'book-luke': 'Luke',
@@ -124,6 +111,18 @@ const newTestamentBookNames: Record<Language, Record<string, string>> = {
     'book-revelation': 'Revelation',
   },
   el: {
+    'book-genesis': 'Γένεση', 'book-exodus': 'Έξοδος', 'book-leviticus': 'Λευιτικό',
+    'book-numbers': 'Αριθμοί', 'book-deuteronomy': 'Δευτερονόμιο', 'book-joshua': 'Ιησούς του Ναυή',
+    'book-judges': 'Κριτές', 'book-ruth': 'Ρουθ', 'book-1-samuel': 'Α΄ Σαμουήλ',
+    'book-2-samuel': 'Β΄ Σαμουήλ', 'book-1-kings': 'Α΄ Βασιλέων', 'book-2-kings': 'Β΄ Βασιλέων',
+    'book-1-chronicles': 'Α΄ Παραλειπομένων', 'book-2-chronicles': 'Β΄ Παραλειπομένων',
+    'book-ezra': 'Έσδρας', 'book-nehemiah': 'Νεεμίας', 'book-esther': 'Εσθήρ', 'book-job': 'Ιώβ',
+    'book-psalms': 'Ψαλμοί', 'book-proverbs': 'Παροιμίες', 'book-ecclesiastes': 'Εκκλησιαστής',
+    'book-song-of-solomon': 'Άσμα Ασμάτων', 'book-isaiah': 'Ησαΐας', 'book-jeremiah': 'Ιερεμίας',
+    'book-lamentations': 'Θρήνοι', 'book-ezekiel': 'Ιεζεκιήλ', 'book-daniel': 'Δανιήλ',
+    'book-hosea': 'Ωσηέ', 'book-joel': 'Ιωήλ', 'book-amos': 'Αμώς', 'book-obadiah': 'Οβδιού',
+    'book-jonah': 'Ιωνάς', 'book-micah': 'Μιχαίας', 'book-nahum': 'Ναούμ', 'book-habakkuk': 'Αββακούμ',
+    'book-zephaniah': 'Σοφονίας', 'book-haggai': 'Αγγαίος', 'book-zechariah': 'Ζαχαρίας', 'book-malachi': 'Μαλαχίας',
     'book-matthew': 'Κατά Ματθαίον',
     'book-mark': 'Κατά Μάρκον',
     'book-luke': 'Κατά Λουκάν',
@@ -162,6 +161,16 @@ const gospelEntryForBook: Record<string, string> = {
 };
 
 const bibleChapterCounts: Record<string, number> = {
+  'book-genesis': 50, 'book-exodus': 40, 'book-leviticus': 27, 'book-numbers': 36,
+  'book-deuteronomy': 34, 'book-joshua': 24, 'book-judges': 21, 'book-ruth': 4,
+  'book-1-samuel': 31, 'book-2-samuel': 24, 'book-1-kings': 22, 'book-2-kings': 25,
+  'book-1-chronicles': 29, 'book-2-chronicles': 36, 'book-ezra': 10, 'book-nehemiah': 13,
+  'book-esther': 10, 'book-job': 42, 'book-psalms': 150, 'book-proverbs': 31,
+  'book-ecclesiastes': 12, 'book-song-of-solomon': 8, 'book-isaiah': 66, 'book-jeremiah': 52,
+  'book-lamentations': 5, 'book-ezekiel': 48, 'book-daniel': 12, 'book-hosea': 14,
+  'book-joel': 3, 'book-amos': 9, 'book-obadiah': 1, 'book-jonah': 4, 'book-micah': 7,
+  'book-nahum': 3, 'book-habakkuk': 3, 'book-zephaniah': 3, 'book-haggai': 2,
+  'book-zechariah': 14, 'book-malachi': 4,
   'book-matthew': 28, 'book-mark': 16, 'book-luke': 24, 'book-john': 21,
   'book-acts': 28, 'book-romans': 16, 'book-1-corinthians': 16, 'book-2-corinthians': 13,
   'book-galatians': 6, 'book-ephesians': 6, 'book-philippians': 4, 'book-colossians': 4,
@@ -188,25 +197,15 @@ const copy: Record<Language, {
   ar: {
     eyebrow: 'صلوات · الإنجيل المسموع',
     title: 'الكتاب المقدس',
-    subtitle: 'اختر العهد والقسم الذي تريد قراءته.',
+    subtitle: 'اختر العهد والسفر الذي تريد قراءته.',
     old: 'العهد القديم',
     new: 'العهد الجديد',
     testamentHint: {
-      old: 'من الأسفار التاريخية والشعرية إلى كتب الأنبياء والتوراة',
+      old: 'تصفّح الأسفار التسعة والثلاثين بالترتيب.',
       new: 'من الأناجيل وأعمال الرسل إلى الرسائل والرؤيا',
     },
-    sectionNames: {
-      history: 'الأسفار التاريخية',
-      poetry: 'الأسفار الشعرية',
-      prophets: 'الأنبياء',
-      torah: 'التوراة',
-    },
-    sectionDescriptions: {
-      history: 'تاريخ شعب الله ومسيرته',
-      poetry: 'أسفار الشعر والحكمة والتسبيح',
-      prophets: 'كتب الأنبياء في العهد القديم',
-      torah: 'أسفار التوراة',
-    },
+    sectionNames: {},
+    sectionDescriptions: {},
     emptyTitle: 'ملفات القراءة والصوت لم تُضف بعد',
     emptyBody: 'ارفع ملفات النصوص والتسجيلات عندما تصبح جاهزة، وسنربطها هنا لتقرأ وتستمع إلى الإصحاح نفسه.',
     audioNote: 'لا يتوفر تسجيل صوتي لهذه المقتطفات بعد.',
@@ -215,25 +214,15 @@ const copy: Record<Language, {
   en: {
     eyebrow: 'PRAYERS · AUDIO GOSPEL',
     title: 'Holy Bible',
-    subtitle: 'Choose a testament and a section to read.',
+    subtitle: 'Choose a testament and a book to read.',
     old: 'Old Testament',
     new: 'New Testament',
     testamentHint: {
-      old: 'Historical and poetic books, the prophets, and the Torah',
+      old: 'Browse all 39 books in order.',
       new: 'From the Gospels and Acts to the letters and Revelation',
     },
-    sectionNames: {
-      history: 'Historical Books',
-      poetry: 'Poetic Books',
-      prophets: 'The Prophets',
-      torah: 'The Torah',
-    },
-    sectionDescriptions: {
-      history: 'The history and journey of God’s people',
-      poetry: 'Books of poetry, wisdom, and praise',
-      prophets: 'The prophetic books of the Old Testament',
-      torah: 'The books of the Torah',
-    },
+    sectionNames: {},
+    sectionDescriptions: {},
     emptyTitle: 'Reading and audio files are not added yet',
     emptyBody: 'When you upload the text and recordings, they will be linked here so you can read and listen to the same chapter.',
     audioNote: 'Audio recordings are not available for these excerpts yet.',
@@ -242,25 +231,15 @@ const copy: Record<Language, {
   el: {
     eyebrow: 'ΠΡΟΣΕΥΧΕΣ · ΑΚΟΥΣΤΟ ΕΥΑΓΓΕΛΙΟ',
     title: 'Αγία Γραφή',
-    subtitle: 'Επιλέξτε Διαθήκη και ενότητα για ανάγνωση.',
+    subtitle: 'Επιλέξτε Διαθήκη και βιβλίο για ανάγνωση.',
     old: 'Παλαιά Διαθήκη',
     new: 'Καινή Διαθήκη',
     testamentHint: {
-      old: 'Ιστορικά και ποιητικά βιβλία, οι προφήτες και η Τορά',
+      old: 'Περιηγηθείτε στα 39 βιβλία με τη σειρά.',
       new: 'Από τα Ευαγγέλια και τις Πράξεις στις επιστολές και την Αποκάλυψη',
     },
-    sectionNames: {
-      history: 'Ιστορικά Βιβλία',
-      poetry: 'Ποιητικά Βιβλία',
-      prophets: 'Οι Προφήτες',
-      torah: 'Η Τορά',
-    },
-    sectionDescriptions: {
-      history: 'Η ιστορία και η πορεία του λαού του Θεού',
-      poetry: 'Βιβλία ποίησης, σοφίας και ύμνων',
-      prophets: 'Τα προφητικά βιβλία της Παλαιάς Διαθήκης',
-      torah: 'Τα βιβλία της Τορά',
-    },
+    sectionNames: {},
+    sectionDescriptions: {},
     emptyTitle: 'Δεν έχουν προστεθεί ακόμη αρχεία κειμένου και ήχου',
     emptyBody: 'Όταν ανεβάσετε τα κείμενα και τις ηχογραφήσεις, θα συνδεθούν εδώ για να διαβάζετε και να ακούτε το ίδιο κεφάλαιο.',
     audioNote: 'Δεν υπάρχουν ακόμη ηχογραφήσεις για αυτά τα αποσπάσματα.',
@@ -280,28 +259,6 @@ export default function BibleScreen() {
   const webBottomInset = Platform.OS === 'web' ? 34 : 0;
   const [testament, setTestament] = useState<Testament>('new');
   const [selectedSection, setSelectedSection] = useState<string | null>(null);
-  const [selectedChapter, setSelectedChapter] = useState<number | null>(null);
-  const [remoteChapter, setRemoteChapter] = useState<RemoteBibleChapter | null>(null);
-  const [remoteChapterLoading, setRemoteChapterLoading] = useState(false);
-  const [remoteChapterError, setRemoteChapterError] = useState(false);
-  useEffect(() => {
-    setRemoteChapter(null);
-    setRemoteChapterError(false);
-    if (selectedSection !== 'book-matthew' || selectedChapter === null) return;
-    let active = true;
-    setRemoteChapterLoading(true);
-    const configuredApiBase = process.env.EXPO_PUBLIC_BIBLE_API_BASE_URL?.trim() || 'https://www.orthotypikon.org';
-    const origin = (/^https?:\/\//i.test(configuredApiBase) ? configuredApiBase : `https://${configuredApiBase}`).replace(/\/+$/, '');
-    fetch(`${origin}/api/bible/matthew/${selectedChapter}`)
-      .then(async (response) => {
-        if (!response.ok) throw new Error('Chapter unavailable');
-        return response.json() as Promise<RemoteBibleChapter>;
-      })
-      .then((data) => { if (active) setRemoteChapter(data); })
-      .catch(() => { if (active) setRemoteChapterError(true); })
-      .finally(() => { if (active) setRemoteChapterLoading(false); });
-    return () => { active = false; };
-  }, [selectedSection, selectedChapter]);
   const selectedChapterCount = selectedSection ? bibleChapterCounts[selectedSection] : undefined;
   const selectedGospelEntryId = selectedSection ? gospelEntryForBook[selectedSection] : undefined;
   const selectedGospelEntries = gospelCollection?.entries.filter(
@@ -348,7 +305,6 @@ export default function BibleScreen() {
               onPress={() => {
                 setTestament(value);
                 setSelectedSection(null);
-                setSelectedChapter(null);
               }}
               style={[
                 styles.testamentTab,
@@ -383,7 +339,7 @@ export default function BibleScreen() {
         {sections[testament].map((section, index) => {
           const active = selectedSection === section.id;
           const sectionName = section.book
-            ? newTestamentBookNames[language][section.id]
+            ? bibleBookNames[language][section.id]
             : text.sectionNames[section.id];
           return (
             <View key={section.id}>
@@ -394,7 +350,6 @@ export default function BibleScreen() {
                 accessibilityState={{ expanded: active }}
                 onPress={() => {
                   setSelectedSection(active ? null : section.id);
-                  setSelectedChapter(null);
                 }}
                 style={({ pressed }) => [
                   styles.sectionCard,
@@ -434,41 +389,25 @@ export default function BibleScreen() {
                   <View style={styles.chapterGrid}>
                     {Array.from({ length: selectedChapterCount }, (_, chapterIndex) => {
                       const chapterNumber = chapterIndex + 1;
-                      const chapterActive = selectedChapter === chapterNumber;
                       return (
                         <Pressable
                           key={chapterNumber}
                           testID={`bible-chapter-${section.id}-${chapterNumber}`}
                           accessibilityRole="button"
-                          accessibilityState={{ selected: chapterActive }}
-                          onPress={() => setSelectedChapter(chapterNumber)}
-                          style={[styles.chapterButton, { backgroundColor: chapterActive ? colors.primary : colors.card, borderColor: chapterActive ? colors.primary : colors.border }]}
+                          accessibilityState={{ selected: false }}
+                          onPress={() => router.push({
+                            pathname: '/bible-reader',
+                            params: { book: section.id, chapter: String(chapterNumber), testament },
+                          })}
+                          style={[styles.chapterButton, { backgroundColor: colors.card, borderColor: colors.border }]}
                         >
-                          <Text style={{ color: chapterActive ? colors.primaryForeground : colors.foreground, fontWeight: '700', fontSize: 13 }}>
+                          <Text style={{ color: colors.foreground, fontWeight: '700', fontSize: 13 }}>
                             {chapterNumber}
                           </Text>
                         </Pressable>
                       );
                     })}
                   </View>
-                  {selectedChapter && (
-                    selectedSection === 'book-matthew' ? (
-                      remoteChapterLoading ? (
-                        <Text testID="bible-chapter-loading" style={[styles.chapterPending, { color: colors.mutedForeground }]}>{isRTL ? 'جارٍ تحميل الإصحاح…' : 'Loading chapter…'}</Text>
-                      ) : remoteChapterError ? (
-                        <Text testID="bible-chapter-error" style={[styles.chapterPending, { color: colors.mutedForeground }]}>{isRTL ? 'تعذر تحميل النص أو التسجيل من التخزين.' : 'Could not load the text or audio from storage.'}</Text>
-                      ) : remoteChapter ? (
-                        <View style={{ marginTop: 12, padding: 12, borderRadius: 12, borderWidth: 1, backgroundColor: colors.card, borderColor: colors.border }}>
-                          <Text testID="bible-chapter-text" style={{ color: colors.foreground, textAlign: isRTL ? 'right' : 'left', writingDirection: isRTL ? 'rtl' : 'ltr', fontSize: 17, lineHeight: 30 }}>{remoteChapter.text}</Text>
-                          <BibleAudioControl url={remoteChapter.audioUrl} isRTL={isRTL} />
-                        </View>
-                      ) : null
-                    ) : (
-                      <Text testID="bible-chapter-pending" style={[styles.chapterPending, { color: colors.mutedForeground, textAlign: isRTL ? 'right' : 'left' }]}>
-                        {language === 'ar' ? `الإصحاح ${selectedChapter}: ستظهر القراءة والتسجيل الصوتي هنا بعد رفع الملفات.` : language === 'el' ? `Κεφάλαιο ${selectedChapter}: το κείμενο και η ηχογράφηση θα εμφανιστούν εδώ όταν προστεθούν τα αρχεία.` : `Chapter ${selectedChapter}: its reading and audio will appear here when the files are added.`}
-                      </Text>
-                    )
-                  )}
                 </View>
               )}
             </View>
@@ -567,7 +506,6 @@ const styles = StyleSheet.create({
   chapterPanelTitle: { fontSize: 13, fontWeight: '800' },
   chapterGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   chapterButton: { width: 42, height: 42, borderWidth: 1, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
-  chapterPending: { fontSize: 11, lineHeight: 17 },
   gospelList: { gap: 10 },
   gospelListTitle: { fontSize: 17, fontWeight: '800' },
   gospelListDescription: { fontSize: 12, lineHeight: 18, marginTop: -5 },

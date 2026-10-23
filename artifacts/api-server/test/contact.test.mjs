@@ -35,8 +35,8 @@ test("Resend sender reports missing configuration and provider rejection", async
   await assert.rejects(rejectedSender({}), /Resend rejected email: 401/);
 });
 
-test("confirmation email contains only the submitting address and generic text", () => {
-  const confirmation = buildConfirmationEmail(" visitor@example.com ");
+test("confirmation email uses the requested language and contains no submitted message", () => {
+  const confirmation = buildConfirmationEmail(" visitor@example.com ", "en");
   assert.deepEqual(confirmation, {
     from: "OrthoTypikon <info@orthotypikon.org>",
     to: ["visitor@example.com"],
@@ -44,6 +44,26 @@ test("confirmation email contains only the submitting address and generic text",
     text: "We received your message. Our team will review it and respond if needed.",
   });
   assert.equal(JSON.stringify(confirmation).includes("private message"), false);
+
+  assert.deepEqual(buildConfirmationEmail("visitor@example.com", "ar"), {
+    from: "OrthoTypikon <info@orthotypikon.org>",
+    to: ["visitor@example.com"],
+    subject: "تلقينا رسالتك إلى OrthoTypikon",
+    text: "وصلتنا رسالتك. سيراجع فريقنا رسالتك وسيرد عليك إذا لزم الأمر.",
+  });
+  assert.deepEqual(buildConfirmationEmail("visitor@example.com", "el"), {
+    from: "OrthoTypikon <info@orthotypikon.org>",
+    to: ["visitor@example.com"],
+    subject: "Λάβαμε το μήνυμά σας προς το OrthoTypikon",
+    text: "Λάβαμε το μήνυμά σας. Η ομάδα μας θα το εξετάσει και θα απαντήσει αν χρειάζεται.",
+  });
+});
+
+test("confirmation email defaults to English for older clients", () => {
+  assert.deepEqual(
+    buildConfirmationEmail("visitor@example.com"),
+    buildConfirmationEmail("visitor@example.com", "en"),
+  );
 });
 
 test("contact endpoint validates submissions and sends confirmation only after support delivery", async () => {
@@ -51,14 +71,15 @@ test("contact endpoint validates submissions and sends confirmation only after s
   const confirmations = [];
   const app = express();
   app.use(express.json());
+  app.set("trust proxy", true);
   app.use(createContactRouter(
     async (input) => {
       if (input.name === "Support delivery failure") throw new Error("provider unavailable");
       supportSent.push(input);
     },
-    async (email) => {
+    async (email, language) => {
       if (email === "confirmation-failure@example.com") throw new Error("provider unavailable");
-      confirmations.push(email);
+      confirmations.push({ email, language });
     },
   ));
   const server = app.listen(0);
@@ -90,7 +111,33 @@ test("contact endpoint validates submissions and sends confirmation only after s
     assert.deepEqual(await response.json(), { accepted: true });
     assert.equal(supportSent.length, 1);
     assert.equal(supportSent[0].email, "visitor@example.com");
-    assert.deepEqual(confirmations, ["visitor@example.com"]);
+    assert.deepEqual(confirmations, [{ email: "visitor@example.com", language: "en" }]);
+
+    for (const [language, ip] of [
+      ["ar", "198.51.100.10"],
+      ["el", "198.51.100.11"],
+    ]) {
+      const localizedResponse = await fetch(`${base}/contact`, {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          "x-forwarded-for": ip,
+        },
+        body: JSON.stringify({
+          name: "Localized visitor",
+          email: `${language}@example.com`,
+          message: "Please contact me.",
+          language,
+        }),
+      });
+      assert.equal(localizedResponse.status, 202);
+      assert.deepEqual(await localizedResponse.json(), { accepted: true });
+    }
+    assert.deepEqual(confirmations, [
+      { email: "visitor@example.com", language: "en" },
+      { email: "ar@example.com", language: "ar" },
+      { email: "el@example.com", language: "el" },
+    ]);
 
     const supportFailed = await fetch(`${base}/contact`, {
       method: "POST",
@@ -106,7 +153,7 @@ test("contact endpoint validates submissions and sends confirmation only after s
       error: "We could not send your message. Please try again or email info@orthotypikon.org.",
       code: "support_delivery_failed",
     });
-    assert.equal(confirmations.length, 1);
+    assert.equal(confirmations.length, 3);
 
     const confirmationFailed = await fetch(`${base}/contact`, {
       method: "POST",
@@ -122,8 +169,12 @@ test("contact endpoint validates submissions and sends confirmation only after s
       error: "Your message was delivered, but we could not send a confirmation email. Please do not submit the form again.",
       code: "confirmation_delivery_failed",
     });
-    assert.equal(supportSent.length, 2);
-    assert.deepEqual(confirmations, ["visitor@example.com"]);
+    assert.equal(supportSent.length, 4);
+    assert.deepEqual(confirmations, [
+      { email: "visitor@example.com", language: "en" },
+      { email: "ar@example.com", language: "ar" },
+      { email: "el@example.com", language: "el" },
+    ]);
   } finally {
     await new Promise((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
   }

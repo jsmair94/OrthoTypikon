@@ -1,6 +1,5 @@
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useAudioPlayer, useAudioPlayerStatus } from 'expo-audio';
 import { Alert, AppState, Image, Linking, Modal, Platform, Pressable, ScrollView, Share, StyleProp, StyleSheet, Text, View, ViewStyle } from 'react-native';
 import { Circle, Line, Path, Rect, Svg } from 'react-native-svg';
 import { useEffect, useRef, useState, type MutableRefObject } from 'react';
@@ -13,6 +12,7 @@ import {
 import { useColors } from '@/hooks/useColors';
 import { useI18n, usePreferences } from '@/hooks/usePreferences';
 import { useHymnPlayer } from '@/hooks/useHymnPlayer';
+import { isAudioPlaybackError, useAppAudio } from '@/hooks/useAppAudio';
 import { dateKeyFromDate, getDailyWidgetContent } from '@/data/dailyWidget';
 import { getCalendarEntryForType } from '@/data/calendar2026';
 import { fetchDailyGospelFromSource, fetchSynaxarionFromSource } from '@/lib/synaxarionSource';
@@ -210,12 +210,12 @@ function DailyGospelAudioControl({
 }) {
   const colors = useColors();
   const { t } = useI18n();
-  const player = useAudioPlayer(null, {
-    updateInterval: 250,
-    keepAudioSessionActive: true,
-  });
-  const audioStatus = useAudioPlayerStatus(player);
-  const sourceLoaded = useRef(false);
+  const { player, status: globalStatus, activeId, play, pause } = useAppAudio();
+  const audioId = `daily-gospel:${sourceUrl}`;
+  const isActiveTrack = activeId === audioId;
+  const audioStatus = isActiveTrack
+    ? globalStatus
+    : { ...globalStatus, playing: false, isBuffering: false, isLoaded: false, didJustFinish: false, currentTime: 0, duration: 0 };
   const isActiveRef = useRef(true);
   const [isPreparing, setIsPreparing] = useState(false);
   const [hasError, setHasError] = useState(false);
@@ -223,20 +223,20 @@ function DailyGospelAudioControl({
   useEffect(() => {
     isActiveRef.current = true;
     stopPlayerRef.current = () => {
-      player.pause();
+      pause(audioId);
       setIsPreparing(false);
     };
     return () => {
       isActiveRef.current = false;
       stopPlayerRef.current = null;
     };
-  }, [player, stopPlayerRef]);
+  }, [audioId, pause, stopPlayerRef]);
 
   useEffect(() => {
     if (audioStatus.playing) {
       setIsPreparing(false);
       setHasError(false);
-    } else if (audioStatus.playbackState.toLowerCase().includes('error')) {
+    } else if (isAudioPlaybackError(audioStatus.playbackState)) {
       setIsPreparing(false);
       setHasError(true);
     } else if (audioStatus.isLoaded && !audioStatus.isBuffering) {
@@ -255,25 +255,15 @@ function DailyGospelAudioControl({
 
   const togglePlayback = async () => {
     if (audioStatus.playing) {
-      player.pause();
+      pause(audioId);
       return;
     }
 
     setHasError(false);
     setIsPreparing(true);
     try {
-      if (!sourceLoaded.current || hasError) {
-        player.replace({ uri: sourceUrl });
-        sourceLoaded.current = true;
-      }
-      if (
-        audioStatus.didJustFinish ||
-        (audioStatus.duration > 0 && audioStatus.currentTime >= audioStatus.duration)
-      ) {
-        await player.seekTo(0);
-      }
       if (!isActiveRef.current) return;
-      player.play();
+      await play(audioId, { uri: sourceUrl });
     } catch {
       setIsPreparing(false);
       setHasError(true);
@@ -479,10 +469,31 @@ export default function HomeScreen() {
               <Text style={[styles.eyebrow, { color: colors.mutedForeground }]}>{currentDate}</Text>
             </View>
           </View>
-          <Pressable testID="notifications" style={[styles.iconButton, { backgroundColor: colors.card, borderColor: colors.border }]}>
-            <HomeIcon name="bell" size={19} color={colors.primary} />
-            <View style={[styles.dot, { backgroundColor: colors.accent }]} />
-          </Pressable>
+          <View style={styles.headerActions}>
+            <Pressable
+              testID="morning-hymn-toggle"
+              accessibilityRole="button"
+              accessibilityLabel={isLoading ? t.hymn.loading : hasError ? t.hymn.retry : isPlaying ? t.hymn.stop : t.hymn.title}
+              onPress={toggle}
+              style={[
+                styles.headerListenButton,
+                {
+                  backgroundColor: isPlaying ? colors.primary : colors.card,
+                  borderColor: isPlaying ? colors.primary : colors.border,
+                  opacity: isLoading ? 0.75 : 1,
+                },
+              ]}
+            >
+              <HomeIcon name={isPlaying ? 'pause' : 'play'} size={17} color={isPlaying ? colors.primaryForeground : colors.primary} />
+              <Text style={[styles.headerListenLabel, { color: isPlaying ? colors.primaryForeground : colors.primary }]}>
+                {isLoading ? t.hymn.loading : hasError ? t.hymn.retry : isPlaying ? t.hymn.stop : t.hymn.title}
+              </Text>
+            </Pressable>
+            <Pressable testID="notifications" style={[styles.iconButton, { backgroundColor: colors.card, borderColor: colors.border }]}>
+              <HomeIcon name="bell" size={19} color={colors.primary} />
+              <View style={[styles.dot, { backgroundColor: colors.accent }]} />
+            </Pressable>
+          </View>
         </View>
 
         <View style={styles.dailySectionHeading}>
@@ -518,27 +529,6 @@ export default function HomeScreen() {
             >
               <Text style={[styles.dailyTabLabel, { color: dailyContentView === 'gospel' ? colors.primaryForeground : colors.mutedForeground }]}>
                 {t.home.gospelTab}
-              </Text>
-            </Pressable>
-          </View>
-          <View style={styles.hymnActionRow}>
-            <Pressable
-              testID="morning-hymn-toggle"
-              accessibilityRole="button"
-              accessibilityLabel={isPlaying ? t.hymn.stop : t.hymn.title}
-              onPress={toggle}
-              style={({ pressed }) => [
-                styles.hymnButton,
-                {
-                  backgroundColor: isPlaying ? colors.primary : colors.secondary,
-                  borderColor: isPlaying ? colors.primary : colors.border,
-                  opacity: pressed ? 0.78 : 1,
-                },
-              ]}
-            >
-              <HomeIcon name={isPlaying ? 'pause' : 'play'} size={14} color={isPlaying ? colors.primaryForeground : colors.primary} />
-              <Text style={[styles.hymnButtonText, { color: isPlaying ? colors.primaryForeground : colors.primary }]}>
-                {isLoading ? t.hymn.loading : hasError ? t.hymn.retry : isPlaying ? t.hymn.stop : t.hymn.title}
               </Text>
             </Pressable>
           </View>
@@ -725,21 +715,21 @@ const styles = StyleSheet.create({
   root: { flex: 1 },
   content: { paddingHorizontal: 18, gap: 18 },
   header: { flexDirection: 'row-reverse', justifyContent: 'space-between', alignItems: 'center' },
+  headerActions: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   identity: { flexDirection: 'row-reverse', alignItems: 'center', gap: 11, flex: 1 },
   brandMark: { width: 42, height: 42, borderRadius: 14, overflow: 'hidden' },
   identityCopy: { alignItems: 'flex-end', flex: 1 },
   brandName: { fontSize: 16, fontWeight: '700', letterSpacing: 0.2 },
   eyebrow: { fontSize: 11, fontWeight: '500', textAlign: 'right', marginTop: 3 },
-  hymnButton: { minHeight: 38, borderRadius: 14, borderWidth: 1, paddingHorizontal: 13, flexDirection: 'row-reverse', alignItems: 'center', gap: 8 },
-  hymnButtonText: { fontSize: 12, fontWeight: '800' },
   iconButton: { width: 44, height: 44, borderRadius: 22, borderWidth: 1, justifyContent: 'center', alignItems: 'center', position: 'relative' },
+  headerListenButton: { minWidth: 40, height: 40, borderRadius: 20, borderWidth: 1, paddingHorizontal: 9, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 5 },
+  headerListenLabel: { fontSize: 11, fontWeight: '700' },
   dot: { width: 7, height: 7, borderRadius: 4, position: 'absolute', top: 8, right: 9 },
   dailySectionHeading: { gap: 9, marginTop: 2 },
   dailyTabs: { borderWidth: 1, borderRadius: 16, padding: 4, gap: 4 },
   dailyTab: { flex: 1, minHeight: 40, borderRadius: 12, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 8 },
   dailyTabLabel: { fontSize: 12, fontWeight: '800', textAlign: 'center' },
   sectionHeading: { flexDirection: 'row-reverse', justifyContent: 'space-between', alignItems: 'center', marginTop: 2 },
-  hymnActionRow: { width: '100%', alignItems: 'flex-end' },
   sectionTitle: { fontSize: 18, fontWeight: '700' },
   link: { fontSize: 12, fontWeight: '600' },
   verseCard: { height: 196, borderRadius: 22, borderWidth: 1, padding: 18, gap: 8, justifyContent: 'space-between', overflow: 'hidden', position: 'relative' },

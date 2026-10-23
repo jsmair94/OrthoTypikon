@@ -32,6 +32,12 @@ export const SubmitContactMessageBody = zod.object({
   country: zod.string().max(submitContactMessageBodyCountryMax).optional(),
   phone: zod.string().max(submitContactMessageBodyPhoneMax).optional(),
   message: zod.string().min(1).max(submitContactMessageBodyMessageMax),
+  language: zod
+    .enum(["ar", "en", "el"])
+    .optional()
+    .describe(
+      "Language for the confirmation email. Defaults to English when omitted.",
+    ),
 });
 
 export const SubmitContactMessageResponse = zod.object({
@@ -43,6 +49,56 @@ export const SubmitContactMessageResponse = zod.object({
  */
 export const HealthCheckResponse = zod.object({
   status: zod.enum(["ok"]),
+});
+
+/**
+ * @summary Get a Bible chapter and its matching audio recording
+ */
+export const getBibleChapterPathBookMax = 24;
+
+export const getBibleChapterPathChapterMax = 28;
+export const getBibleChapterPathChapterMultipleOf = 1;
+
+export const GetBibleChapterParams = zod.object({
+  book: zod.coerce
+    .string()
+    .min(1)
+    .max(getBibleChapterPathBookMax)
+    .describe("Lowercase book slug from the Bible catalog"),
+  chapter: zod.coerce
+    .number()
+    .min(1)
+    .max(getBibleChapterPathChapterMax)
+    .multipleOf(getBibleChapterPathChapterMultipleOf)
+    .describe("One-based chapter number"),
+});
+
+export const getBibleChapterResponseChapterMultipleOf = 1;
+
+export const getBibleChapterResponseAudioUrlExpiresInMultipleOf = 1;
+
+export const getBibleChapterResponseVersesItemNumberMultipleOf = 1;
+
+export const GetBibleChapterResponse = zod.object({
+  book: zod.string(),
+  chapter: zod.number().multipleOf(getBibleChapterResponseChapterMultipleOf),
+  text: zod.string(),
+  audioUrl: zod.string().nullable(),
+  audioUrlExpiresIn: zod
+    .number()
+    .multipleOf(getBibleChapterResponseAudioUrlExpiresInMultipleOf),
+  verses: zod
+    .array(
+      zod.object({
+        number: zod
+          .number()
+          .multipleOf(getBibleChapterResponseVersesItemNumberMultipleOf),
+        text: zod.string(),
+        startTime: zod.number(),
+        endTime: zod.number(),
+      }),
+    )
+    .optional(),
 });
 
 /**
@@ -501,7 +557,7 @@ export const listAdminDailyContentQueryLimitDefault = 25;
 export const listAdminDailyContentQueryLimitMax = 50;
 
 export const ListAdminDailyContentQueryParams = zod.object({
-  locale: zod.enum(["ar", "en", "fr"]).optional(),
+  locale: zod.enum(["ar", "en", "el"]).optional(),
   publicationStatus: zod.enum(["draft", "published", "archived"]).optional(),
   search: zod.coerce
     .string()
@@ -535,7 +591,7 @@ export const ListAdminDailyContentResponse = zod.object({
       id: zod.string(),
       contentDate: zod.coerce.date(),
       calendarSystem: zod.enum(["gregorian", "julian"]),
-      locale: zod.enum(["ar", "en", "fr"]),
+      locale: zod.enum(["ar", "en", "el"]),
       verseReference: zod.string(),
       verseText: zod.string(),
       verseAuthor: zod.string(),
@@ -577,7 +633,7 @@ export const upsertAdminDailyContentBodyReadingDurationMinutesMultipleOf = 1;
 export const UpsertAdminDailyContentBody = zod.object({
   contentDate: zod.coerce.date(),
   calendarSystem: zod.enum(["gregorian", "julian"]),
-  locale: zod.enum(["ar", "en", "fr"]),
+  locale: zod.enum(["ar", "en", "el"]),
   verseReference: zod.string().min(1),
   verseText: zod.string().min(1),
   verseAuthor: zod.string().min(1),
@@ -599,7 +655,7 @@ export const UpsertAdminDailyContentResponse = zod.object({
   id: zod.string(),
   contentDate: zod.coerce.date(),
   calendarSystem: zod.enum(["gregorian", "julian"]),
-  locale: zod.enum(["ar", "en", "fr"]),
+  locale: zod.enum(["ar", "en", "el"]),
   verseReference: zod.string(),
   verseText: zod.string(),
   verseAuthor: zod.string(),
@@ -630,7 +686,7 @@ export const updateAdminDailyContentBodyReadingDurationMinutesMultipleOf = 1;
 export const UpdateAdminDailyContentBody = zod.object({
   contentDate: zod.coerce.date(),
   calendarSystem: zod.enum(["gregorian", "julian"]),
-  locale: zod.enum(["ar", "en", "fr"]),
+  locale: zod.enum(["ar", "en", "el"]),
   verseReference: zod.string().min(1),
   verseText: zod.string().min(1),
   verseAuthor: zod.string().min(1),
@@ -652,7 +708,7 @@ export const UpdateAdminDailyContentResponse = zod.object({
   id: zod.string(),
   contentDate: zod.coerce.date(),
   calendarSystem: zod.enum(["gregorian", "julian"]),
-  locale: zod.enum(["ar", "en", "fr"]),
+  locale: zod.enum(["ar", "en", "el"]),
   verseReference: zod.string(),
   verseText: zod.string(),
   verseAuthor: zod.string(),
@@ -692,7 +748,7 @@ export const listAdminCalendarEntriesQueryLimitDefault = 25;
 export const listAdminCalendarEntriesQueryLimitMax = 50;
 
 export const ListAdminCalendarEntriesQueryParams = zod.object({
-  locale: zod.enum(["ar", "en", "fr"]).optional(),
+  locale: zod.enum(["ar", "en", "el"]).optional(),
   publicationStatus: zod.enum(["draft", "published", "archived"]).optional(),
   search: zod.coerce
     .string()
@@ -724,7 +780,7 @@ export const ListAdminCalendarEntriesResponse = zod.object({
       id: zod.string(),
       gregorianDate: zod.coerce.date(),
       calendarSystem: zod.enum(["gregorian", "julian"]),
-      locale: zod.enum(["ar", "en", "fr"]),
+      locale: zod.enum(["ar", "en", "el"]),
       feastTitle: zod.string().nullable(),
       fastingTitle: zod.string().nullable(),
       liturgy: zod.string().nullable(),
@@ -755,7 +811,7 @@ export const ListAdminCalendarEntriesResponse = zod.object({
 export const UpsertAdminCalendarEntryBody = zod.object({
   gregorianDate: zod.coerce.date(),
   calendarSystem: zod.enum(["gregorian", "julian"]),
-  locale: zod.enum(["ar", "en", "fr"]),
+  locale: zod.enum(["ar", "en", "el"]),
   feastTitle: zod.string().nullable(),
   fastingTitle: zod.string().nullable(),
   liturgy: zod.string().nullable(),
@@ -768,7 +824,7 @@ export const UpsertAdminCalendarEntryResponse = zod.object({
   id: zod.string(),
   gregorianDate: zod.coerce.date(),
   calendarSystem: zod.enum(["gregorian", "julian"]),
-  locale: zod.enum(["ar", "en", "fr"]),
+  locale: zod.enum(["ar", "en", "el"]),
   feastTitle: zod.string().nullable(),
   fastingTitle: zod.string().nullable(),
   liturgy: zod.string().nullable(),
@@ -791,7 +847,7 @@ export const UpdateAdminCalendarEntryParams = zod.object({
 export const UpdateAdminCalendarEntryBody = zod.object({
   gregorianDate: zod.coerce.date(),
   calendarSystem: zod.enum(["gregorian", "julian"]),
-  locale: zod.enum(["ar", "en", "fr"]),
+  locale: zod.enum(["ar", "en", "el"]),
   feastTitle: zod.string().nullable(),
   fastingTitle: zod.string().nullable(),
   liturgy: zod.string().nullable(),
@@ -804,7 +860,7 @@ export const UpdateAdminCalendarEntryResponse = zod.object({
   id: zod.string(),
   gregorianDate: zod.coerce.date(),
   calendarSystem: zod.enum(["gregorian", "julian"]),
-  locale: zod.enum(["ar", "en", "fr"]),
+  locale: zod.enum(["ar", "en", "el"]),
   feastTitle: zod.string().nullable(),
   fastingTitle: zod.string().nullable(),
   liturgy: zod.string().nullable(),
@@ -838,7 +894,7 @@ export const listAdminSaintsQueryLimitDefault = 25;
 export const listAdminSaintsQueryLimitMax = 50;
 
 export const ListAdminSaintsQueryParams = zod.object({
-  locale: zod.enum(["ar", "en", "fr"]).optional(),
+  locale: zod.enum(["ar", "en", "el"]).optional(),
   publicationStatus: zod.enum(["draft", "published", "archived"]).optional(),
   search: zod.coerce.string().max(listAdminSaintsQuerySearchMax).optional(),
   page: zod.coerce
@@ -883,7 +939,7 @@ export const ListAdminSaintsResponse = zod.object({
         .nullable(),
       shortBio: zod.string(),
       audioText: zod.string(),
-      locale: zod.enum(["ar", "en", "fr"]),
+      locale: zod.enum(["ar", "en", "el"]),
       publicationStatus: zod.enum(["draft", "published", "archived"]),
       createdAt: zod.coerce.date(),
       updatedAt: zod.coerce.date(),
@@ -931,7 +987,7 @@ export const CreateAdminSaintBody = zod.object({
     .nullable(),
   shortBio: zod.string(),
   audioText: zod.string(),
-  locale: zod.enum(["ar", "en", "fr"]),
+  locale: zod.enum(["ar", "en", "el"]),
   publicationStatus: zod.enum(["draft", "published", "archived"]),
 });
 
@@ -955,7 +1011,7 @@ export const CreateAdminSaintResponse = zod.object({
     .nullable(),
   shortBio: zod.string(),
   audioText: zod.string(),
-  locale: zod.enum(["ar", "en", "fr"]),
+  locale: zod.enum(["ar", "en", "el"]),
   publicationStatus: zod.enum(["draft", "published", "archived"]),
   createdAt: zod.coerce.date(),
   updatedAt: zod.coerce.date(),
@@ -992,7 +1048,7 @@ export const UpdateAdminSaintBody = zod.object({
     .nullable(),
   shortBio: zod.string(),
   audioText: zod.string(),
-  locale: zod.enum(["ar", "en", "fr"]),
+  locale: zod.enum(["ar", "en", "el"]),
   publicationStatus: zod.enum(["draft", "published", "archived"]),
 });
 
@@ -1016,7 +1072,7 @@ export const UpdateAdminSaintResponse = zod.object({
     .nullable(),
   shortBio: zod.string(),
   audioText: zod.string(),
-  locale: zod.enum(["ar", "en", "fr"]),
+  locale: zod.enum(["ar", "en", "el"]),
   publicationStatus: zod.enum(["draft", "published", "archived"]),
   createdAt: zod.coerce.date(),
   updatedAt: zod.coerce.date(),
@@ -1267,7 +1323,7 @@ export const listAdminFastingGuidanceQueryLimitDefault = 25;
 export const listAdminFastingGuidanceQueryLimitMax = 50;
 
 export const ListAdminFastingGuidanceQueryParams = zod.object({
-  locale: zod.enum(["ar", "en", "fr"]).optional(),
+  locale: zod.enum(["ar", "en", "el"]).optional(),
   publicationStatus: zod.enum(["draft", "published", "archived"]).optional(),
   search: zod.coerce
     .string()
@@ -1299,7 +1355,7 @@ export const ListAdminFastingGuidanceResponse = zod.object({
       id: zod.string(),
       contentDate: zod.coerce.date(),
       calendarSystem: zod.enum(["gregorian", "julian"]),
-      locale: zod.enum(["ar", "en", "fr"]),
+      locale: zod.enum(["ar", "en", "el"]),
       level: zod.enum(["strict", "oil", "fish", "none"]),
       title: zod.string(),
       description: zod.string(),
@@ -1330,7 +1386,7 @@ export const ListAdminFastingGuidanceResponse = zod.object({
 export const UpsertAdminFastingGuidanceBody = zod.object({
   contentDate: zod.coerce.date(),
   calendarSystem: zod.enum(["gregorian", "julian"]),
-  locale: zod.enum(["ar", "en", "fr"]),
+  locale: zod.enum(["ar", "en", "el"]),
   level: zod.enum(["strict", "oil", "fish", "none"]),
   title: zod.string().min(1),
   description: zod.string(),
@@ -1342,7 +1398,7 @@ export const UpsertAdminFastingGuidanceResponse = zod.object({
   id: zod.string(),
   contentDate: zod.coerce.date(),
   calendarSystem: zod.enum(["gregorian", "julian"]),
-  locale: zod.enum(["ar", "en", "fr"]),
+  locale: zod.enum(["ar", "en", "el"]),
   level: zod.enum(["strict", "oil", "fish", "none"]),
   title: zod.string(),
   description: zod.string(),
@@ -1364,7 +1420,7 @@ export const UpdateAdminFastingGuidanceParams = zod.object({
 export const UpdateAdminFastingGuidanceBody = zod.object({
   contentDate: zod.coerce.date(),
   calendarSystem: zod.enum(["gregorian", "julian"]),
-  locale: zod.enum(["ar", "en", "fr"]),
+  locale: zod.enum(["ar", "en", "el"]),
   level: zod.enum(["strict", "oil", "fish", "none"]),
   title: zod.string().min(1),
   description: zod.string(),
@@ -1376,7 +1432,7 @@ export const UpdateAdminFastingGuidanceResponse = zod.object({
   id: zod.string(),
   contentDate: zod.coerce.date(),
   calendarSystem: zod.enum(["gregorian", "julian"]),
-  locale: zod.enum(["ar", "en", "fr"]),
+  locale: zod.enum(["ar", "en", "el"]),
   level: zod.enum(["strict", "oil", "fish", "none"]),
   title: zod.string(),
   description: zod.string(),
@@ -1409,7 +1465,7 @@ export const listAdminFastingRecipesQueryLimitDefault = 25;
 export const listAdminFastingRecipesQueryLimitMax = 50;
 
 export const ListAdminFastingRecipesQueryParams = zod.object({
-  locale: zod.enum(["ar", "en", "fr"]).optional(),
+  locale: zod.enum(["ar", "en", "el"]).optional(),
   publicationStatus: zod.enum(["draft", "published", "archived"]).optional(),
   search: zod.coerce
     .string()
@@ -1445,7 +1501,7 @@ export const ListAdminFastingRecipesResponse = zod.object({
       level: zod.enum(["strict", "oil", "fish", "none"]),
       ingredients: zod.array(zod.string()),
       steps: zod.array(zod.string()),
-      locale: zod.enum(["ar", "en", "fr"]),
+      locale: zod.enum(["ar", "en", "el"]),
       publicationStatus: zod.enum(["draft", "published", "archived"]),
       createdAt: zod.coerce.date(),
       updatedAt: zod.coerce.date(),
@@ -1476,7 +1532,7 @@ export const CreateAdminFastingRecipeBody = zod.object({
   level: zod.enum(["strict", "oil", "fish", "none"]),
   ingredients: zod.array(zod.string()),
   steps: zod.array(zod.string()),
-  locale: zod.enum(["ar", "en", "fr"]),
+  locale: zod.enum(["ar", "en", "el"]),
   publicationStatus: zod.enum(["draft", "published", "archived"]),
 });
 
@@ -1488,7 +1544,7 @@ export const CreateAdminFastingRecipeResponse = zod.object({
   level: zod.enum(["strict", "oil", "fish", "none"]),
   ingredients: zod.array(zod.string()),
   steps: zod.array(zod.string()),
-  locale: zod.enum(["ar", "en", "fr"]),
+  locale: zod.enum(["ar", "en", "el"]),
   publicationStatus: zod.enum(["draft", "published", "archived"]),
   createdAt: zod.coerce.date(),
   updatedAt: zod.coerce.date(),
@@ -1510,7 +1566,7 @@ export const UpdateAdminFastingRecipeBody = zod.object({
   level: zod.enum(["strict", "oil", "fish", "none"]),
   ingredients: zod.array(zod.string()),
   steps: zod.array(zod.string()),
-  locale: zod.enum(["ar", "en", "fr"]),
+  locale: zod.enum(["ar", "en", "el"]),
   publicationStatus: zod.enum(["draft", "published", "archived"]),
 });
 
@@ -1522,7 +1578,7 @@ export const UpdateAdminFastingRecipeResponse = zod.object({
   level: zod.enum(["strict", "oil", "fish", "none"]),
   ingredients: zod.array(zod.string()),
   steps: zod.array(zod.string()),
-  locale: zod.enum(["ar", "en", "fr"]),
+  locale: zod.enum(["ar", "en", "el"]),
   publicationStatus: zod.enum(["draft", "published", "archived"]),
   createdAt: zod.coerce.date(),
   updatedAt: zod.coerce.date(),
@@ -1551,7 +1607,7 @@ export const listAdminLearningEntriesQueryLimitDefault = 25;
 export const listAdminLearningEntriesQueryLimitMax = 50;
 
 export const ListAdminLearningEntriesQueryParams = zod.object({
-  locale: zod.enum(["ar", "en", "fr"]).optional(),
+  locale: zod.enum(["ar", "en", "el"]).optional(),
   publicationStatus: zod.enum(["draft", "published", "archived"]).optional(),
   search: zod.coerce
     .string()
@@ -1587,7 +1643,7 @@ export const ListAdminLearningEntriesResponse = zod.object({
       pronunciation: zod.string().nullable(),
       definition: zod.string(),
       body: zod.string().nullable(),
-      locale: zod.enum(["ar", "en", "fr"]),
+      locale: zod.enum(["ar", "en", "el"]),
       publicationStatus: zod.enum(["draft", "published", "archived"]),
       createdAt: zod.coerce.date(),
       updatedAt: zod.coerce.date(),
@@ -1618,7 +1674,7 @@ export const CreateAdminLearningEntryBody = zod.object({
   pronunciation: zod.string().nullable(),
   definition: zod.string(),
   body: zod.string().nullable(),
-  locale: zod.enum(["ar", "en", "fr"]),
+  locale: zod.enum(["ar", "en", "el"]),
   publicationStatus: zod.enum(["draft", "published", "archived"]),
 });
 
@@ -1630,7 +1686,7 @@ export const CreateAdminLearningEntryResponse = zod.object({
   pronunciation: zod.string().nullable(),
   definition: zod.string(),
   body: zod.string().nullable(),
-  locale: zod.enum(["ar", "en", "fr"]),
+  locale: zod.enum(["ar", "en", "el"]),
   publicationStatus: zod.enum(["draft", "published", "archived"]),
   createdAt: zod.coerce.date(),
   updatedAt: zod.coerce.date(),
@@ -1652,7 +1708,7 @@ export const UpdateAdminLearningEntryBody = zod.object({
   pronunciation: zod.string().nullable(),
   definition: zod.string(),
   body: zod.string().nullable(),
-  locale: zod.enum(["ar", "en", "fr"]),
+  locale: zod.enum(["ar", "en", "el"]),
   publicationStatus: zod.enum(["draft", "published", "archived"]),
 });
 
@@ -1664,7 +1720,7 @@ export const UpdateAdminLearningEntryResponse = zod.object({
   pronunciation: zod.string().nullable(),
   definition: zod.string(),
   body: zod.string().nullable(),
-  locale: zod.enum(["ar", "en", "fr"]),
+  locale: zod.enum(["ar", "en", "el"]),
   publicationStatus: zod.enum(["draft", "published", "archived"]),
   createdAt: zod.coerce.date(),
   updatedAt: zod.coerce.date(),
@@ -1763,7 +1819,7 @@ export const GetDailyContentQueryParams = zod.object({
     .regex(getDailyContentQueryDateRegExp)
     .optional()
     .describe("Calendar date in YYYY-MM-DD format; defaults to today in UTC"),
-  locale: zod.enum(["ar", "en", "fr"]).optional().describe("Content locale"),
+  locale: zod.enum(["ar", "en", "el"]).optional().describe("Content locale"),
   calendarType: zod
     .enum(["gregorian", "julian"])
     .optional()
@@ -1776,7 +1832,7 @@ export const GetDailyContentResponse = zod.object({
   date: zod.string(),
   canonicalDate: zod.string(),
   calendarType: zod.enum(["gregorian", "julian"]),
-  locale: zod.enum(["ar", "en", "fr"]),
+  locale: zod.enum(["ar", "en", "el"]),
   verse: zod.object({
     reference: zod.string(),
     text: zod.string(),
@@ -1879,7 +1935,7 @@ export const ListCalendarByMonthQueryParams = zod.object({
     .string()
     .regex(listCalendarByMonthQueryMonthRegExp)
     .describe("Month in YYYY-MM format"),
-  locale: zod.enum(["ar", "en", "fr"]).optional().describe("Content locale"),
+  locale: zod.enum(["ar", "en", "el"]).optional().describe("Content locale"),
   calendarType: zod
     .enum(["gregorian", "julian"])
     .optional()
@@ -1891,7 +1947,7 @@ export const ListCalendarByMonthResponseItem = zod.object({
   date: zod.string(),
   canonicalDate: zod.string(),
   calendarType: zod.enum(["gregorian", "julian"]),
-  locale: zod.enum(["ar", "en", "fr"]),
+  locale: zod.enum(["ar", "en", "el"]),
   feast: zod.union([
     zod.object({
       title: zod.string(),
@@ -1929,7 +1985,7 @@ export const GetCalendarByDateParams = zod.object({
 });
 
 export const GetCalendarByDateQueryParams = zod.object({
-  locale: zod.enum(["ar", "en", "fr"]).optional().describe("Content locale"),
+  locale: zod.enum(["ar", "en", "el"]).optional().describe("Content locale"),
   calendarType: zod
     .enum(["gregorian", "julian"])
     .optional()
@@ -1941,7 +1997,7 @@ export const GetCalendarByDateResponse = zod.object({
   date: zod.string(),
   canonicalDate: zod.string(),
   calendarType: zod.enum(["gregorian", "julian"]),
-  locale: zod.enum(["ar", "en", "fr"]),
+  locale: zod.enum(["ar", "en", "el"]),
   feast: zod.union([
     zod.object({
       title: zod.string(),
@@ -1976,7 +2032,7 @@ export const GetFastingByDateParams = zod.object({
 });
 
 export const GetFastingByDateQueryParams = zod.object({
-  locale: zod.enum(["ar", "en", "fr"]).optional().describe("Content locale"),
+  locale: zod.enum(["ar", "en", "el"]).optional().describe("Content locale"),
   calendarType: zod
     .enum(["gregorian", "julian"])
     .optional()
@@ -1987,7 +2043,7 @@ export const GetFastingByDateResponse = zod.object({
   date: zod.string(),
   canonicalDate: zod.string(),
   calendarType: zod.enum(["gregorian", "julian"]),
-  locale: zod.enum(["ar", "en", "fr"]),
+  locale: zod.enum(["ar", "en", "el"]),
   level: zod.enum(["strict", "oil", "fish", "none"]),
   title: zod.string(),
   description: zod.string(),
@@ -2017,7 +2073,7 @@ export const listSaintsQueryLimitMax = 50;
 export const listSaintsQuerySearchMax = 100;
 
 export const ListSaintsQueryParams = zod.object({
-  locale: zod.enum(["ar", "en", "fr"]).optional().describe("Content locale"),
+  locale: zod.enum(["ar", "en", "el"]).optional().describe("Content locale"),
   page: zod.coerce
     .number()
     .int()
@@ -2065,7 +2121,7 @@ export const GetSaintParams = zod.object({
 });
 
 export const GetSaintQueryParams = zod.object({
-  locale: zod.enum(["ar", "en", "fr"]).optional().describe("Content locale"),
+  locale: zod.enum(["ar", "en", "el"]).optional().describe("Content locale"),
 });
 
 export const GetSaintResponse = zod.object({
@@ -2088,7 +2144,7 @@ export const listLearningEntriesQueryLimitMax = 50;
 export const listLearningEntriesQuerySearchMax = 100;
 
 export const ListLearningEntriesQueryParams = zod.object({
-  locale: zod.enum(["ar", "en", "fr"]).optional().describe("Content locale"),
+  locale: zod.enum(["ar", "en", "el"]).optional().describe("Content locale"),
   page: zod.coerce
     .number()
     .int()

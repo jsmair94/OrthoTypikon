@@ -29,6 +29,20 @@
       "when": 1790879947260,
       "tag": "0003_numerous_warlock",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1792510368624,
+      "tag": "0004_slim_night_nurse",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1792512743511,
+      "tag": "0005_dry_warpath",
+      "breakpoints": true
     }
   ]
 }

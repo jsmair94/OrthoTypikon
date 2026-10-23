@@ -1198,6 +1198,19 @@ export async function validateDatabaseSchema(
   }
 }
 
+export async function validateCurrentDatabaseSchema(): Promise<void> {
+  if (!pool) {
+    throw new Error("Cannot validate the database schema without DATABASE_URL.");
+  }
+
+  const client = await pool.connect();
+  try {
+    await validateDatabaseSchema(client);
+  } finally {
+    client.release();
+  }
+}
+
 export async function applyDatabaseMigrations(
   migrationsFolder: string,
 ): Promise<void> {

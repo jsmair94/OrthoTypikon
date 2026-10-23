@@ -1,83 +1,39 @@
-import { setAudioModeAsync, useAudioPlayer, useAudioPlayerStatus } from 'expo-audio';
-import { createContext, ReactNode, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
+import { isAudioPlaybackError, useAppAudio } from '@/hooks/useAppAudio';
 
-const HYMN_AUDIO = require('../assets/audio/kyrie-eleison.mp3');
+const apiHost =
+  process.env.EXPO_PUBLIC_DOMAIN?.replace(/^https?:\/\//, '').replace(/\/+$/, '') ||
+  'api.orthotypikon.org';
+const HYMN_AUDIO_URL = `https://${apiHost}/api/audio/morning-hymn`;
+const HYMN_AUDIO_ID = 'morning-hymn';
 
-type HymnPlayerValue = {
-  isPlaying: boolean;
-  isLoading: boolean;
-  hasError: boolean;
-  toggle: () => void;
-  stop: () => void;
-};
-
-const HymnPlayerContext = createContext<HymnPlayerValue | null>(null);
-
-export function HymnPlayerProvider({ children }: { children: ReactNode }) {
-  const audioPlayer = useAudioPlayer(HYMN_AUDIO, {
-    updateInterval: 500,
-    keepAudioSessionActive: true,
-  });
-  const audioStatus = useAudioPlayerStatus(audioPlayer);
+export function useHymnPlayer() {
+  const { status, activeId, play, pause } = useAppAudio();
   const [hasError, setHasError] = useState(false);
 
   useEffect(() => {
-    setAudioModeAsync({ playsInSilentMode: true, interruptionMode: 'duckOthers' }).catch(() => undefined);
-  }, []);
-
-  useEffect(() => {
-    if (audioStatus.playbackState.toLowerCase().includes('error')) setHasError(true);
-  }, [audioStatus.playbackState]);
+    if (activeId === HYMN_AUDIO_ID && isAudioPlaybackError(status.playbackState)) {
+      setHasError(true);
+    }
+  }, [activeId, status.playbackState]);
 
   const toggle = useCallback(async () => {
     setHasError(false);
     try {
-      if (audioStatus.playing) {
-        audioPlayer.pause();
+      if (activeId === HYMN_AUDIO_ID && status.playing) {
+        pause(HYMN_AUDIO_ID);
         return;
       }
-
-      if (
-        audioStatus.didJustFinish ||
-        (audioStatus.duration > 0 && audioStatus.currentTime >= audioStatus.duration)
-      ) {
-        await audioPlayer.seekTo(0);
-      }
-
-      audioPlayer.volume = 1;
-      audioPlayer.play();
+      await play(HYMN_AUDIO_ID, HYMN_AUDIO_URL);
     } catch {
       setHasError(true);
     }
-  }, [
-    audioPlayer,
-    audioStatus.currentTime,
-    audioStatus.didJustFinish,
-    audioStatus.duration,
-    audioStatus.playing,
+  }, [activeId, pause, play, status.playing]);
+
+  return {
+    isPlaying: activeId === HYMN_AUDIO_ID && status.playing,
+    isLoading: activeId === HYMN_AUDIO_ID && status.isBuffering,
     hasError,
-  ]);
-
-  const stop = useCallback(() => {
-    audioPlayer.pause();
-  }, [audioPlayer]);
-
-  const value = useMemo(
-    () => ({
-      isPlaying: audioStatus.playing,
-      isLoading: audioStatus.isBuffering,
-      hasError,
-      toggle,
-      stop,
-    }),
-    [audioStatus.isBuffering, audioStatus.playing, hasError, stop, toggle],
-  );
-
-  return <HymnPlayerContext.Provider value={value}>{children}</HymnPlayerContext.Provider>;
-}
-
-export function useHymnPlayer() {
-  const value = useContext(HymnPlayerContext);
-  if (!value) throw new Error('useHymnPlayer must be used within HymnPlayerProvider');
-  return value;
+    toggle,
+  };
 }

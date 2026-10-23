@@ -1,12 +1,13 @@
 import * as Speech from 'expo-speech';
 import { Feather } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useColors } from '@/hooks/useColors';
 import { currentSaint } from '@/data/saints';
 import { useI18n } from '@/hooks/usePreferences';
+import { useAppAudio } from '@/hooks/useAppAudio';
 
 type LearningTab = 'audio' | 'icon' | 'dictionary';
 
@@ -32,7 +33,15 @@ export default function LearnScreen() {
   const [query, setQuery] = useState('');
   const [openTerm, setOpenTerm] = useState<string | null>(null);
   const [iconOpen, setIconOpen] = useState(false);
+  const { claimExternal, registerExternalStopper } = useAppAudio();
 
+  useEffect(
+    () => registerExternalStopper('learn-synaxarion', async () => {
+      await Speech.stop();
+      setSpeaking(false);
+    }),
+    [registerExternalStopper],
+  );
   const filteredTerms = useMemo(() => terms.filter((item) => `${item.term} ${item.greek}`.includes(query.trim())), [query]);
 
   const toggleSpeech = async () => {
@@ -41,6 +50,7 @@ export default function LearnScreen() {
       setSpeaking(false);
       return;
     }
+    claimExternal('learn-synaxarion');
     setSpeaking(true);
     setPlayedOnce(true);
     Speech.speak(saintText.audioText, { language: language === 'ar' ? 'ar-SA' : language === 'el' ? 'el-GR' : 'en-US', rate: 0.92, onDone: () => setSpeaking(false), onStopped: () => setSpeaking(false), onError: () => setSpeaking(false) });

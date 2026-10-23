@@ -2,6 +2,7 @@ import { Feather } from '@expo/vector-icons';
 import { useMemo, useState } from 'react';
 import {
   Keyboard,
+  Linking,
   Modal,
   Pressable,
   ScrollView,
@@ -167,12 +168,19 @@ export function ContactForm() {
           country: selectedCountry?.name ?? values.country,
           phone: [values.dialCode, values.phone.trim()].filter(Boolean).join(' '),
           message: values.message.trim(),
+          language,
         },
       });
       setNotice(content.submitNotice);
       setValues({ name: '', email: '', country: '', phone: '', message: '', dialCode: '' });
-    } catch {
-      setNotice(content.sendFailed);
+    } catch (error) {
+      const code = (error as { data?: { code?: unknown } })?.data?.code;
+      if (code === 'confirmation_delivery_failed') {
+        setNotice(content.confirmationFailed);
+        setValues({ name: '', email: '', country: '', phone: '', message: '', dialCode: '' });
+      } else {
+        setNotice(content.sendFailed);
+      }
     }
   };
 
@@ -180,6 +188,18 @@ export function ContactForm() {
     <View style={styles.form}>
       <Text style={[styles.intro, { color: colors.mutedForeground, textAlign: isArabic ? 'right' : 'left' }]}>
         {content.intro}
+      </Text>
+      <Text
+        accessibilityRole="link"
+        onPress={() => {
+          void Linking.openURL(`mailto:${ORTHOTYPIKON_CONTACT_EMAIL}`).catch(() => {
+            setNotice(content.emailOpenFailed);
+          });
+        }}
+        selectable
+        style={[styles.contactEmail, { color: colors.primary, textAlign: isArabic ? 'right' : 'left' }]}
+      >
+        {ORTHOTYPIKON_CONTACT_EMAIL}
       </Text>
 
       <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
@@ -515,6 +535,7 @@ export function ContactForm() {
 const styles = StyleSheet.create({
   form: { gap: 14, marginTop: 4 },
   intro: { fontSize: 13, lineHeight: 20 },
+  contactEmail: { fontSize: 14, fontWeight: '700', textDecorationLine: 'underline' },
   card: { borderWidth: 1, borderRadius: 18, padding: 15, gap: 16 },
   field: { gap: 7 },
   label: { fontSize: 13, fontWeight: '700' },

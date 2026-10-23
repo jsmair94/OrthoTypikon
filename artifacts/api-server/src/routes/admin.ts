@@ -1,5 +1,11 @@
 import { createHmac, randomUUID, timingSafeEqual } from "node:crypto";
-import { Router, type IRouter, type RequestHandler, type Response } from "express";
+import express, { Router, type IRouter, type RequestHandler, type Response } from "express";
+import {
+  DeleteObjectCommand,
+  ListObjectsV2Command,
+  PutObjectCommand,
+  S3Client,
+} from "@aws-sdk/client-s3";
 import {
   and,
   asc,
@@ -23,6 +29,7 @@ import {
   prayerRequestsTable,
   saintsTable,
 } from "@workspace/db";
+import { managedContentTable } from "@workspace/db/schema";
 import {
   ArchiveAdminCalendarEntryParams,
   ArchiveAdminDailyContentParams,
@@ -99,6 +106,8 @@ import {
   UpsertAdminFastingGuidanceResponse,
 } from "@workspace/api-zod";
 import { DatabaseUnavailableError, invalidRequest, notFound } from "../lib/api-errors";
+import { invalidateBibleAssetCache, isSupportedBibleAssetKey } from "./bible";
+import { createManagedContentRouter, type ManagedContentKey } from "./managed-content";
 
 const router: IRouter = Router();
 const ADMIN_SESSION_TTL_MS = 8 * 60 * 60 * 1000;
@@ -195,6 +204,127 @@ router.post("/admin/session", (req, res): void => {
 });
 
 router.use("/admin", requireAdmin);
+
+router.use(createManagedContentRouter({
+  async get(key) {
+    const [row] = await requireDatabase()
+      .select({ content: managedContentTable.content, updatedAt: managedContentTable.updatedAt })
+      .from(managedContentTable)
+      .where(eq(managedContentTable.key, key))
+      .limit(1);
+    return row ?? null;
+  },
+  async save(key: ManagedContentKey, content) {
+    const [row] = await requireDatabase()
+      .insert(managedContentTable)
+      .values({ key, content, updatedAt: new Date() })
+      .onConflictDoUpdate({
+        target: managedContentTable.key,
+        set: { content, updatedAt: new Date() },
+      })
+      .returning({ content: managedContentTable.content, updatedAt: managedContentTable.updatedAt });
+    return row;
+  },
+}));
+
+function getAdminBibleStorage() {
+  const bucket = process.env.AWS_S3_BUCKET_NAME ?? process.env.BUCKET;
+  const endpoint = process.env.AWS_ENDPOINT_URL ?? process.env.AWS_ENDPOINT ??
+    process.env.AWS_S3_ENDPOINT ?? process.env.ENDPOINT;
+  const region = process.env.AWS_DEFAULT_REGION ?? process.env.AWS_REGION ?? process.env.REGION;
+  const accessKeyId = process.env.AWS_ACCESS_KEY_ID ?? process.env.ACCESS_KEY_ID;
+  const secretAccessKey = process.env.AWS_SECRET_ACCESS_KEY ?? process.env.SECRET_ACCESS_KEY;
+  if (!bucket || !endpoint || !region || !accessKeyId || !secretAccessKey) return null;
+  return {
+    bucket,
+    client: new S3Client({
+      endpoint,
+      region,
+      forcePathStyle: true,
+      credentials: { accessKeyId, secretAccessKey },
+    }),
+  };
+}
+
+router.get("/admin/bible-assets", async (_req, res): Promise<void> => {
+  const storage = getAdminBibleStorage();
+  if (!storage) {
+    res.status(503).json({ message: "Bible storage is not configured." });
+    return;
+  }
+  const assets: Array<{ key: string; size: number; updatedAt: string | null }> = [];
+  let continuationToken: string | undefined;
+  do {
+    const page = await storage.client.send(new ListObjectsV2Command({
+      Bucket: storage.bucket,
+      ContinuationToken: continuationToken,
+    }));
+    for (const item of page.Contents ?? []) {
+      if (item.Key && isSupportedBibleAssetKey(item.Key)) {
+        assets.push({
+          key: item.Key,
+          size: item.Size ?? 0,
+          updatedAt: item.LastModified?.toISOString() ?? null,
+        });
+      }
+    }
+    continuationToken = page.IsTruncated ? page.NextContinuationToken : undefined;
+  } while (continuationToken);
+  res.json({ assets });
+});
+
+router.put(
+  "/admin/bible-assets",
+  express.raw({ type: "application/octet-stream", limit: "100mb" }),
+  async (req, res): Promise<void> => {
+    const key = typeof req.query.key === "string" ? req.query.key : "";
+    if (!isSupportedBibleAssetKey(key)) {
+      res.status(400).json({ message: "Choose a supported Bible chapter file key." });
+      return;
+    }
+    if (!Buffer.isBuffer(req.body) || req.body.length === 0) {
+      res.status(400).json({ message: "The uploaded file is empty or invalid." });
+      return;
+    }
+    const extension = key.split(".").at(-1)?.toLowerCase();
+    const contentType = extension === "mp3" ? "audio/mpeg" :
+      extension === "vtt" ? "text/vtt; charset=utf-8" : "text/plain; charset=utf-8";
+    const storage = getAdminBibleStorage();
+    if (!storage) {
+      res.status(503).json({ message: "Bible storage is not configured." });
+      return;
+    }
+    await storage.client.send(new PutObjectCommand({
+      Bucket: storage.bucket,
+      Key: key,
+      Body: req.body,
+      ContentType: contentType,
+    }));
+    invalidateBibleAssetCache();
+    res.json({ key, size: req.body.length, uploaded: true });
+  },
+);
+
+router.delete("/admin/bible-assets", async (req, res): Promise<void> => {
+  const key = typeof req.query.key === "string" ? req.query.key : "";
+  const confirmation = req.header("x-confirm-delete");
+  if (!isSupportedBibleAssetKey(key)) {
+    res.status(400).json({ message: "Choose a supported Bible chapter file key." });
+    return;
+  }
+  if (confirmation !== key) {
+    res.status(400).json({ message: "Confirm deletion by repeating the exact asset key." });
+    return;
+  }
+  const storage = getAdminBibleStorage();
+  if (!storage) {
+    res.status(503).json({ message: "Bible storage is not configured." });
+    return;
+  }
+  await storage.client.send(new DeleteObjectCommand({ Bucket: storage.bucket, Key: key }));
+  invalidateBibleAssetCache();
+  res.json({ key, deleted: true });
+});
 
 function timestamped<T extends { createdAt: Date; updatedAt: Date }>(row: T) {
   return {

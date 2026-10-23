@@ -15,7 +15,9 @@ import {
 import { sql } from "drizzle-orm";
 import { z } from "zod/v4";
 
-export const localeEnum = pgEnum("content_locale", ["ar", "en", "fr"]);
+// `fr` is retained in PostgreSQL for existing rows, while current clients
+// expose Arabic, English, and Greek as the supported content languages.
+export const localeEnum = pgEnum("content_locale", ["ar", "en", "fr", "el"]);
 export const calendarSystemEnum = pgEnum("calendar_system", ["gregorian", "julian"]);
 export const publicationStatusEnum = pgEnum("publication_status", [
   "draft",

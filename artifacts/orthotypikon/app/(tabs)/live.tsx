@@ -2,11 +2,12 @@ import { Feather } from '@expo/vector-icons';
 import * as WebBrowser from 'expo-web-browser';
 import { useRouter } from 'expo-router';
 import { ActivityIndicator, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { createElement, useState } from 'react';
+import { createElement, useEffect, useState } from 'react';
 import { WebView } from 'react-native-webview';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useColors } from '@/hooks/useColors';
 import { useI18n } from '@/hooks/usePreferences';
+import { fetchManagedContent } from '@/lib/managedContent';
 
 const LIVE_PLAYER_URL = 'https://iframe.dacast.com/live/5b5db9ba-4c13-8bb5-6bc4-cd42ee652aa1/07d3cb7c-1a21-ccdc-128d-6817f25ff78a?autoplay=true';
 const RADIO_PLAYER_URL = 'https://orthodoxjo.tv/audio/%D8%B5%D9%88%D8%AA-%D8%A7%D9%84%D9%83%D9%86%D9%8A%D8%B3%D8%A9';
@@ -16,6 +17,15 @@ export default function LiveScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { t } = useI18n();
+  const [broadcasts, setBroadcasts] = useState<{ livePlayerUrl?: string; radioPlayerUrl?: string } | null>(null);
+  useEffect(() => {
+    let active = true;
+    void fetchManagedContent<{ livePlayerUrl?: string; radioPlayerUrl?: string }>('broadcasts')
+      .then((content) => { if (active && content) setBroadcasts(content); });
+    return () => { active = false; };
+  }, []);
+  const livePlayerUrl = broadcasts?.livePlayerUrl || LIVE_PLAYER_URL;
+  const radioPlayerUrl = broadcasts?.radioPlayerUrl || RADIO_PLAYER_URL;
   const [streamLoading, setStreamLoading] = useState(true);
   const [streamError, setStreamError] = useState(false);
   const [radioPlaying, setRadioPlaying] = useState(false);
@@ -23,11 +33,11 @@ export default function LiveScreen() {
   const [radioError, setRadioError] = useState(false);
 
   const openLiveStream = async () => {
-    await WebBrowser.openBrowserAsync(LIVE_PLAYER_URL);
+    await WebBrowser.openBrowserAsync(livePlayerUrl);
   };
 
   const openRadio = async () => {
-    await WebBrowser.openBrowserAsync(RADIO_PLAYER_URL);
+    await WebBrowser.openBrowserAsync(radioPlayerUrl);
   };
 
   const startRadio = () => {
@@ -77,7 +87,7 @@ export default function LiveScreen() {
           Platform.OS === 'web' ? (
             <View style={styles.webView}>
               {createElement('iframe', {
-                src: LIVE_PLAYER_URL,
+                src: livePlayerUrl,
                 title: t.live.channel,
                 allow: 'autoplay; fullscreen; picture-in-picture',
                 allowFullScreen: true,
@@ -88,7 +98,7 @@ export default function LiveScreen() {
             </View>
           ) : (
             <WebView
-              source={{ uri: LIVE_PLAYER_URL }}
+              source={{ uri: livePlayerUrl }}
               style={styles.webView}
               originWhitelist={['*']}
               javaScriptEnabled
@@ -151,7 +161,7 @@ export default function LiveScreen() {
             {Platform.OS === 'web' ? (
               <View style={styles.radioWebView}>
                 {createElement('iframe', {
-                  src: RADIO_PLAYER_URL,
+                  src: radioPlayerUrl,
                   title: t.live.radioTitle,
                   allow: 'autoplay',
                   onLoad: () => setRadioLoading(false),
@@ -161,7 +171,7 @@ export default function LiveScreen() {
               </View>
             ) : (
               <WebView
-                source={{ uri: RADIO_PLAYER_URL }}
+                source={{ uri: radioPlayerUrl }}
                 style={styles.radioWebView}
                 originWhitelist={['*']}
                 javaScriptEnabled

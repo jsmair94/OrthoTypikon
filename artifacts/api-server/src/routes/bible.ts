@@ -6,10 +6,6 @@ import {
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { Router, type IRouter } from "express";
 import { alignBibleWebVttToChapterText, parseBibleWebVtt } from "../lib/bible-vtt";
-import {
-  createApproximateMatthewChapterTimings,
-  createMatthewChapterOneTimings,
-} from "../lib/matthew-chapter-one-timings";
 
 const signedUrlLifetimeSeconds = 60 * 60;
 
@@ -443,11 +439,29 @@ const aliasToBook = new Map<string, BibleBook>(
   ),
 );
 
+export function isSupportedBibleAssetKey(key: string): boolean {
+  const segments = key.split("/");
+  const filename = segments.at(-1);
+  const folder = segments.at(-2);
+  const match = filename?.match(/^(\d+)\.(txt|mp3|vtt)$/i);
+  if (!folder || !match) return false;
+  const book = aliasToBook.get(normalizeFolderName(folder));
+  if (!book) return false;
+  const chapter = Number(match[1]);
+  return Number.isInteger(chapter) && chapter >= 1 && chapter <= bibleBooks[book].chapterCount;
+}
+
 type CachedObjects = {
   bucket: string;
   keys: string[];
   expiresAt: number;
+  revision: number;
 };
+
+let bibleCacheRevision = 0;
+export function invalidateBibleAssetCache() {
+  bibleCacheRevision += 1;
+}
 
 export function findBibleChapterAssets(
   keys: string[],
@@ -648,12 +662,21 @@ export function createBibleRouter({
   let cachedObjects: CachedObjects | null = null;
 
   async function listBibleObjects(client: S3Client, bucket: string): Promise<string[]> {
-    if (cachedObjects?.bucket === bucket && cachedObjects.expiresAt > Date.now()) {
+    if (
+      cachedObjects?.bucket === bucket &&
+      cachedObjects.expiresAt > Date.now() &&
+      cachedObjects.revision === bibleCacheRevision
+    ) {
       return cachedObjects.keys;
     }
 
     const keys = await listAllBibleObjects(client, bucket);
-    cachedObjects = { bucket, keys, expiresAt: Date.now() + assetCacheLifetimeMs };
+    cachedObjects = {
+      bucket,
+      keys,
+      expiresAt: Date.now() + assetCacheLifetimeMs,
+      revision: bibleCacheRevision,
+    };
     return keys;
   }
 
@@ -714,25 +737,9 @@ export function createBibleRouter({
             const parsedVerses = parseBibleWebVtt(timingText);
             verses = alignBibleWebVttToChapterText(text, parsedVerses) ?? undefined;
           }
-        } catch (error) {
-          const timingError = error as {
-            name?: string;
-            $metadata?: { httpStatusCode?: number };
-          };
-          if (
-            timingError.name !== "NoSuchKey" &&
-            timingError.name !== "NotFound" &&
-            timingError.$metadata?.httpStatusCode !== 404
-          ) {
-            throw error;
-          }
+        } catch {
+          // Timings are optional; a timing-file problem must not block chapter audio.
         }
-      }
-      if (!verses && assets.audioKey && book === "matthew") {
-        verses =
-          (chapter === 1
-            ? createMatthewChapterOneTimings(text)
-            : createApproximateMatthewChapterTimings(chapter, text)) ?? undefined;
       }
 
       const audioUrl = assets.audioKey

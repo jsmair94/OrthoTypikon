@@ -5,6 +5,10 @@ const path = require("path");
 const { spawn, spawnSync } = require("child_process");
 const { pipeline } = require("stream/promises");
 const { Readable } = require("stream");
+const {
+  normalizeRuntimeDomain,
+  verifyContactApiBundle,
+} = require("./contact-api-config");
 
 const projectRoot = path.resolve(__dirname, "..");
 const workspaceRoot = path.resolve(projectRoot, "../..");
@@ -119,34 +123,15 @@ function ensureSdkManager() {
 }
 
 function configureRuntimeDomain() {
-  const candidate = process.env.EXPO_PUBLIC_DOMAIN?.trim();
-  if (!candidate) {
-    delete process.env.EXPO_PUBLIC_DOMAIN;
-    console.log(
-      "No app API domain supplied; live Synaxarion content will fetch directly from Orthodox Jordan.",
-    );
-    return;
-  }
-
-  let url;
+  let apiHost;
   try {
-    url = new URL(
-      candidate.includes("://") ? candidate : `https://${candidate}`,
-    );
-  } catch {
-    fail("EXPO_PUBLIC_DOMAIN must be a valid HTTPS URL or hostname");
+    apiHost = normalizeRuntimeDomain(process.env.EXPO_PUBLIC_DOMAIN);
+  } catch (error) {
+    fail(error instanceof Error ? error.message : String(error));
   }
-  const blockedHost =
-    /(^localhost$|^127(?:\\.|$)|^0\\.0\\.0\\.0$|\\.replit\\.dev$)/i.test(
-      url.hostname,
-    );
-  if (url.protocol !== "https:" || blockedHost) {
-    fail(
-      "EXPO_PUBLIC_DOMAIN must be a reachable HTTPS domain, not localhost or a Replit development domain",
-    );
-  }
-  process.env.EXPO_PUBLIC_DOMAIN = url.host;
-  console.log(`Using public API domain: ${url.host}`);
+  process.env.EXPO_PUBLIC_DOMAIN = apiHost;
+  console.log(`Using public API domain: ${apiHost}`);
+  return apiHost;
 }
 
 async function installSdkComponents(sdkmanager) {
@@ -211,47 +196,6 @@ function listApkEntries(apkPath) {
   return result.stdout.split(/\r?\n/).filter(Boolean);
 }
 
-function filesMatchByteForByte(leftPath, rightPath) {
-  if (fs.statSync(leftPath).size !== fs.statSync(rightPath).size) return false;
-
-  const leftFd = fs.openSync(leftPath, "r");
-  const rightFd = fs.openSync(rightPath, "r");
-  const leftBuffer = Buffer.alloc(64 * 1024);
-  const rightBuffer = Buffer.alloc(64 * 1024);
-  let offset = 0;
-  try {
-    while (true) {
-      const leftBytes = fs.readSync(
-        leftFd,
-        leftBuffer,
-        0,
-        leftBuffer.length,
-        offset,
-      );
-      const rightBytes = fs.readSync(
-        rightFd,
-        rightBuffer,
-        0,
-        rightBuffer.length,
-        offset,
-      );
-      if (leftBytes !== rightBytes) return false;
-      if (leftBytes === 0) return true;
-      if (
-        !leftBuffer
-          .subarray(0, leftBytes)
-          .equals(rightBuffer.subarray(0, rightBytes))
-      ) {
-        return false;
-      }
-      offset += leftBytes;
-    }
-  } finally {
-    fs.closeSync(leftFd);
-    fs.closeSync(rightFd);
-  }
-}
-
 function extractApkEntry(apkPath, entryPath, destination) {
   const destinationFd = fs.openSync(destination, "w");
   let result;
@@ -265,8 +209,7 @@ function extractApkEntry(apkPath, entryPath, destination) {
     fs.closeSync(destinationFd);
   }
 
-  if (result.error)
-    fail(`Could not extract ${entryPath} from APK: ${result.error.message}`);
+  if (result.error) fail(`Could not extract ${entryPath} from APK: ${result.error.message}`);
   if (result.status !== 0) {
     fail(
       `Could not extract ${entryPath} from APK: ${
@@ -276,39 +219,21 @@ function extractApkEntry(apkPath, entryPath, destination) {
   }
 }
 
-function verifyBundledHymn(apkPath, entries) {
-  const bundledAudioPath = path.join(
-    projectRoot,
-    "assets",
-    "audio",
-    "kyrie-eleison.mp3",
-  );
-  if (!fs.existsSync(bundledAudioPath))
-    fail(`Bundled hymn audio is missing at ${bundledAudioPath}`);
-
+function verifyRemovedHymn(apkPath, entries) {
+  const removedHymnSha256 = "3a06c6dab5f4b0f85416e7a4697f8d2a2f2da88774c77ec64100f37ecad016cd";
   const mp3Entries = entries.filter((entry) => /\.mp3$/i.test(entry));
-  if (mp3Entries.length === 0) fail("APK does not contain any MP3 audio files");
-
-  const temporaryDir = fs.mkdtempSync(
-    path.join(os.tmpdir(), "orthotypikon-apk-audio-"),
-  );
+  const temporaryDir = fs.mkdtempSync(path.join(os.tmpdir(), "orthotypikon-apk-check-"));
   const extractedAudioPath = path.join(temporaryDir, "candidate.mp3");
-  let matchingEntry = null;
   try {
     for (const entry of mp3Entries) {
       extractApkEntry(apkPath, entry, extractedAudioPath);
-      if (filesMatchByteForByte(bundledAudioPath, extractedAudioPath)) {
-        matchingEntry = entry;
-        break;
-      }
+      const sha256 = crypto.createHash("sha256").update(fs.readFileSync(extractedAudioPath)).digest("hex");
+      if (sha256 === removedHymnSha256) fail("APK still contains the removed hymn audio file");
     }
   } finally {
     fs.rmSync(temporaryDir, { recursive: true, force: true });
   }
-
-  if (!matchingEntry)
-    fail("APK does not contain a byte-for-byte match of kyrie-eleison.mp3");
-  console.log(`Verified bundled hymn audio: ${matchingEntry}`);
+  console.log("Verified removed hymn audio is not bundled.");
 }
 
 function verifyNativeLibraryArchitectures(entries) {
@@ -349,8 +274,7 @@ function verifyApkSignature(apkPath) {
   });
 }
 
-function buildNativeAndroid() {
-  configureRuntimeDomain();
+function buildNativeAndroid(apiHost) {
   const env = {
     ...process.env,
     ANDROID_HOME: sdkRoot,
@@ -388,9 +312,10 @@ function buildNativeAndroid() {
       env,
     },
   );
+  return apiHost;
 }
 
-function verifyAndCopyApk() {
+function verifyAndCopyApk(apiHost) {
   const sourcePath = path.join(
     projectRoot,
     "android",
@@ -415,7 +340,26 @@ function verifyAndCopyApk() {
 
   verifyApkSignature(sourcePath);
   const entries = listApkEntries(sourcePath);
-  verifyBundledHymn(sourcePath, entries);
+  const bundleEntry = "assets/index.android.bundle";
+  if (!entries.includes(bundleEntry)) {
+    fail(`APK does not contain the Android JavaScript bundle ${bundleEntry}`);
+  }
+  const bundleDir = fs.mkdtempSync(
+    path.join(os.tmpdir(), "orthotypikon-contact-api-check-"),
+  );
+  const bundlePath = path.join(bundleDir, "index.android.bundle");
+  try {
+    extractApkEntry(sourcePath, bundleEntry, bundlePath);
+    verifyContactApiBundle(fs.readFileSync(bundlePath, "utf8"), apiHost);
+  } catch (error) {
+    fail(error instanceof Error ? error.message : String(error));
+  } finally {
+    fs.rmSync(bundleDir, { recursive: true, force: true });
+  }
+  console.log(
+    `Verified Android contact API URL: https://${apiHost}/api/contact`,
+  );
+  verifyRemovedHymn(sourcePath, entries);
   verifyNativeLibraryArchitectures(entries);
 
   fs.mkdirSync(outputDir, { recursive: true });
@@ -446,10 +390,11 @@ function verifyAndCopyApk() {
 }
 
 async function main() {
+  const apiHost = configureRuntimeDomain();
   if (packageName !== "com.orthotypikon.app")
     fail(`Unexpected Android package: ${packageName}`);
-  if (versionCode !== 1)
-    fail(`Expected Android versionCode 1, received ${versionCode}`);
+  if (!Number.isInteger(versionCode) || versionCode < 1)
+    fail(`Expected a positive Android versionCode, received ${versionCode}`);
   if (!commandExists("java"))
     fail("Java is required; install a JDK before building");
   if (
@@ -462,8 +407,8 @@ async function main() {
   fs.mkdirSync(sdkRoot, { recursive: true });
   const sdkmanager = await ensureSdkManager();
   await installSdkComponents(sdkmanager);
-  buildNativeAndroid();
-  verifyAndCopyApk();
+  buildNativeAndroid(apiHost);
+  verifyAndCopyApk(apiHost);
 }
 
 main().catch((error) =>

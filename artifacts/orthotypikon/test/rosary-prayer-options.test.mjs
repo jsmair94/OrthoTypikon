@@ -120,6 +120,7 @@ const mockPlayer = {
 
 let pauseCalls = 0;
 let playCalls = 0;
+let activeAudioId = null;
 
 const audioStatus = {
   currentTime: 0,
@@ -172,6 +173,20 @@ const PrayerScreen = buildScreen('../app/prayer.tsx', {
   '@/hooks/usePreferences': {
     useI18n: () => ({ t: translations, language: 'ar' }),
   },
+  '@/hooks/useAppAudio': {
+    useAppAudio: () => ({
+      player: mockPlayer,
+      status: audioStatus,
+      activeId: activeAudioId,
+      play: async (id) => {
+        activeAudioId = id;
+        mockPlayer.play();
+      },
+      pause: (id) => {
+        if (!id || activeAudioId === id) mockPlayer.pause();
+      },
+    }),
+  },
   '@/data/rosaryPrayerOptions': {
     ROSARY_PRAYER_CONTENT_ID,
     rosaryPrayerOptions,
@@ -181,6 +196,7 @@ const PrayerScreen = buildScreen('../app/prayer.tsx', {
 test('choosing another rosary updates the selection and hides unavailable text, audio, and bead actions', async () => {
   pauseCalls = 0;
   playCalls = 0;
+  activeAudioId = null;
   audioStatus.playing = false;
   audioStatus.currentTime = 0;
   let renderer;
@@ -224,6 +240,7 @@ test('choosing another rosary updates the selection and hides unavailable text, 
 test('switching rosaries waits for pending playback to start before pausing it', async () => {
   pauseCalls = 0;
   playCalls = 0;
+  activeAudioId = null;
   audioStatus.playing = false;
   audioStatus.currentTime = 0;
   let renderer;

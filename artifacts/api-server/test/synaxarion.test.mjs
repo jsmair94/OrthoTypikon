@@ -4,6 +4,7 @@ import test from "node:test";
 import { createSynaxarionHomepageRouter } from "../src/routes/synaxarion-homepage.ts";
 import {
   parseDailyGospelPage as parseApiGospel,
+  parseSynaxarionHomepage as parseApiHomepage,
   parseVerse as parseApiVerse,
   translateDailyGospelPayload as translateApiGospelPayload,
   translateSynaxarionPayload as translateApiPayload,
@@ -11,6 +12,7 @@ import {
 import { prepareDailyGospelSpeechText } from "../src/services/daily-gospel-audio.ts";
 import {
   parseDailyGospelPage as parseNativeGospel,
+  parseSynaxarionHomepage as parseNativeHomepage,
   parseVerse as parseNativeVerse,
   translateDailyGospelPayload as translateNativeGospelPayload,
   translateSynaxarionPayload as translateNativePayload,
@@ -36,6 +38,24 @@ const DAILY_GOSPEL_HTML = `
     <div class="daily-message-body"><p>1 أما يسوع فرجع من الأردن ممتلئًا من الروح القدس. 2 أربعين يومًا يُجرّب من إبليس.</p></div>
   </div>
 `;
+const HOMEPAGE_PAYLOAD = {
+  link: "https://orthodoxjo.tv/",
+  modified: "2026-10-21T22:20:55",
+  content: {
+    rendered: `
+      <div data-id="a7bc24a">
+        <img src="https://orthodoxjo.tv/saints/pelagia.jpg" />
+        <p>الخميس 22 تشرين الأول | 9 تشرين الأول شرقي</p>
+        <p>الخميس من الأسبوع الحادي والعشرين بعد العنصرة</p>
+        <p>تذكار القديسين اليوم، والقديسة بوبليا الأنطاكية</p>
+        <p>أية اليوم :&#8221;${SOURCE_VERSE_TEXT}&#8221; (${SOURCE_REFERENCE})</p>
+        <a href="https://orthodoxjo.tv/gospel"><img src="https://orthodoxjo.tv/gospel.jpg" /></a>
+        <a href="https://orthodoxjo.tv/calendar"><img src="https://orthodoxjo.tv/calendar.jpg" /></a>
+      </div>
+      <div data-id="b13ce22"></div>
+    `,
+  },
+};
 
 async function requestHomepage(locale, homepageService) {
   const app = express();
@@ -144,6 +164,34 @@ test("both source parsers separate the Arabic verse from its trailing citation",
       text: SOURCE_VERSE_TEXT,
       reference: SOURCE_REFERENCE,
     }, `${name} parser`);
+  }
+  for (const [name, parse] of [
+    ["API proxy", parseApiVerse],
+    ["native direct fetch", parseNativeVerse],
+  ]) {
+    assert.deepEqual(parse(`أية اليوم : ”${SOURCE_VERSE_TEXT}” (${SOURCE_REFERENCE})`), {
+      text: SOURCE_VERSE_TEXT,
+      reference: SOURCE_REFERENCE,
+    }, `${name} parser with upstream spelling`);
+  }
+});
+
+test("both homepage parsers accept the updated upstream 'أية اليوم' label", () => {
+  for (const [name, parse] of [
+    ["API proxy", parseApiHomepage],
+    ["native direct fetch", parseNativeHomepage],
+  ]) {
+    assert.deepEqual(parse(HOMEPAGE_PAYLOAD), {
+      sourceUrl: "https://orthodoxjo.tv/",
+      modifiedAt: "2026-10-21T22:20:55",
+      dateLabel: "الخميس 22 تشرين الأول | 9 تشرين الأول شرقي",
+      liturgicalLabel: "الخميس من الأسبوع الحادي والعشرين بعد العنصرة",
+      commemorations: "تذكار القديسين اليوم، والقديسة بوبليا الأنطاكية",
+      verse: { text: SOURCE_VERSE_TEXT, reference: SOURCE_REFERENCE },
+      saintImageUrl: "https://orthodoxjo.tv/saints/pelagia.jpg",
+      gospelUrl: "https://orthodoxjo.tv/gospel",
+      calendarUrl: "https://orthodoxjo.tv/calendar",
+    }, `${name} homepage parser`);
   }
 });
 

@@ -87,7 +87,7 @@ function absoluteUrl(value: string | undefined) {
 }
 
 export function parseVerse(value: string) {
-  const cleaned = value.replace(/^آية اليوم\s*[:：]?\s*/i, "").trim();
+  const cleaned = value.replace(/^[آأا]ية اليوم\s*[:：]?\s*/i, "").trim();
   const citationMatch = cleaned.match(/\s*[（(]([^()（）]+)[）)]\s*$/);
   const verseText = citationMatch
     ? cleaned.slice(0, citationMatch.index).trim()
@@ -131,7 +131,7 @@ export function parseDailyGospelPage(html: string): DailyGospelReading {
   throw new Error("Orthodox Jordan daily Gospel heading was not found.");
 }
 
-function parseHomepage(payload: WordPressHomepage): SynaxarionHomepagePayload {
+export function parseSynaxarionHomepage(payload: WordPressHomepage): SynaxarionHomepagePayload {
   const html = payload.content?.rendered ?? "";
   const sectionStart = html.indexOf('data-id="a7bc24a"');
   const sectionEnd = html.indexOf('data-id="b13ce22"', sectionStart);
@@ -144,7 +144,7 @@ function parseHomepage(payload: WordPressHomepage): SynaxarionHomepagePayload {
     .map((match) => stripHtml(match[1]))
     .filter(Boolean);
   const verseIndex = paragraphs.findIndex((paragraph) =>
-    /^آية اليوم\s*[:：]?/i.test(paragraph),
+    /^[آأا]ية اليوم\s*[:：]?/i.test(paragraph),
   );
   const verseParagraph = verseIndex >= 0 ? paragraphs[verseIndex] : "";
   const contentParagraphs = paragraphs.slice(
@@ -204,7 +204,7 @@ async function fetchSourcePayload() {
     if (!response.ok) {
       throw new Error(`Orthodox Jordan source returned HTTP ${response.status}.`);
     }
-    const payload = parseHomepage((await response.json()) as WordPressHomepage);
+    const payload = parseSynaxarionHomepage((await response.json()) as WordPressHomepage);
     cachedSourcePayload = { expiresAt: Date.now() + CACHE_TTL_MS, payload };
     return payload;
   } finally {

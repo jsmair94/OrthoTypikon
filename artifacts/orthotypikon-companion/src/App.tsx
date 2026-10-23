@@ -28,7 +28,7 @@ import { getPrayerCollection, PRAYER_COLLECTION_IDS } from '../../orthotypikon/d
 import { rosaryPrayerOptions } from '../../orthotypikon/data/rosaryPrayerOptions';
 import { getNameDayChoices } from '../../orthotypikon/data/nameDays';
 import { fetchNearbyOrthodoxPlaces } from '../../orthotypikon/lib/orthodoxPlaces';
-import { getMoreContent } from '../../orthotypikon/data/moreContent';
+import { getMoreContent, ORTHOTYPIKON_CONTACT_EMAIL, resolveAboutBody } from '../../orthotypikon/data/moreContent';
 import { fetchJordanNews, NEWS_REGION_SOURCES } from '../../orthotypikon/data/news';
 
 const queryClient = new QueryClient();
@@ -293,6 +293,47 @@ const libraryTopics = [
   { key: 'theotokos', en: 'Theotokos', ar: 'والدة الإله', color: '#56708B', href: '/learning' },
 ];
 const bibleBooks = ['Matthew', 'Mark', 'Luke', 'John', 'Acts', 'Romans', '1 Corinthians', '2 Corinthians', 'Galatians', 'Ephesians', 'Philippians', 'Colossians', '1 Thessalonians', '2 Thessalonians', '1 Timothy', '2 Timothy', 'Titus', 'Philemon', 'Hebrews', 'James', '1 Peter', '2 Peter', '1 John', '2 John', '3 John', 'Jude', 'Revelation'];
+const oldBibleBooks = [
+  { id: 'genesis', en: 'Genesis', ar: 'التكوين', chapters: 50 },
+  { id: 'exodus', en: 'Exodus', ar: 'الخروج', chapters: 40 },
+  { id: 'leviticus', en: 'Leviticus', ar: 'اللاويين', chapters: 27 },
+  { id: 'numbers', en: 'Numbers', ar: 'العدد', chapters: 36 },
+  { id: 'deuteronomy', en: 'Deuteronomy', ar: 'التثنية', chapters: 34 },
+  { id: 'joshua', en: 'Joshua', ar: 'يشوع', chapters: 24 },
+  { id: 'judges', en: 'Judges', ar: 'القضاة', chapters: 21 },
+  { id: 'ruth', en: 'Ruth', ar: 'راعوث', chapters: 4 },
+  { id: '1-samuel', en: 'First Samuel', ar: 'صموئيل الأول', chapters: 31 },
+  { id: '2-samuel', en: 'Second Samuel', ar: 'صموئيل الثاني', chapters: 24 },
+  { id: '1-kings', en: 'First Kings', ar: 'الملوك الأول', chapters: 22 },
+  { id: '2-kings', en: 'Second Kings', ar: 'الملوك الثاني', chapters: 25 },
+  { id: '1-chronicles', en: 'First Chronicles', ar: 'أخبار الأيام الأول', chapters: 29 },
+  { id: '2-chronicles', en: 'Second Chronicles', ar: 'أخبار الأيام الثاني', chapters: 36 },
+  { id: 'ezra', en: 'Ezra', ar: 'عزرا', chapters: 10 },
+  { id: 'nehemiah', en: 'Nehemiah', ar: 'نحميا', chapters: 13 },
+  { id: 'esther', en: 'Esther', ar: 'أستير', chapters: 10 },
+  { id: 'job', en: 'Job', ar: 'أيوب', chapters: 42 },
+  { id: 'psalms', en: 'Psalms', ar: 'المزامير', chapters: 150 },
+  { id: 'proverbs', en: 'Proverbs', ar: 'الأمثال', chapters: 31 },
+  { id: 'ecclesiastes', en: 'Ecclesiastes', ar: 'الجامعة', chapters: 12 },
+  { id: 'song-of-solomon', en: 'Song of Solomon', ar: 'نشيد الأنشاد', chapters: 8 },
+  { id: 'isaiah', en: 'Isaiah', ar: 'إشعياء', chapters: 66 },
+  { id: 'jeremiah', en: 'Jeremiah', ar: 'إرميا', chapters: 52 },
+  { id: 'lamentations', en: 'Lamentations', ar: 'مراثي إرميا', chapters: 5 },
+  { id: 'ezekiel', en: 'Ezekiel', ar: 'حزقيال', chapters: 48 },
+  { id: 'daniel', en: 'Daniel', ar: 'دانيال', chapters: 12 },
+  { id: 'hosea', en: 'Hosea', ar: 'هوشع', chapters: 14 },
+  { id: 'joel', en: 'Joel', ar: 'يوئيل', chapters: 3 },
+  { id: 'amos', en: 'Amos', ar: 'عاموس', chapters: 9 },
+  { id: 'obadiah', en: 'Obadiah', ar: 'عوبديا', chapters: 1 },
+  { id: 'jonah', en: 'Jonah', ar: 'يونان', chapters: 4 },
+  { id: 'micah', en: 'Micah', ar: 'ميخا', chapters: 7 },
+  { id: 'nahum', en: 'Nahum', ar: 'ناحوم', chapters: 3 },
+  { id: 'habakkuk', en: 'Habakkuk', ar: 'حبقوق', chapters: 3 },
+  { id: 'zephaniah', en: 'Zephaniah', ar: 'صفنيا', chapters: 3 },
+  { id: 'haggai', en: 'Haggai', ar: 'حجي', chapters: 2 },
+  { id: 'zechariah', en: 'Zechariah', ar: 'زكريا', chapters: 14 },
+  { id: 'malachi', en: 'Malachi', ar: 'ملاخي', chapters: 4 },
+];
 const bibleChapterCounts: Record<string, number> = {
   matthew: 28, mark: 16, luke: 24, john: 21, acts: 28, romans: 16,
   '1-corinthians': 16, '2-corinthians': 13, galatians: 6, ephesians: 6,
@@ -300,13 +341,8 @@ const bibleChapterCounts: Record<string, number> = {
   '1-timothy': 6, '2-timothy': 4, titus: 3, philemon: 1, hebrews: 13,
   james: 5, '1-peter': 5, '2-peter': 3, '1-john': 5, '2-john': 1,
   '3-john': 1, jude: 1, revelation: 22,
+  ...Object.fromEntries(oldBibleBooks.map((book) => [book.id, book.chapters])),
 };
-const oldBibleSections = [
-  { id: 'history', en: 'Historical Books', ar: 'الأسفار التاريخية' },
-  { id: 'poetry', en: 'Poetic Books', ar: 'الأسفار الشعرية' },
-  { id: 'prophets', en: 'The Prophets', ar: 'الأنبياء' },
-  { id: 'torah', en: 'The Torah', ar: 'التوراة' },
-];
 const prayerLabels: Record<string, { en: string; ar: string }> = {
   gospels: { en: 'Gospel readings', ar: 'الإنجيل المسموع' }, daily: { en: 'Daily prayers', ar: 'صلوات يومية' },
   various: { en: 'Various prayers', ar: 'صلوات متنوعة' }, supplications: { en: 'Supplications', ar: 'طلبات' },
@@ -348,11 +384,11 @@ function BiblePage() {
   useEffect(() => {
     setRemoteChapter(null);
     setRemoteChapterError(false);
-    if (section !== 'matthew' || chapter === null) return;
+    if (!section || !bibleChapterCounts[section] || chapter === null) return;
     const controller = new AbortController();
     setRemoteChapterLoading(true);
     const base = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/+$/, '');
-    fetch(`${base}/api/bible/matthew/${chapter}`, { signal: controller.signal })
+    fetch(`${base}/api/bible/${section}/${chapter}`, { signal: controller.signal })
       .then(async (response) => {
         if (!response.ok) throw new Error('Chapter unavailable');
         return response.json() as Promise<{ text: string; audioUrl: string }>;
@@ -364,13 +400,14 @@ function BiblePage() {
   }, [section, chapter]);
   const gospels = getPrayerCollection(app.locale, 'gospels');
   const gospel = section ? gospels?.entries.find((item) => item.id === `gospel-${section}`) : undefined;
-  const chapterCount = testament === 'new' && section ? bibleChapterCounts[section] : undefined;
+  const chapterCount = section ? bibleChapterCounts[section] : undefined;
   const selectedBook = bibleBooks.find((book) => book.toLowerCase().replaceAll(' ', '-') === section);
-  const selectedBookLabel = selectedBook ? en ? selectedBook : bibleArabicBook(selectedBook) : '';
+  const oldBook = oldBibleBooks.find((book) => book.id === section);
+  const selectedBookLabel = oldBook ? en ? oldBook.en : oldBook.ar : selectedBook ? en ? selectedBook : bibleArabicBook(selectedBook) : '';
   return <><Meta title={en ? 'Holy Bible' : 'الكتاب المقدس'} description={en ? 'Browse testament and Bible sections.' : 'تصفّح العهدين وأقسام الكتاب المقدس.'} /><PageIntro eyebrow={en ? 'Scripture' : 'الكتاب المقدس'} title={en ? 'Holy Bible' : 'الكتاب المقدس'} description={en ? 'Choose a testament and a book. Gospel excerpts are available in the four Gospels.' : 'اختر عهدًا وسفرًا. تتوفر مقتطفات من الأناجيل الأربعة.'} icon={BookText} />
     <div className="mb-5 flex max-w-xl rounded-xl border border-border bg-card p-1">{(['old', 'new'] as const).map((key) => <button key={key} data-testid={`button-bible-testament-${key}`} onClick={() => { setTestament(key); setSection(null); setChapter(null); }} className={`flex-1 rounded-lg px-4 py-3 text-sm font-bold ${testament === key ? 'bg-primary text-primary-foreground' : 'text-muted-foreground'}`}>{key === 'old' ? en ? 'Old Testament' : 'العهد القديم' : en ? 'New Testament' : 'العهد الجديد'}</button>)}</div>
-    <div className="grid gap-5 lg:grid-cols-[.85fr_1.15fr]"><section className="space-y-2">{(testament === 'old' ? oldBibleSections.map((item) => ({ id: item.id, label: en ? item.en : item.ar })) : bibleBooks.map((book) => ({ id: book.toLowerCase().replaceAll(' ', '-'), label: en ? book : bibleArabicBook(book) }))).map((item) => <button key={item.id} data-testid={`button-bible-book-${item.id}`} onClick={() => { setSection(section === item.id ? null : item.id); setChapter(null); }} className={`flex w-full items-center justify-between rounded-xl border p-4 text-start text-sm font-semibold ${section === item.id ? 'border-accent bg-secondary text-primary' : 'border-border bg-card text-foreground'}`}><span>{item.label}</span><ChevronRight size={16} /></button>)}</section>
-       <section className="min-h-64 rounded-[26px] border border-border bg-card p-6 sm:p-8">{chapterCount ? <><SectionLabel>{en ? `Chapters · ${selectedBookLabel}` : `إصحاحات ${selectedBookLabel}`}</SectionLabel><div className="mt-4 grid grid-cols-4 gap-2 sm:grid-cols-6">{Array.from({ length: chapterCount }, (_, index) => index + 1).map((number) => <button key={number} data-testid={`button-bible-chapter-${section}-${number}`} aria-pressed={chapter === number} onClick={() => setChapter(number)} className={`rounded-xl border px-3 py-3 text-sm font-bold ${chapter === number ? 'border-primary bg-primary text-primary-foreground' : 'border-border bg-background text-foreground hover:border-accent'}`}>{number}</button>)}</div>{chapter && (section === 'matthew' ? <div className="mt-5 rounded-xl border border-border p-4">{remoteChapterLoading ? <p className="text-sm text-muted-foreground">{en ? 'Loading chapter…' : 'جارٍ تحميل الإصحاح…'}</p> : remoteChapterError ? <p data-testid="text-bible-chapter-error" className="text-sm text-muted-foreground">{en ? 'Could not load the chapter from storage.' : 'تعذر تحميل الإصحاح من التخزين.'}</p> : remoteChapter ? <><p data-testid="text-bible-chapter" className="whitespace-pre-wrap text-base leading-8 text-foreground" dir={en ? 'ltr' : 'rtl'}>{remoteChapter.text}</p><audio className="mt-4 w-full" controls preload="none" src={remoteChapter.audioUrl}>{en ? 'Your browser does not support audio playback.' : 'متصفحك لا يدعم تشغيل الصوت.'}</audio></> : null}</div> : <p data-testid="text-bible-chapter-pending" className="mt-5 rounded-xl border border-dashed border-border p-4 text-sm leading-7 text-muted-foreground">{en ? `Chapter ${chapter} of ${selectedBookLabel}: the reading and matching audio will appear here when the files are uploaded.` : `الإصحاح ${chapter} من ${selectedBookLabel}: سيظهر النص والتسجيل الصوتي المطابق هنا بعد رفع الملفات.`}</p>)}{gospel && <article className="mt-6 border-t border-border pt-5"><p className="text-xs font-bold uppercase tracking-widest text-accent">{gospel.reference}</p><h2 className="mt-2 font-display text-xl font-bold text-primary">{gospel.title}</h2><p data-testid="text-bible-gospel-excerpt" className="mt-4 font-display text-lg leading-8 text-foreground">{gospel.text}</p><p className="mt-4 text-xs text-muted-foreground">{en ? 'Audio recordings have not been added yet.' : 'لم تُضف التسجيلات الصوتية بعد.'}</p></article>}</> : gospel ? <><p className="text-xs font-bold uppercase tracking-widest text-accent">{gospel.reference}</p><h2 className="mt-3 font-display text-2xl font-bold text-primary">{gospel.title}</h2><p data-testid="text-bible-gospel-excerpt" className="mt-5 font-display text-xl leading-9 text-foreground">{gospel.text}</p><p className="mt-6 border-t border-border pt-4 text-xs text-muted-foreground">{en ? 'Audio recordings have not been added yet.' : 'لم تُضف التسجيلات الصوتية بعد.'}</p></> : <><div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-secondary text-primary"><BookOpen size={21} /></div><h2 className="mt-5 font-display text-2xl font-bold text-primary">{section ? en ? 'Files are not added yet' : 'الملفات لم تُضف بعد' : en ? 'Choose a book or section' : 'اختر سفرًا أو قسمًا'}</h2><p className="mt-3 max-w-lg text-sm leading-7 text-muted-foreground">{section ? en ? 'Bible reading text and audio files are not available yet. They can be added when the source files are uploaded.' : 'نصوص الكتاب المقدس والملفات الصوتية غير متاحة بعد، وستظهر عند رفع الملفات.' : en ? 'The catalog follows the Bible sections used in the mobile app. Existing Gospel excerpts remain available here.' : 'يتبع الفهرس أقسام الكتاب المقدس في التطبيق، وتبقى مقتطفات الأناجيل الموجودة متاحة هنا.'}</p></>}</section></div>
+      <div className="grid gap-5 lg:grid-cols-[.85fr_1.15fr]"><section className="space-y-2">{(testament === 'old' ? oldBibleBooks.map((item) => ({ id: item.id, label: en ? item.en : item.ar })) : bibleBooks.map((book) => ({ id: book.toLowerCase().replaceAll(' ', '-'), label: en ? book : bibleArabicBook(book) }))).map((item) => <button key={item.id} data-testid={`button-bible-book-${item.id}`} onClick={() => { setSection(section === item.id ? null : item.id); setChapter(null); }} className={`flex w-full items-center justify-between rounded-xl border p-4 text-start text-sm font-semibold ${section === item.id ? 'border-accent bg-secondary text-primary' : 'border-border bg-card text-foreground'}`}><span>{item.label}</span><ChevronRight size={16} /></button>)}</section>
+        <section className="min-h-64 rounded-[26px] border border-border bg-card p-6 sm:p-8">{chapterCount ? <><SectionLabel>{en ? `Chapters · ${selectedBookLabel}` : `إصحاحات ${selectedBookLabel}`}</SectionLabel><div className="mt-4 grid grid-cols-4 gap-2 sm:grid-cols-6">{Array.from({ length: chapterCount }, (_, index) => index + 1).map((number) => <button key={number} data-testid={`button-bible-chapter-${section}-${number}`} aria-pressed={chapter === number} onClick={() => setChapter(number)} className={`rounded-xl border px-3 py-3 text-sm font-bold ${chapter === number ? 'border-primary bg-primary text-primary-foreground' : 'border-border bg-background text-foreground hover:border-accent'}`}>{number}</button>)}</div>{chapter && <div className="mt-5 rounded-xl border border-border p-4">{remoteChapterLoading ? <p className="text-sm text-muted-foreground">{en ? 'Loading chapter…' : 'جارٍ تحميل الإصحاح…'}</p> : remoteChapterError ? <p data-testid="text-bible-chapter-error" className="text-sm text-muted-foreground">{en ? 'Could not load the chapter from storage.' : 'تعذر تحميل الإصحاح من التخزين.'}</p> : remoteChapter ? <><p data-testid="text-bible-chapter" className="whitespace-pre-wrap text-base leading-8 text-foreground" dir={en ? 'ltr' : 'rtl'}>{remoteChapter.text}</p>{remoteChapter.audioUrl && <audio className="mt-4 w-full" controls preload="none" src={remoteChapter.audioUrl}>{en ? 'Your browser does not support audio playback.' : 'متصفحك لا يدعم تشغيل الصوت.'}</audio>}</> : null}</div>}{gospel && <article className="mt-6 border-t border-border pt-5"><p className="text-xs font-bold uppercase tracking-widest text-accent">{gospel.reference}</p><h2 className="mt-2 font-display text-xl font-bold text-primary">{gospel.title}</h2><p data-testid="text-bible-gospel-excerpt" className="mt-4 font-display text-lg leading-8 text-foreground">{gospel.text}</p><p className="mt-4 text-xs text-muted-foreground">{en ? 'Audio recordings have not been added yet.' : 'لم تُضف التسجيلات الصوتية بعد.'}</p></article>}</> : gospel ? <><p className="text-xs font-bold uppercase tracking-widest text-accent">{gospel.reference}</p><h2 className="mt-3 font-display text-2xl font-bold text-primary">{gospel.title}</h2><p data-testid="text-bible-gospel-excerpt" className="mt-5 font-display text-xl leading-9 text-foreground">{gospel.text}</p><p className="mt-6 border-t border-border pt-4 text-xs text-muted-foreground">{en ? 'Audio recordings have not been added yet.' : 'لم تُضف التسجيلات الصوتية بعد.'}</p></> : <><div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-secondary text-primary"><BookOpen size={21} /></div><h2 className="mt-5 font-display text-2xl font-bold text-primary">{section ? en ? 'Files are not added yet' : 'الملفات لم تُضف بعد' : en ? 'Choose a book or section' : 'اختر سفرًا أو قسمًا'}</h2><p className="mt-3 max-w-lg text-sm leading-7 text-muted-foreground">{section ? en ? 'Bible reading text and audio files are not available yet. They can be added when the source files are uploaded.' : 'نصوص الكتاب المقدس والملفات الصوتية غير متاحة بعد، وستظهر عند رفع الملفات.' : en ? 'The catalog follows the Bible sections used in the mobile app. Existing Gospel excerpts remain available here.' : 'يتبع الفهرس أقسام الكتاب المقدس في التطبيق، وتبقى مقتطفات الأناجيل الموجودة متاحة هنا.'}</p></>}</section></div>
   </>;
 }
 function bibleArabicBook(name: string) {
@@ -456,11 +493,28 @@ function SettingsPage() {
 
 function InformationPage() {
   const app = useApp(), params = useParams<{ section: string }>(), en = app.locale === 'en', data = getMoreContent(app.locale), section = params.section;
+  const [managedAboutBody, setManagedAboutBody] = useState<string | null>(null);
+  useEffect(() => {
+    let active = true;
+    setManagedAboutBody(null);
+    const base = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/+$/, '');
+    fetch(`${base}/api/content/about`)
+      .then(async (response) => {
+        if (!response.ok) return null;
+        return response.json() as Promise<{ content?: Record<string, { aboutBody?: string }> }>;
+      })
+      .then((result) => {
+        const body = result?.content?.[app.locale]?.aboutBody;
+        if (active && typeof body === 'string' && body.trim()) setManagedAboutBody(body);
+      })
+      .catch(() => {})
+    return () => { active = false; };
+  }, [app.locale]);
   const page = section === 'privacy' ? data.privacyPage : section === 'terms' ? data.termsPage : null;
   const title = section === 'privacy' ? data.privacy : section === 'terms' ? data.terms : section === 'contact' ? data.contactTitle : data.about;
   return <><Meta title={title} description={title} /><PageIntro eyebrow={en ? 'Information' : 'معلومات'} title={title} description={section === 'contact' ? data.contactForm.intro : en ? 'OrthoTypikon web companion' : 'رفيق أرثوذكس تيبيكون'} icon={section === 'privacy' ? ShieldCheck : section === 'contact' ? Mail : Info} />
     {section === 'contact' && <a href={`mailto:${ORTHOTYPIKON_CONTACT_EMAIL}`} className="mb-5 inline-block font-semibold text-primary underline underline-offset-4">{ORTHOTYPIKON_CONTACT_EMAIL}</a>}
-    {page ? <article className="max-w-3xl rounded-[26px] border border-border bg-card p-6 sm:p-9"><h2 className="font-display text-2xl font-bold text-primary">{page.title}</h2><p className="mt-3 text-sm leading-7 text-muted-foreground">{page.intro}</p><p className="mt-3 text-xs text-muted-foreground">{page.updated}</p><div className="mt-7 space-y-6">{page.sections.map((item, i) => <section key={`${item.title}-${i}`} data-testid={`section-info-${i}`} className="border-t border-border pt-5"><h3 className="font-display text-lg font-bold text-foreground">{item.title}</h3><p className="mt-2 text-sm leading-7 text-muted-foreground">{item.body}</p></section>)}</div></article> : section === 'contact' ? <ContactPageForm locale={app.locale} /> : <section className="max-w-2xl rounded-[26px] border border-border bg-card p-7"><h2 className="font-display text-2xl font-bold text-primary">OrthoTypikon</h2><p className="mt-3 text-sm leading-7 text-muted-foreground">{en ? 'A companion for the church day, with a liturgical calendar, fasting guidance, saint biographies, learning entries, Scripture excerpts, prayer collections, and live broadcasts.' : 'رفيق لليوم الكنسي، يضم الرزنامة الليتورجية وإرشادات الصوم وسير القديسين ومداخل تعليمية ومقتطفات كتابية ومجموعات صلاة وبثًا مباشرًا.'}</p></section>}
+     {page ? <article className="max-w-3xl rounded-[26px] border border-border bg-card p-6 sm:p-9"><h2 className="font-display text-2xl font-bold text-primary">{page.title}</h2><p className="mt-3 text-sm leading-7 text-muted-foreground">{page.intro}</p><p className="mt-3 text-xs text-muted-foreground">{page.updated}</p><div className="mt-7 space-y-6">{page.sections.map((item, i) => <section key={`${item.title}-${i}`} data-testid={`section-info-${i}`} className="border-t border-border pt-5"><h3 className="font-display text-lg font-bold text-foreground">{item.title}</h3><p className="mt-2 text-sm leading-7 text-muted-foreground">{item.body}</p></section>)}</div></article> : section === 'contact' ? <ContactPageForm locale={app.locale} /> : <section className="max-w-2xl rounded-[26px] border border-border bg-card p-7"><h2 className="font-display text-2xl font-bold text-primary">OrthoTypikon</h2><p className="mt-3 text-sm leading-7 text-muted-foreground">{resolveAboutBody(app.locale, managedAboutBody)}</p></section>}
   </>;
 }
 
@@ -480,11 +534,18 @@ function ContactPageForm({ locale }: { locale: Locale }) {
         country: String(values.get('country') ?? '').trim() || undefined,
         phone: String(values.get('phone') ?? '').trim() || undefined,
         message: String(values.get('message') ?? '').trim(),
+        language: locale,
       } });
       setStatus(data.contactForm.submitNotice);
       form.reset();
-    } catch {
-      setStatus(data.contactForm.sendFailed);
+    } catch (error) {
+      const code = (error as { data?: { code?: unknown } })?.data?.code;
+      if (code === 'confirmation_delivery_failed') {
+        setStatus(data.contactForm.confirmationFailed);
+        form.reset();
+      } else {
+        setStatus(data.contactForm.sendFailed);
+      }
     }
   };
   return <form className="grid max-w-2xl gap-4 rounded-[26px] border border-border bg-card p-6" onSubmit={handleSubmit}>

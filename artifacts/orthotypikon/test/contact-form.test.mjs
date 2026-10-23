@@ -87,5 +87,6 @@ test('contact form copy and the not-connected disclosure exist in all supported 
     assert.ok(copy.optional);
     assert.ok(copy.message);
     assert.ok(copy.submitNotice);
+    assert.ok(copy.confirmationFailed);
   }
 });

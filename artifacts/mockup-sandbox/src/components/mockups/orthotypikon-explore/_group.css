@@ -1,0 +1,190 @@
+.orthotypikon-explore {
+  --ot-background: #101a24;
+  --ot-foreground: #f6f2ea;
+  --ot-card: #182838;
+  --ot-border: #304453;
+  --ot-primary: #e4b967;
+  --ot-muted: #b7c0c3;
+  box-sizing: border-box;
+  min-height: 100vh;
+  width: 100%;
+  overflow: hidden;
+  padding: 18px;
+  background: var(--ot-background);
+  color: var(--ot-foreground);
+  direction: rtl;
+  font-family: "Noto Sans Arabic", "Geeza Pro", Tahoma, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+.orthotypikon-explore *,
+.orthotypikon-explore *::before,
+.orthotypikon-explore *::after {
+  box-sizing: border-box;
+}
+
+.ot-explore-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 12px;
+  direction: rtl;
+}
+
+.ot-explore-title {
+  margin: 0;
+  color: var(--ot-foreground);
+  font-size: 17px;
+  font-weight: 700;
+  line-height: 1.45;
+}
+
+.ot-explore-all {
+  color: var(--ot-primary);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.45;
+  white-space: nowrap;
+}
+
+.ot-explore-rail {
+  display: flex;
+  flex-direction: row;
+  gap: 10px;
+  width: calc(100% + 36px);
+  margin-inline: -18px;
+  padding: 0 18px 3px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  direction: rtl;
+  overscroll-behavior-inline: contain;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+
+.ot-explore-rail::-webkit-scrollbar {
+  display: none;
+}
+
+.ot-explore-current-card,
+.ot-explore-compact-card {
+  flex: 0 0 auto;
+  border: 1px solid var(--ot-border);
+  background: var(--ot-card);
+}
+
+.ot-explore-current-card {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  width: 258px;
+  height: 86px;
+  padding: 7px;
+  overflow: hidden;
+  border-radius: 18px;
+  direction: rtl;
+}
+
+.ot-explore-current-artwork {
+  position: relative;
+  flex: 0 0 72px;
+  width: 72px;
+  height: 72px;
+  overflow: hidden;
+  border-radius: 13px;
+}
+
+.ot-explore-current-artwork img,
+.ot-explore-compact-artwork img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.ot-explore-current-artwork::after {
+  position: absolute;
+  inset: 0;
+  background: rgb(0 0 0 / 16%);
+  content: "";
+}
+
+.ot-explore-current-label {
+  flex: 1 1 auto;
+  min-width: 0;
+  color: var(--ot-foreground);
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 20px;
+  text-align: right;
+}
+
+.ot-explore-current-arrow {
+  flex: 0 0 16px;
+  color: var(--ot-muted);
+}
+
+.ot-explore-current-arrow svg {
+  display: block;
+  width: 16px;
+  height: 16px;
+}
+
+.ot-explore-compact-stack {
+  display: flex;
+  flex: 0 0 auto;
+  flex-direction: column;
+  gap: 9px;
+  direction: rtl;
+}
+
+.ot-explore-compact-rail {
+  gap: 26px;
+}
+
+.ot-explore-compact-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 108px;
+  min-height: 142px;
+  padding: 7px 6px 9px;
+  overflow: hidden;
+  border-radius: 15px;
+  text-align: center;
+}
+
+.ot-explore-compact-artwork {
+  flex: 0 0 80px;
+  width: 80px;
+  height: 80px;
+  overflow: hidden;
+  border-radius: 11px;
+}
+
+.ot-explore-compact-label {
+  display: flex;
+  flex: 1 0 auto;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  padding-top: 5px;
+  color: var(--ot-foreground);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 17px;
+  text-align: center;
+}
+
+@media (max-width: 360px) {
+  .orthotypikon-explore {
+    padding-inline: 14px;
+  }
+
+  .ot-explore-rail {
+    width: calc(100% + 28px);
+    margin-inline: -14px;
+    padding-inline: 14px;
+  }
+}

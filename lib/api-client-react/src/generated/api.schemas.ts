@@ -26,6 +26,18 @@ export interface BibleChapterError {
   error: string;
 }
 
+/**
+ * Language for the confirmation email. Defaults to English when omitted.
+ */
+export type ContactMessageInputLanguage =
+  (typeof ContactMessageInputLanguage)[keyof typeof ContactMessageInputLanguage];
+
+export const ContactMessageInputLanguage = {
+  ar: "ar",
+  en: "en",
+  el: "el",
+} as const;
+
 export interface ContactMessageInput {
   /**
    * @minLength 1
@@ -46,6 +58,8 @@ export interface ContactMessageInput {
    * @maxLength 2000
    */
   message: string;
+  /** Language for the confirmation email. Defaults to English when omitted. */
+  language?: ContactMessageInputLanguage;
 }
 
 export const ContactMessageResponseValue = {
@@ -53,8 +67,17 @@ export const ContactMessageResponseValue = {
 } as const;
 export type ContactMessageResponse = typeof ContactMessageResponseValue;
 
+export type ContactMessageErrorCode =
+  (typeof ContactMessageErrorCode)[keyof typeof ContactMessageErrorCode];
+
+export const ContactMessageErrorCode = {
+  support_delivery_failed: "support_delivery_failed",
+  confirmation_delivery_failed: "confirmation_delivery_failed",
+} as const;
+
 export interface ContactMessageError {
   error: string;
+  code?: ContactMessageErrorCode;
 }
 
 export type OrthodoxPlaceCategory =
@@ -359,7 +382,7 @@ export type Locale = (typeof Locale)[keyof typeof Locale];
 export const Locale = {
   ar: "ar",
   en: "en",
-  fr: "fr",
+  el: "el",
 } as const;
 
 export type PublicationStatus =

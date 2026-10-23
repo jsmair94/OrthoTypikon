@@ -1,4 +1,4 @@
-import type { Language } from '@/hooks/usePreferences';
+type Language = 'ar' | 'en' | 'el';
 
 export const PRAYER_COLLECTION_IDS = [
   'gospels',

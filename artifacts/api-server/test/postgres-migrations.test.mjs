@@ -171,7 +171,7 @@ async function startApi(
       env: {
         ...postgresEnvironment(),
         DATABASE_URL: databaseUrl,
-        NODE_ENV: "production",
+        NODE_ENV: "development",
         PORT: String(port),
         ...extraEnv,
       },
@@ -318,6 +318,14 @@ test("real PostgreSQL migrations preserve rows in fresh and pre-existing databas
         );
         if (failedStartup?.status === "rejected") throw failedStartup.reason;
         assertMigrationRecorded(port, "fresh_upgrade");
+
+        const productionApi = await startApi(
+          freshDatabaseUrl,
+          undefined,
+          undefined,
+          { ...adminTestEnvironment, NODE_ENV: "production" },
+        );
+        await stopApi(productionApi);
 
         const apiPort = freshApis[0].testPort;
         const apiRequest = (route, options) =>
@@ -486,6 +494,11 @@ test("real PostgreSQL migrations preserve rows in fresh and pre-existing databas
           cwd: databaseDirectory,
           env: { ...environment, DATABASE_URL: databaseUrl },
         },
+      );
+      psql(
+        port,
+        "existing_upgrade",
+        "DROP TABLE managed_content",
       );
       assert.equal(
         psql(

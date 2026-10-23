@@ -15,8 +15,20 @@ The Replit development container's runtime `fetch` and `curl` to the Orthodox Jo
 
 **How to apply:** When debugging this source, test from the actual app/API runtime. Keep the client fallback, avoid unbounded timeout increases or untrusted public CORS proxies, and state clearly when the upstream is unreachable from Replit.
 
+The dedicated daily-message HTML page is reachable from the Replit runtime and exposes the Gospel heading and paragraph in adjacent `daily-message-item` markup. Keep Gospel retrieval independent of the WordPress REST homepage request.
+
+**Why:** The HTML article returned successfully at runtime even though prior tests of the WordPress REST endpoint timed out; coupling the two requests can hide a readable daily Gospel.
+
+**How to apply:** For daily Gospel content, proxy this HTML page for web and fetch it directly on native clients, with its own timeout and unavailable state.
+
 The Arabic daily-verse paragraph can use the same right-curly quote character (`”`) at both ends, followed by the scripture citation in parentheses. Parse the trailing citation independently instead of assuming a conventional opening/closing guillemet pair.
 
 **Why:** The old quote pattern treated the citation as verse text, so English and Greek translation returned only a translated book reference in the verse card.
 
 **How to apply:** Re-check the live paragraph shape when the source changes, and keep verse extraction consistent between the native direct-fetch path and the API proxy.
+
+The live homepage may label its verse `أية اليوم` instead of `آية اليوم`; accept spelling variants in both the API proxy parser and the native parser.
+
+**Why:** On October 21, 2026, the upstream WordPress content used `أية اليوم`, causing the strict heading match to miss the verse and return a 500 for the entire Synaxarion homepage.
+
+**How to apply:** Treat the heading as variable source text rather than a fixed schema; keep a parser regression test for the upstream spelling.

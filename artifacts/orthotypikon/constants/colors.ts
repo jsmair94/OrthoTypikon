@@ -41,6 +41,9 @@ const colors = {
     // Accent highlights (badges, selected items, focus rings)
     accent: '#E4B967',
     accentForeground: '#18324A',
+    verseHighlight: '#E8F4D3',
+    verseHighlightForeground: '#243A2B',
+    verseHighlightBorder: '#B78C46',
     fastingCell: '#F0CFE0',
     fastingCellText: '#642442',
 
@@ -86,6 +89,9 @@ const colors = {
     mutedForeground: '#B7C0C3',
     accent: '#E4B967',
     accentForeground: '#102130',
+    verseHighlight: '#D5EDA8',
+    verseHighlightForeground: '#1B3020',
+    verseHighlightBorder: '#9A6F24',
     fastingCell: '#49263A',
     fastingCellText: '#F9EAF2',
     heroStart: '#152C3F',

@@ -1,0 +1,10 @@
+@import url("https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&display=swap");
+
+.prayer-screen-preview,
+.prayer-screen-preview * {
+  box-sizing: border-box;
+}
+
+.prayer-screen-preview {
+  font-family: "Amiri", "Noto Naskh Arabic", Georgia, serif;
+}

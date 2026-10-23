@@ -29,7 +29,8 @@ const tools = [
 type FeatherIconName = ComponentProps<typeof Feather>['name'];
 
 const prayerSections: Array<{
-  collection: Exclude<PrayerCollectionId, 'gospels'>;
+  collection?: Exclude<PrayerCollectionId, 'gospels'>;
+  route?: '/relaxation-music';
   labelIndex: number;
   icon: FeatherIconName;
   color: string;
@@ -38,6 +39,7 @@ const prayerSections: Array<{
   { collection: 'various', labelIndex: 2, icon: 'book-open', color: '#25394A' },
   { collection: 'supplications', labelIndex: 3, icon: 'heart', color: '#8C5948' },
   { collection: 'epistles', labelIndex: 4, icon: 'mail', color: '#6C7C96' },
+  { route: '/relaxation-music', labelIndex: 5, icon: 'music', color: '#55706B' },
 ];
 
 type LibraryRailItem = {
@@ -46,7 +48,7 @@ type LibraryRailItem = {
   color: string;
   topic?: LibraryTopicKey;
   icon?: FeatherIconName;
-  route?: (typeof tools)[number]['route'];
+  route?: (typeof tools)[number]['route'] | '/relaxation-music';
   prayerCollection?: PrayerCollectionId;
   imageUrl?: string;
   imageResizeMode?: ImageResizeMode;
@@ -102,7 +104,7 @@ function LibraryRail({
               const artwork = (
                 <View style={[
                   styles.artwork,
-                  item.topic || item.imageUrl ? styles.wideArtwork : undefined,
+                   item.topic || item.imageUrl ? styles.wideArtwork : undefined,
                   { backgroundColor: item.color },
                 ]}>
                   {item.topic ? (
@@ -204,11 +206,12 @@ export default function LibraryScreen() {
     };
   });
   const prayerItems: LibraryRailItem[] = prayerSections.map((section) => ({
-    key: `prayer-section-${section.collection}`,
+    key: `prayer-section-${section.collection ?? section.route}`,
     title: t.library.prayerSections[section.labelIndex],
     color: section.color,
     icon: section.icon,
-    prayerCollection: section.collection,
+    ...(section.collection ? { prayerCollection: section.collection } : {}),
+    ...(section.route ? { route: section.route } : {}),
   }));
 
   return (
@@ -266,6 +269,10 @@ export default function LibraryScreen() {
             borderColor={colors.border}
             isRTL={isRTL}
             onItemPress={(item) => {
+              if (item.route) {
+                router.push(item.route);
+                return;
+              }
               if (item.prayerCollection) {
                 router.push({
                   pathname: '/prayer-collection',

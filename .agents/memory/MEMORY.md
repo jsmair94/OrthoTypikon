@@ -1,17 +1,34 @@
 - [Orval Zod generation](orval-zod-generation.md) — keep output schema-only and model integers with compatible Zod 3 constraints.
 - [Orval URI compatibility](orval-uri-compatibility.md) — OpenAPI URI formats can generate unsupported zod.url() calls with the workspace's Zod version.
 - [Expo workspace dependencies](expo-workspace-dependencies.md) — package installer targets the workspace root; scoped Expo dependencies need the artifact filter.
+- [pnpm package working directory](pnpm-package-cwd.md) — scripts run from package root; anchor cross-package paths to module location, not process.cwd().
+- [Railway pnpm lockfile pin](railway-pnpm-lockfile-pin.md) — pin Railpack to the pnpm version that produced the lockfile to keep frozen installs reproducible.
+- [Railway remote branch merges](railway-remote-branch-merge.md) — preserve GitHub-only changes when publishing from a local Replit workspace.
+- [Bootstrapping empty GitHub repos](github-empty-repository-bootstrap.md) — create the first commit with Contents API before using Git Database API.
 - [Expo web preference persistence](expo-web-preference-persistence.md) — mirror critical first-run preferences to a same-site cookie because preview localStorage may reset on reload.
-- [Expo Android builds in constrained workspaces](expo-android-build-memory.md) — pause previews, cap both Gradle and Ninja, and keep build caches in the workspace.
+- [Expo Android build cadence](expo-android-build-memory.md) — batch APK creation for requested releases; pause previews, cap Gradle/Ninja, and keep caches local.
 - [Radio embed compatibility](radio-embed-compatibility.md) — the supplied Orthodox radio embed is HTTP-only here; keep native WebView playback and a web/external fallback.
 - [Local image fallback](local-image-fallback.md) — use bundled artwork when public image search is unavailable in the current environment.
 - [Expo workflow restart behavior](expo-workflow-restart-behavior.md) — a managed Expo restart can disconnect without creating a new log; verify status before changing app code.
-- [Synaxarion locale boundary](synaxarion-locale-boundary.md) — keep live-card translation locales separate from database-backed content locales; Greek is translation-only.
+- [OrthoTypikon content locales](synaxarion-locale-boundary.md) — active admin locales are Arabic, English, and Greek; legacy French rows remain stored but unsupported.
 - [Synaxarion source connectivity](synaxarion-source-connectivity.md) — account for CORS, runtime egress, and Orthodox Jordan's Arabic quote/citation markup.
+- [Prayer collection content](prayer-collection-content.md) — the prayer library is a bundled localized catalog; keep its reader separate from a future content source.
+- [Bible text and audio assets](bible-content-assets.md) — use user-provided text/audio and a dedicated chapter reader; do not substitute another translation.
+- [MP3 frame validation](mp3-frame-validation.md) — MPEG bitrate tables are layer-specific; verify frame parsing against standard headers and computed frame lengths.
+- [Rosary screen visual direction](rosary-screen-visual-direction.md) — keep the full rosary screen as warm and intimate as the Hearthlight prayer introduction.
+- [Antioch news source connectivity](antioch-news-source-connectivity.md) — category URLs are HTML; Replit runtime gets Cloudflare 403, even when agent web fetch succeeds.
+- [OpenStreetMap Overpass availability](openstreetmap-overpass-availability.md) — public Overpass services can time out from Replit; bound requests and keep a map-search fallback.
 - [Eastern calendar display dates](eastern-calendar-display-dates.md) — home calendar cards must use the displayed month/day directly, not the 13-day civil-date offset.
+- [Daily content defaults](daily-content-defaults.md) — distinguish shared availability fallbacks from date-specific readings and preserve reviewed rows with insert-only writes.
 - [APK signature verification](apk-signature-verification.md) — trust Android's `apksigner verify`; generic ZIP checkers can flag a valid signed APK's signing block.
 - [React Native image sizing](expo-image-sizing-parity.md) — give Android card thumbnails an explicit frame height; `minHeight` alone can let source dimensions expand the card.
-- [OrthoTypikon UI parity](orthotypikon-ui-parity.md) — keep user-facing UI and behavior shared between Android and web unless a platform difference is intentional.
+- [OrthoTypikon website and mobile UI](orthotypikon-ui-parity.md) — share content where useful, but give the public website its own desktop-first structure and keep mobile UI native.
 - [Google Drive audio streaming](orthotypikon-drive-audio-streaming.md) — a valid MP3 download and range response do not guarantee browser audio playback.
-- [Expo audio player lifecycle](orthotypikon-expo-audio-lifecycle.md) — let the hook release its shared player; cleanup can run after source replacement.
+- [Expo audio player lifecycle](orthotypikon-expo-audio-lifecycle.md) — avoid pausing released players or interrupting pending browser playback.
 - [API route source tests](api-route-source-tests.md) — Node's TypeScript test runner needs support for bundler-style imports and transform-only syntax.
+- [Database migration startup](database-migration-startup.md) — Replit Publish applies managed production schema changes; API startup validates instead of replaying DDL.
+- [Drizzle migration batch rollback](drizzle-migration-batch-rollback.md) — a SQL error rolls back all pending migrations in the startup batch, leaving each version retryable.
+- [PostgreSQL index storage settings](postgres-index-storage-settings.md) — compare storage parameters after PostgreSQL normalizes them, not by raw Drizzle value strings.
+- [Contact form delivery scope](contact-form-delivery.md) — send submissions through Resend to the fixed support inbox; do not persist messages in the app.
+- [Legal publisher details](ortho-legal-details.md) — OrthoTypikon and its contact email are supplied; jurisdiction still needs confirmation for legal copy.
+- [Admin interface languages](orthotypikon-admin-localization.md) — Arabic, English, and Greek switches must localize the full admin interface, not only content editors.

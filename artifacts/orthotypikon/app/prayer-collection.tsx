@@ -1,10 +1,11 @@
 import { Feather } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useColors } from '@/hooks/useColors';
 import { useI18n } from '@/hooks/usePreferences';
+import { fetchManagedContent } from '@/lib/managedContent';
 import {
   getPrayerCollection,
   PRAYER_COLLECTION_IDS,
@@ -17,10 +18,20 @@ function PrayerCollectionContent({ collectionId }: { collectionId: string }) {
   const router = useRouter();
   const { language, t } = useI18n();
   const [selectedEntryId, setSelectedEntryId] = useState<string | null>(null);
+  const [managedCollections, setManagedCollections] = useState<any>(null);
+  useEffect(() => {
+    let active = true;
+    void fetchManagedContent<any>('prayer-library').then((content) => {
+      if (active && content) setManagedCollections(content);
+    });
+    return () => { active = false; };
+  }, []);
   const isRTL = language === 'ar';
   const webTopInset = Platform.OS === 'web' ? 67 : 0;
   const webBottomInset = Platform.OS === 'web' ? 34 : 0;
-  const collection = getPrayerCollection(language, collectionId);
+  const collection = (managedCollections?.[language]?.[collectionId] as
+    ReturnType<typeof getPrayerCollection> | undefined) ??
+    getPrayerCollection(language, collectionId);
   const categoryIndex = PRAYER_COLLECTION_IDS.indexOf(
     collectionId as (typeof PRAYER_COLLECTION_IDS)[number],
   );

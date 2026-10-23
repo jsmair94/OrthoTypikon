@@ -8,3 +8,9 @@ For React Native thumbnails inside flex-row cards, give the image frame an expli
 **Why:** The same occasion card stayed compact on web but expanded almost to screen height on Android when a tall source image determined a frame that only had `minHeight`.
 
 **How to apply:** When a card's native layout differs from web after image loading, check for percentage-height images inside min-height-only frames. Bound the frame and constrain flex text, then verify both renderers.
+
+For every new user-supplied OrthoTypikon Explore image, use `stretch` so it fills the tile edge-to-edge with no empty bands and no cropping. This can distort the image's proportions.
+
+**Why:** The user explicitly instructed that all future images they send for Explore sections should use the same fill treatment, without margins.
+
+**How to apply:** Treat a user-supplied image and Explore label as a request to replace that tile's cover, and set that tile to `stretch`. Do not change other cards. Follow a later explicit request to preserve proportions or use another fit mode.

@@ -1,0 +1,630 @@
+.prayer-hearthlight,
+.prayer-hearthlight * {
+  box-sizing: border-box;
+}
+
+.prayer-hearthlight {
+  --ink: #51443a;
+  --muted-ink: #827363;
+  --soft-ink: #a18c77;
+  --clay: #ac7957;
+  --clay-deep: #946748;
+  --border: #e5d8c7;
+  position: relative;
+  display: grid;
+  min-height: 100dvh;
+  width: 100%;
+  place-items: center;
+  overflow-x: hidden;
+  padding: 16px;
+  color: var(--ink);
+  background:
+    radial-gradient(ellipse at 51% -6%, rgba(255, 253, 247, .94), transparent 48%),
+    radial-gradient(ellipse at 100% 83%, rgba(210, 190, 165, .16), transparent 32%),
+    #eee6d8;
+  font-family: "Amiri", "Noto Naskh Arabic", "Geeza Pro", Georgia, serif;
+}
+
+.prayer-hearthlight::before {
+  position: fixed;
+  z-index: 0;
+  inset: 0;
+  content: "";
+  opacity: .16;
+  pointer-events: none;
+  background-image: repeating-linear-gradient(0deg, rgba(104, 78, 53, .025) 0, rgba(104, 78, 53, .025) 1px, transparent 1px, transparent 4px);
+}
+
+.prayer-screen-content {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 11px;
+  width: min(100%, 430px);
+  animation: prayer-arrive 650ms cubic-bezier(.2, .75, .25, 1) both;
+}
+
+.prayer-screen-header {
+  display: flex;
+  align-items: center;
+  min-height: 48px;
+  gap: 11px;
+  padding: 0 2px 1px;
+}
+
+.prayer-back,
+.header-seal {
+  display: grid;
+  flex: 0 0 35px;
+  width: 35px;
+  height: 35px;
+  place-items: center;
+  border: 1px solid rgba(183, 147, 116, .34);
+  border-radius: 50%;
+  color: #9b7658;
+  background: rgba(255, 251, 243, .57);
+}
+
+.prayer-back {
+  padding: 0;
+  cursor: pointer;
+  transition: transform 160ms ease, background-color 160ms ease;
+}
+
+.prayer-back:active {
+  transform: translateX(2px);
+  background-color: #fffaf1;
+}
+
+.prayer-heading {
+  flex: 1;
+  text-align: right;
+}
+
+.prayer-heading > span,
+.progress-label {
+  color: #9b795b;
+  font-family: "DM Sans", sans-serif;
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: .1em;
+}
+
+.prayer-heading h1 {
+  margin: 0;
+  color: #51443a;
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+.header-seal {
+  flex-basis: 31px;
+  width: 31px;
+  height: 31px;
+  color: #ac805f;
+  background: rgba(255, 250, 240, .48);
+}
+
+.hearthlight-prayer-card {
+  position: relative;
+  isolation: isolate;
+  display: flex;
+  min-height: 151px;
+  flex-direction: column;
+  justify-content: space-between;
+  overflow: hidden;
+  padding: 11px 19px 10px;
+  border: 1px solid #e2d3c1;
+  border-inline-start: 3px solid #b88967;
+  border-radius: 20px;
+  background:
+    radial-gradient(ellipse at 48% 20%, rgba(255, 255, 250, .95), transparent 66%),
+    linear-gradient(142deg, #fffdf7 0%, #faf4e9 57%, #f4eadb 100%);
+  box-shadow:
+    0 10px 25px rgba(94, 69, 47, .07),
+    0 2px 7px rgba(94, 69, 47, .03),
+    inset 0 1px 0 rgba(255, 255, 255, .96);
+}
+
+.hearthlight-prayer-card::before {
+  position: absolute;
+  z-index: -1;
+  inset: 7px;
+  content: "";
+  border: 1px solid rgba(190, 153, 119, .26);
+  border-radius: 13px;
+  pointer-events: none;
+}
+
+.hearthlight-prayer-card::after {
+  position: absolute;
+  z-index: -1;
+  bottom: -110px;
+  left: -94px;
+  width: 158px;
+  height: 158px;
+  content: "";
+  border: 1px solid rgba(187, 142, 113, .12);
+  border-radius: 50%;
+  box-shadow: 0 0 0 12px rgba(187, 142, 113, .035), 0 0 0 24px rgba(187, 142, 113, .02);
+}
+
+.hearthlight-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.prayer-kicker {
+  color: #997251;
+  font-family: "DM Sans", sans-serif;
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: .14em;
+}
+
+.prayer-sparkle {
+  display: grid;
+  width: 23px;
+  height: 23px;
+  place-items: center;
+  border: 1px solid rgba(190, 146, 112, .32);
+  border-radius: 50%;
+  color: #a87956;
+  background: rgba(255, 251, 242, .76);
+}
+
+.hearthlight-card-copy {
+  padding: 0;
+  text-align: center;
+}
+
+.hearthlight-card-copy h2 {
+  margin: 0;
+  color: #4f4239;
+  font-size: clamp(23px, 6.5vw, 29px);
+  font-weight: 600;
+  line-height: 1.32;
+  letter-spacing: -.035em;
+  text-wrap: balance;
+}
+
+.hearthlight-divider {
+  display: flex;
+  width: 75px;
+  margin: 3px auto 3px;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  color: #ae805e;
+}
+
+.hearthlight-divider i {
+  display: block;
+  height: 1px;
+  flex: 1;
+  background: linear-gradient(90deg, transparent, #c4a284);
+}
+
+.hearthlight-divider i:last-child {
+  transform: scaleX(-1);
+}
+
+.hearthlight-divider b {
+  width: 4px;
+  height: 4px;
+  border: 1px solid #b68765;
+  transform: rotate(45deg);
+}
+
+.hearthlight-card-copy p {
+  max-width: 340px;
+  margin: 0 auto;
+  color: #77675a;
+  font-size: clamp(15px, 4vw, 17px);
+  font-weight: 400;
+  line-height: 1.55;
+}
+
+.hearthlight-card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: #9a806b;
+  font-size: 10px;
+  letter-spacing: .015em;
+}
+
+.tiny-dot {
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: #c59c7b;
+}
+
+.card-corner {
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  border-color: rgba(183, 140, 108, .46);
+  border-style: solid;
+  pointer-events: none;
+}
+
+.card-corner-top {
+  top: 12px;
+  right: 12px;
+  border-width: 1px 1px 0 0;
+  border-radius: 0 5px 0 0;
+}
+
+.card-corner-bottom {
+  bottom: 12px;
+  left: 12px;
+  border-width: 0 0 1px 1px;
+  border-radius: 0 0 0 5px;
+}
+
+.prayer-audio-panel,
+.bead-progress-panel,
+.prayer-words-panel {
+  border: 1px solid rgba(218, 204, 186, .88);
+  border-radius: 18px;
+  background: rgba(255, 251, 244, .74);
+  box-shadow: 0 5px 15px rgba(94, 69, 47, .035), inset 0 1px 0 rgba(255, 255, 255, .72);
+}
+
+.prayer-audio-panel {
+  padding: 12px 15px 11px;
+}
+
+.audio-panel-heading {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+}
+
+.audio-mark {
+  display: grid;
+  flex: 0 0 34px;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  border: 1px solid rgba(186, 151, 119, .32);
+  border-radius: 12px;
+  color: #9f7553;
+  background: #f7efe3;
+}
+
+.audio-copy {
+  min-width: 0;
+}
+
+.audio-copy h2 {
+  margin: 0;
+  color: #56483d;
+  font-size: 17px;
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+.audio-copy p {
+  margin: 1px 0 0;
+  color: #887967;
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.audio-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.audio-toggle {
+  display: inline-flex;
+  min-height: 31px;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 0 11px;
+  border: 1px solid #dfcdb8;
+  border-radius: 11px;
+  color: #75573e;
+  background: #fbf5eb;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 160ms ease, background-color 160ms ease;
+}
+
+.audio-toggle:active,
+.next-bead-button:active {
+  transform: translateY(1px);
+}
+
+.audio-time {
+  direction: ltr;
+  color: #9a8875;
+  font-family: "DM Sans", sans-serif;
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+}
+
+.audio-track {
+  display: block;
+  width: 100%;
+  height: 4px;
+  margin: 9px 0 0;
+  border-radius: 4px;
+  overflow: hidden;
+  direction: ltr;
+  background: #e8ddce;
+}
+
+.audio-progress-fill {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: #a77958;
+  transition: width 180ms linear;
+}
+
+.audio-toggle:focus-visible,
+.next-bead-button:focus-visible,
+.reset-prayer:focus-visible,
+.prayer-back:focus-visible {
+  outline: 2px solid #b88967;
+  outline-offset: 3px;
+}
+
+.bead-progress-panel {
+  display: flex;
+  min-height: 130px;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 19px 10px 16px;
+  border-inline-start: 3px solid rgba(184, 137, 103, .58);
+}
+
+.bead-progress-copy {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: flex-start;
+  padding-inline-start: 4px;
+}
+
+.progress-label {
+  font-size: 10px;
+}
+
+.progress-number {
+  display: flex;
+  align-items: baseline;
+  gap: 7px;
+  margin-top: 1px;
+  color: #78614c;
+}
+
+.progress-number strong {
+  color: #51443a;
+  font-size: 43px;
+  font-weight: 700;
+  line-height: 1;
+  font-variant-numeric: lining-nums;
+}
+
+.progress-number span {
+  color: #9a8875;
+  font-size: 15px;
+}
+
+.bead-wheel {
+  flex: 0 0 104px;
+  width: 104px;
+  height: 104px;
+  overflow: visible;
+}
+
+.wheel-guide {
+  fill: none;
+  stroke: #ebdfd0;
+  stroke-width: .6;
+  stroke-dasharray: 1 3;
+}
+
+.wheel-bead {
+  fill: #dfd1bf;
+  transition: fill 180ms ease;
+}
+
+.wheel-bead-done {
+  fill: #b27f5d;
+}
+
+.wheel-center {
+  fill: #fbf6ed;
+  stroke: #e5d5c1;
+  stroke-width: .8;
+}
+
+.wheel-center-mark {
+  fill: none;
+  stroke: #ba9677;
+  stroke-linecap: round;
+  stroke-width: 1.1;
+  opacity: .8;
+}
+
+.next-bead-button {
+  display: flex;
+  width: 100%;
+  min-height: 54px;
+  align-items: center;
+  justify-content: space-between;
+  padding: 7px 14px 7px 19px;
+  border: 1px solid #8f6b4e;
+  border-radius: 16px;
+  color: #fff9f0;
+  background:
+    linear-gradient(115deg, rgba(255,255,255,.05), transparent 50%),
+    #84664d;
+  box-shadow: 0 6px 13px rgba(97, 67, 42, .14), inset 0 1px 0 rgba(255, 255, 255, .13);
+  font-family: inherit;
+  font-size: 17px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 150ms ease, background-color 150ms ease;
+}
+
+.next-bead-button:hover {
+  background-color: #765a43;
+}
+
+.next-bead-icon {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  border: 1px solid rgba(255, 246, 230, .26);
+  border-radius: 50%;
+  color: #f7e8d4;
+  background: rgba(255, 250, 242, .1);
+}
+
+.prayer-words-panel {
+  position: relative;
+  display: flex;
+  min-height: 89px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 17px 9px;
+  text-align: center;
+}
+
+.prayer-quote-mark {
+  position: absolute;
+  top: -1px;
+  right: 15px;
+  color: #c6a587;
+  font-family: Georgia, serif;
+  font-size: 27px;
+  line-height: 1;
+  opacity: .72;
+}
+
+.prayer-words-panel p {
+  margin: 0;
+  color: #635347;
+  font-size: 16px;
+  line-height: 1.5;
+}
+
+.prayer-hint {
+  margin-top: 3px;
+  color: #a18c77;
+  font-size: 10px;
+  line-height: 1.3;
+}
+
+.reset-prayer {
+  align-self: center;
+  min-height: 23px;
+  padding: 0 10px;
+  border: 0;
+  color: #a18770;
+  background: transparent;
+  font-family: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.reset-prayer:hover {
+  color: #785e48;
+}
+
+@keyframes prayer-arrive {
+  from { opacity: 0; transform: translateY(7px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@media (max-width: 430px) {
+  .prayer-hearthlight {
+    padding: 13px 14px 12px;
+  }
+
+  .prayer-screen-content {
+    gap: 9px;
+  }
+
+  .hearthlight-prayer-card {
+    min-height: 145px;
+    padding: 10px 17px 9px;
+  }
+
+  .prayer-audio-panel {
+    padding: 10px 13px 9px;
+  }
+
+  .bead-progress-panel {
+    min-height: 123px;
+    padding-inline: 15px 13px;
+  }
+
+  .bead-wheel {
+    flex-basis: 98px;
+    width: 98px;
+    height: 98px;
+  }
+}
+
+@media (max-height: 760px) {
+  .prayer-hearthlight {
+    place-items: start center;
+    padding-top: 10px;
+    padding-bottom: 10px;
+  }
+
+  .prayer-screen-content {
+    gap: 8px;
+  }
+
+  .hearthlight-prayer-card {
+    min-height: 132px;
+  }
+
+  .bead-progress-panel {
+    min-height: 112px;
+  }
+
+  .bead-wheel {
+    flex-basis: 90px;
+    width: 90px;
+    height: 90px;
+  }
+
+  .prayer-words-panel {
+    min-height: 78px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .prayer-screen-content {
+    animation: none;
+  }
+
+  .prayer-back,
+  .audio-toggle,
+  .next-bead-button,
+  .wheel-bead {
+    transition: none;
+  }
+}

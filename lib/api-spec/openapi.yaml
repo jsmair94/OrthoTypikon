@@ -21,6 +21,8 @@ tags:
     description: Live Synaxarion card from the Orthodox Jordan homepage
   - name: calendar
     description: Liturgical calendar
+  - name: bible
+    description: Bible chapter text and recordings
   - name: fasting
     description: Fasting guidance and recipes
   - name: saints
@@ -80,6 +82,61 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+  /bible/{book}/{chapter}:
+    get:
+      operationId: getBibleChapter
+      tags:
+        - bible
+      summary: Get a Bible chapter and its matching audio recording
+      parameters:
+        - name: book
+          in: path
+          required: true
+          description: Lowercase book slug from the Bible catalog
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 24
+        - name: chapter
+          in: path
+          required: true
+          description: One-based chapter number
+          schema:
+            type: number
+            multipleOf: 1
+            minimum: 1
+            maximum: 28
+      responses:
+        "200":
+          description: Bible chapter text with a short-lived signed recording URL
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BibleChapter"
+        "400":
+          description: Unsupported book or invalid chapter
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BibleChapterError"
+        "404":
+          description: Matching text and audio files are not available
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BibleChapterError"
+        "502":
+          description: Bible storage could not be read
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BibleChapterError"
+        "503":
+          description: Bible storage is not configured
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BibleChapterError"
   /prayer-community/session:
     post:
       operationId: createPrayerSession
@@ -1703,6 +1760,13 @@ components:
           type: string
           minLength: 1
           maxLength: 2000
+        language:
+          type: string
+          enum:
+            - ar
+            - en
+            - el
+          description: Language for the confirmation email. Defaults to English when omitted.
     ContactMessageResponse:
       type: object
       additionalProperties: false
@@ -1720,6 +1784,11 @@ components:
       properties:
         error:
           type: string
+        code:
+          type: string
+          enum:
+            - support_delivery_failed
+            - confirmation_delivery_failed
     OrthodoxPlaceCategory:
       type: string
       enum:
@@ -2109,7 +2178,7 @@ components:
       enum:
         - ar
         - en
-        - fr
+        - el
     PublicationStatus:
       type: string
       enum:

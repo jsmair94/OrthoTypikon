@@ -1,10 +1,10 @@
-import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } from 'react';
 import { Link, Route, Switch, useLocation, useRoute } from 'wouter';
 import { MutationCache, QueryCache, QueryClient, QueryClientProvider, useQueryClient } from '@tanstack/react-query';
 import {
-  Archive, BookOpen, CalendarDays, Check, ChevronRight, CircleAlert, Clock3, FileText,
+  Archive, BookOpen, CalendarDays, Check, ChevronRight, CircleAlert, Clock3, FileText, Info,
   Flame, HeartHandshake, KeyRound, Languages, LayoutDashboard, LogOut, Menu, Pencil,
-  MapPin, Plus, Search, ShieldCheck, Sparkles, Utensils, UsersRound, X, type LucideIcon,
+  MapPin, Plus, Search, ShieldCheck, Sparkles, Utensils, UsersRound, X, Radio, Upload, type LucideIcon,
 } from 'lucide-react';
 import {
   getGetAdminOverviewQueryKey, getListAdminCalendarEntriesQueryKey, getListAdminDailyContentQueryKey,
@@ -23,12 +23,15 @@ import {
 } from '@workspace/api-client-react';
 import NotFound from '@/pages/not-found';
 import OrthodoxPlacesPage from '@/pages/orthodox-places';
+import { prayerCollections } from '../../orthotypikon/data/prayerCollections';
+import { ADMIN_LOCALES, translateAdminText, translateCurrentAdminText, type AdminLocale } from '@/lib/admin-locale';
 
 type AnyRecord = Record<string, any>;
 const TOKEN_KEY = 'orthotypikon_admin_token';
 const SESSION_EXPIRED_EVENT = 'orthotypikon-admin:session-expired';
 const getToken = () => sessionStorage.getItem(TOKEN_KEY);
 const is401 = (error: unknown) => (error as { status?: number } | null)?.status === 401;
+const languageName = (locale: string) => ({ ar: 'Arabic', en: 'English', el: 'Greek' }[locale] ?? locale.toUpperCase());
 
 const nav = [
   { href: '/', label: 'Overview', icon: LayoutDashboard },
@@ -37,6 +40,10 @@ const nav = [
   { href: '/saints', label: 'Saints', icon: Sparkles },
   { href: '/fasting', label: 'Fasting', icon: Flame },
   { href: '/learning', label: 'Learning', icon: BookOpen },
+  { href: '/prayer-library', label: 'Prayer library', icon: HeartHandshake },
+  { href: '/about', label: 'About us', icon: Info },
+  { href: '/bible', label: 'Bible library', icon: BookOpen },
+  { href: '/broadcasts', label: 'Broadcasts', icon: Radio },
   { href: '/places', label: 'Places', icon: MapPin },
   { href: '/moderation', label: 'Moderation', icon: HeartHandshake },
 ];
@@ -70,7 +77,26 @@ function Logo() {
   </div>;
 }
 
-function Shell({ children }: { children: ReactNode }) {
+function LanguageSwitcher({ locale, onChange }: { locale: AdminLocale; onChange: (locale: AdminLocale) => void }) {
+  return <div
+    className="language-switch"
+    role="group"
+    aria-label="Supported content languages"
+    style={{ display: 'flex', alignItems: 'center', gap: 5 }}
+  >
+    {ADMIN_LOCALES.map((language) => <button
+      key={language.id}
+      type="button"
+      className={`btn btn-small ${locale === language.id ? 'btn-primary' : 'btn-quiet'}`}
+      style={{ minHeight: 29, padding: '0 8px', fontSize: 10 }}
+      aria-pressed={locale === language.id}
+      onClick={() => onChange(language.id)}
+      data-testid={`button-admin-language-${language.id}`}
+    >{language.label}</button>)}
+  </div>;
+}
+
+function Shell({ children, locale, onLocaleChange }: { children: ReactNode; locale: AdminLocale; onLocaleChange: (locale: AdminLocale) => void }) {
   const [location, setLocation] = useLocation();
   const queryClient = useQueryClient();
   const [menuOpen, setMenuOpen] = useState(false);
@@ -90,7 +116,7 @@ function Shell({ children }: { children: ReactNode }) {
         <button className="btn btn-quiet mobile-menu" onClick={() => setMenuOpen(!menuOpen)} data-testid="button-mobile-menu"><Menu size={16} /></button>
         <div className="mono" style={{ fontSize: 11, color: 'hsl(var(--muted-foreground))' }}>{active}</div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-          <div className="mono" style={{ fontSize: 10, color: 'hsl(var(--muted-foreground))' }}>EN · AR · FR</div>
+          <LanguageSwitcher locale={locale} onChange={onLocaleChange} />
           <button className="btn btn-quiet btn-small" onClick={signOut} data-testid="button-top-sign-out"><LogOut size={13} /> Sign out</button>
         </div>
       </header>
@@ -134,7 +160,7 @@ function EditorModal({ title, fields, initial, onClose, onSave, busy }: { title:
   const [form, setForm] = useState<AnyRecord>(initial);
   const set = (key: string, value: any) => setForm((current) => ({ ...current, [key]: value }));
   const submit = (event: FormEvent) => { event.preventDefault(); onSave(form); };
-  return <div className="modal-backdrop" role="presentation" onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}><form className="modal" onSubmit={submit}><div className="modal-head"><div><div className="eyebrow">Content editor</div><h2>{title}</h2></div><button type="button" className="close" onClick={onClose} data-testid="button-close-modal"><X size={19} /></button></div><div className="modal-body"><div className="form-grid">{fields.map((field) => <div className={`field ${field.span ? 'span-2' : ''}`} key={field.key}><label htmlFor={`field-${field.key}`}>{field.label}</label>{field.options ? <select id={`field-${field.key}`} className="select" value={form[field.key] ?? ''} onChange={(e) => set(field.key, e.target.value)} data-testid={`input-${field.key}`}><option value="">Select</option>{field.options.map((option) => <option value={option} key={option}>{option}</option>)}</select> : field.type === 'textarea' ? <textarea id={`field-${field.key}`} className="textarea" value={form[field.key] ?? ''} onChange={(e) => set(field.key, e.target.value)} data-testid={`input-${field.key}`} /> : <input id={`field-${field.key}`} className="input" type={field.type ?? 'text'} value={form[field.key] ?? ''} onChange={(e) => set(field.key, field.type === 'number' ? (e.target.value === '' ? null : Number(e.target.value)) : e.target.value)} data-testid={`input-${field.key}`} />}</div>)}</div></div><div className="modal-foot"><button type="button" className="btn btn-quiet" onClick={onClose} data-testid="button-cancel-edit">Cancel</button><button type="submit" className="btn btn-primary" disabled={busy} data-testid="button-save-record">{busy ? 'Saving…' : 'Save record'}</button></div></form></div>;
+  return <div className="modal-backdrop" role="presentation" onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}><form className="modal" onSubmit={submit}><div className="modal-head"><div><div className="eyebrow">Content editor</div><h2>{title}</h2></div><button type="button" className="close" onClick={onClose} data-testid="button-close-modal"><X size={19} /></button></div><div className="modal-body"><div className="form-grid">{fields.map((field) => <div className={`field ${field.span ? 'span-2' : ''}`} key={field.key}><label htmlFor={`field-${field.key}`}>{field.label}</label>{field.options ? <select id={`field-${field.key}`} className="select" value={form[field.key] ?? ''} onChange={(e) => set(field.key, e.target.value)} data-testid={`input-${field.key}`}><option value="">Select</option>{field.options.map((option) => <option value={option} key={option}>{field.key === 'locale' ? languageName(option) : option}</option>)}</select> : field.type === 'textarea' ? <textarea id={`field-${field.key}`} className="textarea" value={form[field.key] ?? ''} onChange={(e) => set(field.key, e.target.value)} data-testid={`input-${field.key}`} /> : <input id={`field-${field.key}`} className="input" type={field.type ?? 'text'} value={form[field.key] ?? ''} onChange={(e) => set(field.key, field.type === 'number' ? (e.target.value === '' ? null : Number(e.target.value)) : e.target.value)} data-testid={`input-${field.key}`} />}</div>)}</div></div><div className="modal-foot"><button type="button" className="btn btn-quiet" onClick={onClose} data-testid="button-cancel-edit">Cancel</button><button type="submit" className="btn btn-primary" disabled={busy} data-testid="button-save-record">{busy ? 'Saving…' : 'Save record'}</button></div></form></div>;
 }
 
 function ResourceToolbar({ search, setSearch, onAdd, label = 'New record' }: { search: string; setSearch: (value: string) => void; onAdd: () => void; label?: string }) {
@@ -147,7 +173,7 @@ function DailyContentPage() {
   const upsert = useUpsertAdminDailyContent(); const update = useUpdateAdminDailyContent(); const archive = useArchiveAdminDailyContent();
   const qc = useQueryClient(); const [search, setSearch] = useState(''); const [edit, setEdit] = useState<AnyRecord | null>(null);
   const fields: FieldDef[] = [
-    { key: 'contentDate', label: 'Content date', type: 'date' }, { key: 'locale', label: 'Locale', options: ['en', 'ar', 'fr'] },
+    { key: 'contentDate', label: 'Content date', type: 'date' }, { key: 'locale', label: 'Language', options: ['ar', 'en', 'el'] },
     { key: 'calendarSystem', label: 'Calendar', options: ['gregorian', 'julian'] }, { key: 'publicationStatus', label: 'Status', options: ['draft', 'published', 'archived'] },
     { key: 'verseReference', label: 'Verse reference' }, { key: 'verseAuthor', label: 'Verse author' }, { key: 'verseText', label: 'Verse text', type: 'textarea', span: true },
     { key: 'feastTitle', label: 'Feast title' }, { key: 'feastDescription', label: 'Feast description', type: 'textarea' },
@@ -158,7 +184,7 @@ function DailyContentPage() {
   return <main className="workspace"><PageHeader eyebrow="Persistent library · scripture" title="Daily content" subtitle="Shape the verse, feast, and reading that anchor each day." action={<span className="badge badge-published"><Check size={12} /> live library</span>} /><section className="card table-card"><ResourceToolbar search={search} setSearch={setSearch} label="Add daily content" onAdd={() => setEdit({ contentDate: new Date().toISOString().slice(0, 10), calendarSystem: 'gregorian', locale: 'en', verseReference: '', verseText: '', verseAuthor: '', feastTitle: '', feastDescription: '', readingTitle: '', readingReference: '', readingDurationMinutes: null, publicationStatus: 'draft' })} /><QueryState loading={query.isLoading} error={query.isError} empty={!filtered.length}><div className="table-wrap"><table><thead><tr><th>Date</th><th>Verse</th><th>Reading</th><th>Locale</th><th>Status</th><th /></tr></thead><tbody>{filtered.map((row) => <tr key={row.id}><td className="mono">{row.contentDate}</td><td><div className="table-title">{row.verseReference}</div><span className="table-note">{row.verseText}</span></td><td>{row.readingTitle ?? '—'}<span className="table-note">{row.readingReference ?? 'No reading attached'}</span></td><td><span className="badge badge-draft">{row.locale}</span></td><td><StatusBadge status={row.publicationStatus} /></td><td><div className="actions"><button className="btn btn-quiet btn-small" onClick={() => setEdit(row)} data-testid={`button-edit-daily-${row.id}`}><Pencil size={13} /></button><button className="btn btn-quiet btn-small" onClick={() => { if (confirm('Archive this daily content?')) archive.mutate({ id: row.id }, { onSuccess: () => qc.invalidateQueries({ queryKey: getListAdminDailyContentQueryKey(params) }) }); }} data-testid={`button-archive-daily-${row.id}`}><Archive size={13} /></button></div></td></tr>)}</tbody></table></div></QueryState></section>{edit && <EditorModal title={edit.id ? 'Edit daily content' : 'New daily content'} fields={fields} initial={edit} onClose={() => setEdit(null)} onSave={save} busy={upsert.isPending || update.isPending} />}</main>;
 }
 
-const commonFields: FieldDef[] = [{ key: 'locale', label: 'Locale', options: ['en', 'ar', 'fr'] }, { key: 'publicationStatus', label: 'Status', options: ['draft', 'published', 'archived'] }];
+const commonFields: FieldDef[] = [{ key: 'locale', label: 'Language', options: ['ar', 'en', 'el'] }, { key: 'publicationStatus', label: 'Status', options: ['draft', 'published', 'archived'] }];
 function CalendarPage() {
   const params = useMemo(() => ({ page: 1, limit: 30 }), []); const query = useListAdminCalendarEntries(params); const upsert = useUpsertAdminCalendarEntry(); const update = useUpdateAdminCalendarEntry(); const archive = useArchiveAdminCalendarEntry(); const qc = useQueryClient(); const [search, setSearch] = useState(''); const [edit, setEdit] = useState<AnyRecord | null>(null);
   const fields = [{ key: 'gregorianDate', label: 'Gregorian date', type: 'date' }, { key: 'calendarSystem', label: 'Calendar', options: ['gregorian', 'julian'] }, ...commonFields, { key: 'feastTitle', label: 'Feast title' }, { key: 'fastingTitle', label: 'Fasting title' }, { key: 'liturgy', label: 'Liturgy' }, { key: 'color', label: 'Liturgical color' }, { key: 'saintIds', label: 'Saint IDs · comma separated', span: true }];
@@ -185,9 +211,133 @@ function FastingPage() {
 
 function LearningPage() {
   const params = useMemo(() => ({ page: 1, limit: 30 }), []); const query = useListAdminLearningEntries(params); const create = useCreateAdminLearningEntry(); const update = useUpdateAdminLearningEntry(); const archive = useArchiveAdminLearningEntry(); const qc = useQueryClient(); const [search, setSearch] = useState(''); const [edit, setEdit] = useState<AnyRecord | null>(null); const rows = ((query.data as AnyRecord)?.items ?? []) as AdminLearningEntry[]; const filtered = rows.filter((r) => `${r.title} ${r.definition} ${r.alternate ?? ''}`.toLowerCase().includes(search.toLowerCase()));
-  const fields: FieldDef[] = [{ key: 'category', label: 'Category', options: ['audio', 'icon', 'dictionary'] }, { key: 'locale', label: 'Locale', options: ['en', 'ar', 'fr'] }, ...commonFields.filter((f) => f.key !== 'locale'), { key: 'title', label: 'Title' }, { key: 'alternate', label: 'Alternate spelling' }, { key: 'pronunciation', label: 'Pronunciation' }, { key: 'definition', label: 'Definition', type: 'textarea', span: true }, { key: 'body', label: 'Body', type: 'textarea', span: true }];
+  const fields: FieldDef[] = [{ key: 'category', label: 'Category', options: ['audio', 'icon', 'dictionary'] }, { key: 'locale', label: 'Language', options: ['ar', 'en', 'el'] }, ...commonFields.filter((f) => f.key !== 'locale'), { key: 'title', label: 'Title' }, { key: 'alternate', label: 'Alternate spelling' }, { key: 'pronunciation', label: 'Pronunciation' }, { key: 'definition', label: 'Definition', type: 'textarea', span: true }, { key: 'body', label: 'Body', type: 'textarea', span: true }];
   const save = (form: AnyRecord) => { const data = { ...form, alternate: form.alternate || null, pronunciation: form.pronunciation || null, body: form.body || null }; const done = () => { qc.invalidateQueries({ queryKey: getListAdminLearningEntriesQueryKey(params) }); qc.invalidateQueries({ queryKey: getGetAdminOverviewQueryKey() }); setEdit(null); }; form.id ? update.mutate({ id: form.id, data: data as any }, { onSuccess: done }) : create.mutate({ data: data as any }, { onSuccess: done }); };
   return <main className="workspace"><PageHeader eyebrow="Persistent library · formation" title="Learning" subtitle="Make words, sounds, and definitions ready for the people learning to pray." /><section className="card table-card"><ResourceToolbar search={search} setSearch={setSearch} label="Add learning entry" onAdd={() => setEdit({ category: 'dictionary', title: '', alternate: '', pronunciation: '', definition: '', body: '', locale: 'en', publicationStatus: 'draft' })} /><QueryState loading={query.isLoading} error={query.isError} empty={!filtered.length}><div className="table-wrap"><table><thead><tr><th>Entry</th><th>Category</th><th>Locale</th><th>Status</th><th /></tr></thead><tbody>{filtered.map((row) => <tr key={row.id}><td><div className="table-title">{row.title}</div><span className="table-note">{row.definition}</span></td><td><span className="badge badge-draft">{row.category}</span></td><td><span className="badge badge-draft">{row.locale}</span></td><td><StatusBadge status={row.publicationStatus} /></td><td><div className="actions"><button className="btn btn-quiet btn-small" onClick={() => setEdit(row)} data-testid={`button-edit-learning-${row.id}`}><Pencil size={13} /></button><button className="btn btn-quiet btn-small" onClick={() => { if (confirm('Archive this learning entry?')) archive.mutate({ id: row.id }, { onSuccess: () => qc.invalidateQueries({ queryKey: getListAdminLearningEntriesQueryKey(params) }) }); }} data-testid={`button-archive-learning-${row.id}`}><Archive size={13} /></button></div></td></tr>)}</tbody></table></div></QueryState></section>{edit && <EditorModal title={edit.id ? 'Edit learning entry' : 'New learning entry'} fields={fields} initial={edit} onClose={() => setEdit(null)} onSave={save} busy={create.isPending || update.isPending} />}</main>;
+}
+
+function BibleAssetsPage() {
+  const [assets, setAssets] = useState<AnyRecord[]>([]);
+  const [key, setKey] = useState('');
+  const [file, setFile] = useState<File | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const [message, setMessage] = useState('');
+  const token = () => sessionStorage.getItem(TOKEN_KEY) ?? '';
+  const refresh = async () => {
+    setBusy(true); setError('');
+    try {
+      const response = await fetch('/api/admin/bible-assets', { headers: { Authorization: `Bearer ${token()}` } });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.message ?? 'Could not load Bible assets.');
+      setAssets(result.assets ?? []);
+    } catch (e) { setError(e instanceof Error ? e.message : 'Could not load Bible assets.'); }
+    finally { setBusy(false); }
+  };
+  useEffect(() => { void refresh(); }, []);
+  const upload = async () => {
+    const objectKey = key.trim().replace(/^\/+/, '');
+    if (!file || !objectKey) return;
+    if (assets.some((asset) => asset.key === objectKey) && !window.confirm(translateCurrentAdminText(`Replace ${objectKey}?`))) return;
+    setBusy(true); setError(''); setMessage('');
+    try {
+      const response = await fetch(`/api/admin/bible-assets?key=${encodeURIComponent(objectKey)}`, {
+        method: 'PUT', headers: { Authorization: `Bearer ${token()}`, 'Content-Type': 'application/octet-stream' }, body: file,
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.message ?? 'Upload failed.');
+      setMessage(`Uploaded ${objectKey}.`); setFile(null); setKey(''); await refresh();
+    } catch (e) { setError(e instanceof Error ? e.message : 'Upload failed.'); }
+    finally { setBusy(false); }
+  };
+  const remove = async (asset: AnyRecord) => {
+    const confirmation = window.prompt(translateCurrentAdminText(`Permanent deletion. Type the full file key to confirm:\n${asset.key}`));
+    if (!confirmation || confirmation !== asset.key) return;
+    setBusy(true); setError(''); setMessage('');
+    try {
+      const response = await fetch(`/api/admin/bible-assets?key=${encodeURIComponent(asset.key)}`, {
+        method: 'DELETE', headers: { Authorization: `Bearer ${token()}`, 'x-confirm-delete': confirmation },
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.message ?? 'Delete failed.');
+      setMessage(`Deleted ${asset.key}.`); await refresh();
+    } catch (e) { setError(e instanceof Error ? e.message : 'Delete failed.'); }
+    finally { setBusy(false); }
+  };
+  return <main className="workspace">
+    <PageHeader eyebrow="Scripture assets · text and audio" title="Bible library" subtitle="Manage chapter text, MP3 recordings, and WebVTT timings in the connected storage bucket." />
+    <section className="card" style={{ padding: 20, marginBottom: 18 }}>
+      <div className="form-grid">
+        <div className="field"><label htmlFor="bible-key">Storage key (e.g. Matthew/1.txt)</label><input id="bible-key" className="input" value={key} onChange={(e) => setKey(e.target.value)} /></div>
+        <div className="field"><label htmlFor="bible-file">Chapter file (.txt, .mp3, .vtt)</label><input id="bible-file" className="input" type="file" accept=".txt,.mp3,.vtt" onChange={(e) => setFile(e.target.files?.[0] ?? null)} /></div>
+      </div>
+      <div style={{ display: 'flex', gap: 8, marginTop: 14 }}><button className="btn btn-primary" disabled={!key.trim() || !file || busy} onClick={() => void upload()}><Upload size={14} /> Upload / replace</button><button className="btn btn-quiet" disabled={busy} onClick={() => void refresh()}>Refresh</button></div>
+      {message && <p role="status">{message}</p>}{error && <p role="alert" style={{ color: 'hsl(var(--danger))' }}>{error}</p>}
+    </section>
+    <section className="card table-card"><div className="card-head"><h2>Stored chapter files</h2><span className="badge badge-published">{assets.length} assets</span></div>
+      {assets.length === 0 ? <div className="empty">{busy ? 'Loading Bible assets…' : 'No supported Bible chapter assets found.'}</div> : <div className="table-wrap"><table><thead><tr><th>Storage key</th><th>Size</th><th>Updated</th><th /></tr></thead><tbody>{assets.map((asset) => <tr key={asset.key}><td><code>{asset.key}</code></td><td>{(Number(asset.size) / 1024).toFixed(1)} KB</td><td>{asset.updatedAt ? new Date(asset.updatedAt).toLocaleString() : '—'}</td><td><button className="btn btn-danger btn-small" disabled={busy} onClick={() => void remove(asset)}><Archive size={13} /> Delete</button></td></tr>)}</tbody></table></div>}
+    </section>
+  </main>;
+}
+
+function ManagedContentPage({ kind }: { kind: 'prayer-library' | 'broadcasts' | 'about' }) {
+  const title = kind === 'prayer-library' ? 'Prayer library' : kind === 'broadcasts' ? 'Broadcasts' : 'About us';
+  const initial = kind === 'prayer-library' ? prayerCollections : {
+    livePlayerUrl: 'https://iframe.dacast.com/live/5b5db9ba-4c13-8bb5-6bc4-cd42ee652aa1/07d3cb7c-1a21-ccdc-128d-6817f25ff78a?autoplay=true',
+    radioPlayerUrl: 'https://orthodoxjo.tv/audio/%D8%B5%D9%88%D8%AA-%D8%A7%D9%84%D9%83%D9%86%D9%8A%D8%B3%D8%A9',
+  };
+  const aboutInitial = {
+    ar: { aboutBody: 'نحن سنكون رفيقك اليومي في الحياة الأرثوذكسية. نجمع لك التقويم الكنسي وقراءات اليوم والصلوات وسِيَر القديسين وإرشادات الصوم، إلى جانب مواد تساعدك على التعلّم ومتابعة تراث الكنيسة. صمّمنا لك هذا التطبيق لتعيش الأرثوذكسية في حياتك اليومية، ويعينك على الصلاة والنمو في الإيمان. نسأل أن يكون نافعًا لك ولعائلتك.' },
+    en: { aboutBody: "We will be your daily companion in Orthodox life. We bring together the Church calendar, the day's readings, prayers, the lives of the saints, and fasting guidance, along with resources to help you learn and follow the Church's heritage. We designed this app to help you live Orthodoxy in your daily life and grow in prayer and faith. May it be helpful to you and your family." },
+    el: { aboutBody: 'Θα είμαστε ο καθημερινός σας συνοδοιπόρος στην ορθόδοξη ζωή. Συγκεντρώνουμε για εσάς το εκκλησιαστικό ημερολόγιο, τα αναγνώσματα της ημέρας, προσευχές, βίους αγίων και οδηγίες για τη νηστεία, μαζί με υλικό που σας βοηθά να μαθαίνετε και να γνωρίζετε την παράδοση της Εκκλησίας. Σχεδιάσαμε αυτή την εφαρμογή για να ζείτε την Ορθοδοξία στην καθημερινότητά σας και να ενισχύεστε στην προσευχή και την πίστη. Ευχόμαστε να είναι ωφέλιμη για εσάς και την οικογένειά σας.' },
+  };
+  const defaultContent = kind === 'about' ? aboutInitial : initial;
+  const [value, setValue] = useState('');
+  const [busy, setBusy] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+  const [message, setMessage] = useState('');
+  const read = async () => {
+    setBusy(true); setError('');
+    try {
+      const response = await fetch(`/api/admin/managed-content/${kind}`, { headers: { Authorization: `Bearer ${sessionStorage.getItem(TOKEN_KEY) ?? ''}` } });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.message ?? 'Could not load saved content.');
+      setValue(JSON.stringify(result.content ?? defaultContent, null, 2));
+    } catch (e) { setError(e instanceof Error ? e.message : 'Could not load saved content.'); }
+    finally { setBusy(false); }
+  };
+  useEffect(() => { void read(); }, [kind]);
+  const save = async () => {
+    let content: unknown;
+    try { content = JSON.parse(value); }
+    catch { setError('The JSON is invalid. Fix the syntax before saving.'); return; }
+    if (!content || typeof content !== 'object' || Array.isArray(content)) { setError('Content must be a JSON object.'); return; }
+    setSaving(true); setError(''); setMessage('');
+    try {
+      const response = await fetch(`/api/admin/managed-content/${kind}`, {
+        method: 'PUT',
+        headers: { Authorization: `Bearer ${sessionStorage.getItem(TOKEN_KEY) ?? ''}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content }),
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.message ?? 'Could not save content.');
+      setMessage(`Saved ${title.toLowerCase()}. The app will use this content after refresh.`);
+    } catch (e) { setError(e instanceof Error ? e.message : 'Could not save content.'); }
+    finally { setSaving(false); }
+  };
+  return <main className="workspace">
+    <PageHeader eyebrow="App content · localized" title={title} subtitle={kind === 'prayer-library' ? 'Edit fixed prayer collections in Arabic, English, and Greek.' : 'Change the live video and radio player URLs used by the app.'} />
+    <section className="card" style={{ padding: 20 }}>
+      {kind === 'broadcasts' && <p className="page-subtitle" style={{ marginBottom: 14 }}>Keep the current provider URLs unless you have tested a replacement in the mobile and web players.</p>}
+      {kind === 'about' && <p className="page-subtitle" style={{ marginBottom: 14 }}>Edit the About page paragraphs shown in the mobile app and web companion. Keep Arabic, English, and Greek entries in the JSON.</p>}
+      <label className="field"><span className="field-label">Content JSON</span><textarea className="textarea" spellCheck={false} style={{ minHeight: 440, fontFamily: 'var(--app-font-mono)', fontSize: 11 }} value={value} onChange={(event) => setValue(event.target.value)} disabled={busy} /></label>
+      <div style={{ display: 'flex', gap: 8, marginTop: 14 }}><button className="btn btn-primary" onClick={() => void save()} disabled={busy || saving}>{saving ? 'Saving…' : `Save ${title.toLowerCase()}`}</button><button className="btn btn-quiet" onClick={() => void read()} disabled={busy || saving}>Reload saved</button></div>
+      {error && <p role="alert" style={{ color: 'hsl(var(--danger))' }}>{error}</p>}
+      {message && <p role="status" style={{ color: 'hsl(var(--success))' }}>{message}</p>}
+      {busy && <p className="page-subtitle">Loading saved content…</p>}
+    </section>
+  </main>;
 }
 
 function ModerationPage() {
@@ -196,13 +346,13 @@ function ModerationPage() {
   return <main className="workspace"><PageHeader eyebrow="Pastoral care · review queue" title="Moderation" subtitle="Read with care. Keep the community prayer space truthful, safe, and kind." action={<span className="badge badge-pending"><UsersRound size={12} /> {requests.length} awaiting review</span>} /><section className="card table-card"><div className="card-head"><h2>Prayer requests</h2><span className="mono" style={{ color: 'hsl(var(--muted-foreground))', fontSize: 10 }}>PRIVATE REVIEW · NO PUBLIC NAMES</span></div><QueryState loading={query.isLoading} error={query.isError} empty={!requests.length}><div className="table-wrap"><table><thead><tr><th>Request</th><th>Category</th><th>Visibility</th><th>Submitted</th><th>Review</th></tr></thead><tbody>{requests.map((request) => <tr key={request.id}><td><div className="table-title">{request.nameVisibility === 'anonymous' ? 'Anonymous request' : request.name}</div><span className="table-note">Expires {request.expiresAt ? new Date(request.expiresAt).toLocaleDateString() : 'when removed'}</span></td><td>{request.category ?? 'other'}</td><td>{request.visibility}</td><td className="mono">{new Date(request.createdAt).toLocaleDateString()}</td><td><div className="actions"><button className="btn btn-primary btn-small" onClick={() => act(request.id, 'approved')} disabled={review.isPending} data-testid={`button-approve-prayer-${request.id}`}><Check size={13} /> Approve</button><button className="btn btn-quiet btn-small" onClick={() => act(request.id, 'hidden')} disabled={review.isPending} data-testid={`button-hide-prayer-${request.id}`}><Archive size={13} /></button><button className="btn btn-quiet btn-small" onClick={() => act(request.id, 'rejected')} disabled={review.isPending} data-testid={`button-reject-prayer-${request.id}`}><X size={13} /></button></div></td></tr>)}</tbody></table></div></QueryState></section></main>;
 }
 
-function Login() {
+function Login({ locale, onLocaleChange }: { locale: AdminLocale; onLocaleChange: (locale: AdminLocale) => void }) {
   const [, setLocation] = useLocation(); const queryClient = useQueryClient(); const session = useCreateAdminSession(); const [key, setKey] = useState(''); const [show, setShow] = useState(false); const [expired, setExpired] = useState(false);
   const submit = (event: FormEvent) => { event.preventDefault(); setExpired(false); session.mutate({ data: { key } }, { onSuccess: (data) => { sessionStorage.setItem(TOKEN_KEY, data.token); setAuthTokenGetter(getToken); queryClient.clear(); setLocation('/'); }, onError: () => setExpired(true) }); };
-   return <main className="login-page"><section className="login-art"><Logo /><div className="login-quote"><div className="eyebrow" style={{ color: 'hsl(35 65% 68%)' }}>For the keepers of the day</div><h1 className="serif">A steady hand for sacred content.</h1><p>OrthoTypikon Admin brings the daily word, the calendar, and the people behind the prayers into one calm workspace.</p></div><div className="login-note">CONTENT STEWARDSHIP · ORTHOTYPikon / 01</div></section><section className="login-form-wrap"><form className="login-form" onSubmit={submit}><div className="eyebrow">Administrator access</div><h2>Welcome back.</h2><p>Use the short-lived access key issued to your editorial team. It stays in this browser session only.</p><div className="field"><label htmlFor="admin-key">Access key</label><div style={{ position: 'relative' }}><KeyRound size={15} style={{ position: 'absolute', left: 11, top: 11, color: 'hsl(var(--muted-foreground))' }} /><input id="admin-key" name="admin-access-key" autoComplete="new-password" autoFocus required className="input" style={{ paddingLeft: 34, paddingRight: 62 }} type={show ? 'text' : 'password'} value={key} onChange={(e) => setKey(e.target.value)} placeholder="Enter your access key" data-testid="input-admin-key" /><button type="button" onClick={() => setShow(!show)} className="close" style={{ position: 'absolute', right: 8, top: 6, fontSize: 11 }} data-testid="button-toggle-key">{show ? 'Hide' : 'Show'}</button></div></div>{expired && <div style={{ display: 'flex', gap: 8, color: 'hsl(var(--danger))', fontSize: 12, margin: '16px 0' }} data-testid="status-login-error"><CircleAlert size={15} /> The key was not accepted, or the session has expired.</div>}<button className="btn btn-primary" style={{ width: '100%', marginTop: 10 }} disabled={session.isPending} data-testid="button-submit-login">{session.isPending ? 'Opening workspace…' : 'Enter workspace'} <ChevronRight size={15} /></button><div className="login-foot">Session keys are never stored with your typed value.</div></form></section></main>;
+    return <main className="login-page"><section className="login-art"><Logo /><div className="login-quote"><div className="eyebrow" style={{ color: 'hsl(35 65% 68%)' }}>For the keepers of the day</div><h1 className="serif">A steady hand for sacred content.</h1><p>OrthoTypikon Admin brings the daily word, the calendar, and the people behind the prayers into one calm workspace.</p></div><div className="login-note">CONTENT STEWARDSHIP · ORTHOTYPikon / 01</div></section><section className="login-form-wrap"><div className="login-language" style={{ width: 'min(390px, 100%)', display: 'flex', justifyContent: 'flex-end', marginBottom: 18 }}><LanguageSwitcher locale={locale} onChange={onLocaleChange} /></div><form className="login-form" onSubmit={submit}><div className="eyebrow">Administrator access</div><h2>Welcome back.</h2><p>Use the short-lived access key issued to your editorial team. It stays in this browser session only.</p><div className="field"><label htmlFor="admin-key">Access key</label><div style={{ position: 'relative' }}><KeyRound size={15} style={{ position: 'absolute', left: 11, top: 11, color: 'hsl(var(--muted-foreground))' }} /><input id="admin-key" name="admin-access-key" autoComplete="new-password" autoFocus required className="input" style={{ paddingLeft: 34, paddingRight: 62 }} type={show ? 'text' : 'password'} value={key} onChange={(e) => setKey(e.target.value)} placeholder="Enter your access key" data-testid="input-admin-key" /><button type="button" onClick={() => setShow(!show)} className="close" style={{ position: 'absolute', right: 8, top: 6, fontSize: 11 }} data-testid="button-toggle-key">{show ? 'Hide' : 'Show'}</button></div></div>{expired && <div style={{ display: 'flex', gap: 8, color: 'hsl(var(--danger))', fontSize: 12, margin: '16px 0' }} data-testid="status-login-error"><CircleAlert size={15} /> The key was not accepted, or the session has expired.</div>}<button className="btn btn-primary" style={{ width: '100%', marginTop: 10 }} disabled={session.isPending} data-testid="button-submit-login">{session.isPending ? 'Opening workspace…' : 'Enter workspace'} <ChevronRight size={15} /></button><div className="login-foot">Session keys are never stored with your typed value.</div></form></section></main>;
 }
 
-function AuthGate({ children }: { children: ReactNode }) {
+function AuthGate({ children, locale, onLocaleChange }: { children: ReactNode; locale: AdminLocale; onLocaleChange: (locale: AdminLocale) => void }) {
   const [location, setLocation] = useLocation(); const [ready, setReady] = useState(false);
   useEffect(() => {
     const redirectOnExpiry = () => setLocation('/login');
@@ -211,8 +361,8 @@ function AuthGate({ children }: { children: ReactNode }) {
   }, [setLocation]);
   useEffect(() => { setAuthTokenGetter(getToken); setReady(true); if (!getToken() && location !== '/login') setLocation('/login'); }, [location, setLocation]);
   if (!ready) return <div className="login-page"><div className="login-form-wrap"><div className="skeleton" style={{ width: 280, height: 160 }} /></div></div>;
-  if (!getToken()) return <Login />;
-  return <Shell>{children}</Shell>;
+  if (!getToken()) return <Login locale={locale} onLocaleChange={onLocaleChange} />;
+  return <Shell locale={locale} onLocaleChange={onLocaleChange}>{children}</Shell>;
 }
 
 const queryClient = new QueryClient({
@@ -220,9 +370,64 @@ const queryClient = new QueryClient({
   mutationCache: new MutationCache({ onError: (error) => { if (is401(error)) clearAdminSession(queryClient); } }),
 });
 function Router() {
-  return <Switch><Route path="/" component={Overview} /><Route path="/daily-content" component={DailyContentPage} /><Route path="/calendar" component={CalendarPage} /><Route path="/saints" component={SaintsPage} /><Route path="/fasting" component={FastingPage} /><Route path="/learning" component={LearningPage} /><Route path="/places" component={OrthodoxPlacesPage} /><Route path="/moderation" component={ModerationPage} /><Route component={NotFound} /></Switch>;
+  return <Switch><Route path="/" component={Overview} /><Route path="/daily-content" component={DailyContentPage} /><Route path="/calendar" component={CalendarPage} /><Route path="/saints" component={SaintsPage} /><Route path="/fasting" component={FastingPage} /><Route path="/learning" component={LearningPage} /><Route path="/prayer-library">{() => <ManagedContentPage kind="prayer-library" />}</Route><Route path="/broadcasts">{() => <ManagedContentPage kind="broadcasts" />}</Route><Route path="/about">{() => <ManagedContentPage kind="about" />}</Route><Route path="/bible" component={BibleAssetsPage} /><Route path="/places" component={OrthodoxPlacesPage} /><Route path="/moderation" component={ModerationPage} /><Route component={NotFound} /></Switch>;
 }
 function App() {
-  return <QueryClientProvider client={queryClient}><AuthGate><Router /></AuthGate></QueryClientProvider>;
+  const [locale, setLocale] = useState<AdminLocale>(() => {
+    const saved = window.localStorage.getItem('orthotypikon-admin-locale');
+    return saved === 'ar' || saved === 'el' ? saved : 'en';
+  });
+  const rootRef = useRef<HTMLDivElement>(null);
+  const textNodes = useRef(new WeakMap<Text, { source: string; applied: string }>());
+  const translatedAttributes = useRef(new WeakMap<Element, Map<string, { source: string; applied: string }>>());
+  useEffect(() => {
+    window.localStorage.setItem('orthotypikon-admin-locale', locale);
+    document.documentElement.lang = locale;
+    document.documentElement.dir = locale === 'ar' ? 'rtl' : 'ltr';
+    const root = rootRef.current;
+    if (!root) return;
+    root.dir = locale === 'ar' ? 'rtl' : 'ltr';
+
+    const applyTranslations = () => {
+      const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+      let node = walker.nextNode() as Text | null;
+      while (node) {
+        const current = node.data;
+        const previous = textNodes.current.get(node);
+        const source = previous && current === previous.applied ? previous.source : current;
+        const translated = translateAdminText(source, locale);
+        if (translated !== current) node.data = translated;
+        textNodes.current.set(node, { source, applied: translated });
+        node = walker.nextNode() as Text | null;
+      }
+      root.querySelectorAll<HTMLElement>('[placeholder], [title], [aria-label]').forEach((element) => {
+        const entries = translatedAttributes.current.get(element) ?? new Map();
+        for (const attribute of ['placeholder', 'title', 'aria-label']) {
+          const current = element.getAttribute(attribute);
+          if (current === null) continue;
+          const previous = entries.get(attribute);
+          const source = previous && current === previous.applied ? previous.source : current;
+          const translated = translateAdminText(source, locale);
+          if (translated !== current) element.setAttribute(attribute, translated);
+          entries.set(attribute, { source, applied: translated });
+        }
+        translatedAttributes.current.set(element, entries);
+      });
+    };
+
+    applyTranslations();
+    const observer = new MutationObserver(applyTranslations);
+    observer.observe(root, {
+      subtree: true,
+      childList: true,
+      characterData: true,
+      attributes: true,
+      attributeFilter: ['placeholder', 'title', 'aria-label'],
+    });
+    return () => observer.disconnect();
+  }, [locale]);
+
+  const changeLocale = (nextLocale: AdminLocale) => setLocale(nextLocale);
+  return <div ref={rootRef} data-admin-locale-root><QueryClientProvider client={queryClient}><AuthGate locale={locale} onLocaleChange={changeLocale}><Router /></AuthGate></QueryClientProvider></div>;
 }
 export default App;

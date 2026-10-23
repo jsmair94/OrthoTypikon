@@ -10,6 +10,7 @@ const MAX_PER_HOUR = 5;
 const WINDOW_MS = 60 * 60 * 1000;
 const buckets = new Map<string, { count: number; resetAt: number }>();
 type ContactInput = z.infer<typeof SubmitContactMessageBody>;
+type ContactLanguage = "ar" | "en" | "el";
 
 export function createResendSender(
   apiKey: string | undefined,
@@ -49,17 +50,36 @@ async function deliverSupportMessage(input: ContactInput): Promise<void> {
   });
 }
 
-export function buildConfirmationEmail(email: string) {
+export function buildConfirmationEmail(
+  email: string,
+  language: ContactLanguage = "en",
+) {
+  const localizedCopy = {
+    ar: {
+      subject: "تلقينا رسالتك إلى OrthoTypikon",
+      text: "وصلتنا رسالتك. سيراجع فريقنا رسالتك وسيرد عليك إذا لزم الأمر.",
+    },
+    en: {
+      subject: "We received your message to OrthoTypikon",
+      text: "We received your message. Our team will review it and respond if needed.",
+    },
+    el: {
+      subject: "Λάβαμε το μήνυμά σας προς το OrthoTypikon",
+      text: "Λάβαμε το μήνυμά σας. Η ομάδα μας θα το εξετάσει και θα απαντήσει αν χρειάζεται.",
+    },
+  }[language];
   return {
     from: `OrthoTypikon <${CONTACT_EMAIL}>`,
     to: [email.trim()],
-    subject: "We received your message to OrthoTypikon",
-    text: "We received your message. Our team will review it and respond if needed.",
+    ...localizedCopy,
   };
 }
 
-async function deliverConfirmation(email: string): Promise<void> {
-  await sendEmail(buildConfirmationEmail(email));
+async function deliverConfirmation(
+  email: string,
+  language: ContactLanguage,
+): Promise<void> {
+  await sendEmail(buildConfirmationEmail(email, language));
 }
 
 type ContactErrorCode = "support_delivery_failed" | "confirmation_delivery_failed";
@@ -67,7 +87,10 @@ type ContactError = { error: string; code?: ContactErrorCode };
 
 export function createContactRouter(
   sendSupport: (input: ContactInput) => Promise<void> = deliverSupportMessage,
-  sendConfirmation: (email: string) => Promise<void> = deliverConfirmation,
+  sendConfirmation: (
+    email: string,
+    language: ContactLanguage,
+  ) => Promise<void> = deliverConfirmation,
 ): IRouter {
   const router: IRouter = Router();
   router.post("/contact", async (req, res): Promise<void> => {
@@ -106,7 +129,10 @@ export function createContactRouter(
       return;
     }
     try {
-      await sendConfirmation(parsed.data.email.trim());
+      await sendConfirmation(
+        parsed.data.email.trim(),
+        parsed.data.language ?? "en",
+      );
     } catch {
       req.log?.error("Contact confirmation email delivery failed");
       const error: ContactError = {

@@ -1,10 +1,16 @@
 ---
-name: OrthoTypikon Android and web parity
-description: Product convention for keeping Android and web behavior aligned.
+name: OrthoTypikon website and mobile UI separation
+description: Product convention for a standalone, web-first website beside the mobile app.
 ---
 
-Prefer shared Expo components and behavior for OrthoTypikon's Android app and web view. When a user-facing feature changes, update the shared path so both platforms receive it; rebuild the Android APK when shipping code changes that need to reach installed Android users. Add platform-specific behavior only when required by a native capability or explicitly requested.
+Share OrthoTypikon content and domain behavior across platforms where practical, but give the public website its own web-first layout and navigation. Do not serve the Expo mobile interface as the website or stretch mobile screens across desktop. Keep mobile styling and navigation native to the app.
 
-**Why:** The user asked that every update be reflected on both Android and web, after a visual difference between those views caused confusion.
+**Why:** The user clarified that the website should be a conventional standalone website, not look or behave like the mobile app.
 
-**How to apply:** For UI and behavior changes, first check whether the shared Expo screen/component is the source for both renderers. Avoid web-only patches; include Android verification/build steps when appropriate.
+**How to apply:** Build public web changes in the dedicated website artifact. Preserve equivalent content when useful, but choose web-appropriate information architecture and responsive layouts independently of the mobile app.
+
+For destructive actions shared across web and native, use an app-owned confirmation dialog instead of a multi-button `Alert.alert`. Removing a locally saved record should proceed even if its scheduled notification cannot be cancelled; show a warning after deletion.
+
+**Why:** A name-day reminder could be edited but not deleted reliably across platforms, and a notification cleanup failure should not strand the locally saved reminder.
+
+**How to apply:** Use this for shared Expo screens that manage AsyncStorage-backed records and associated notifications.

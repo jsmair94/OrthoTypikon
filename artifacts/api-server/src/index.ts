@@ -1,7 +1,12 @@
 import app from "./app";
 import { logger } from "./lib/logger";
 import path from "node:path";
-import { applyDatabaseMigrations, isDatabaseConfigured, pool } from "@workspace/db";
+import {
+  applyDatabaseMigrations,
+  isDatabaseConfigured,
+  pool,
+  validateCurrentDatabaseSchema,
+} from "@workspace/db";
 
 const rawPort = process.env["PORT"];
 
@@ -29,12 +34,17 @@ function formatStartupError(error: unknown): string {
 
 async function startServer(): Promise<void> {
   if (isDatabaseConfigured) {
-    const migrationsFolder = path.join(import.meta.dirname, "migrations");
-
-    logger.info({ migrationsFolder }, "Applying pending database migrations");
     try {
-      await applyDatabaseMigrations(migrationsFolder);
-      logger.info("Database migrations are up to date");
+      if (process.env["NODE_ENV"] === "production") {
+        logger.info("Validating production database schema before startup");
+        await validateCurrentDatabaseSchema();
+        logger.info("Production database schema is valid");
+      } else {
+        const migrationsFolder = path.join(import.meta.dirname, "migrations");
+        logger.info({ migrationsFolder }, "Applying pending database migrations");
+        await applyDatabaseMigrations(migrationsFolder);
+        logger.info("Database migrations are up to date");
+      }
     } catch (error) {
       logger.fatal(
         { err: error },

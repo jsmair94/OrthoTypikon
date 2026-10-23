@@ -9,6 +9,7 @@
     "start": "node --enable-source-maps ./dist/index.mjs",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "pnpm run build && node --experimental-transform-types --experimental-loader ./test/extensionless-ts-loader.mjs --test test/*.test.mjs",
+    "check:bible-assets": "node --experimental-transform-types --experimental-loader ./test/extensionless-ts-loader.mjs ./scripts/check-bible-assets.mjs",
     "verify": "node ./scripts/verify.mjs"
   },
   "dependencies": {

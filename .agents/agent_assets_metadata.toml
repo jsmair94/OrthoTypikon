@@ -5,14 +5,14 @@ generated = []
 id = "dfzvbVruGRBGhKPtKGx29"
 uri = "file://artifacts/orthotypikon/dist/OrthoTypikon-1.0.0-release.apk"
 type = "unspecified"
-title = "OrthoTypikon Android APK"
-description = "Updated direct-install Android build with fixed daily occasion card sizing and Arabic text alignment. Debug-signed; not signed for Play Store release."
+title = "تحميل مباشر: OrthoTypikon Android 1.0.0 (APK)"
+description = "نزّل ملف التثبيت من هذه البطاقة؛ لا تفتحه من مستعرض ملفات المشروع."
 logical_id = "adca04aa-2f1a-4bca-95a4-dc736904aa38"
-content_hash = "sha256:59741c5175e3b933f67487a5cdff4716f35520882e590784343a706f59bbf60b"
-size = 54910782
-mtime_ms = 1790466736257
-storage_uri = "gcs://replit-rams-assets-pike/rams/assets/repl:1acb33f3-fdb4-48bf-b45f-f7614dea49b5/adca04aa-2f1a-4bca-95a4-dc736904aa38/4ae8128e-1c45-4f3c-a808-0f3c32ed8627"
-storage_version_token = "1790466915893937"
+content_hash = "sha256:d9eaeaa611cfa1a07f84b7707097dbe19fe5f53ff075d07e5308e1944ef1d9ea"
+size = 95994550
+mtime_ms = 1792003867065
+storage_uri = "gcs://replit-rams-assets-pike/rams/assets/repl:1acb33f3-fdb4-48bf-b45f-f7614dea49b5/adca04aa-2f1a-4bca-95a4-dc736904aa38/36893764-af57-4a0c-af77-fa73f08a16e7"
+storage_version_token = "1792004388178632"
 content_type = "application/octet-stream"
 
 [[outputs]]
@@ -42,3 +42,45 @@ mtime_ms = 1790352824935
 storage_uri = "gcs://replit-rams-assets-pike/rams/assets/repl:1acb33f3-fdb4-48bf-b45f-f7614dea49b5/8160b909-f90a-4f64-afea-70fde47368cd/f5dce994-5d01-4a4e-ad61-8dff6f598937"
 storage_version_token = "1790352832670079"
 content_type = "image/jpeg"
+
+[[outputs]]
+id = "FiSm9EM1ONcj0C6pLNCN2"
+uri = "file://artifacts/orthotypikon/dist/OrthoTypikon-1.0.1-release.apk"
+type = "unspecified"
+title = "تحميل مباشر: OrthoTypikon Android 1.0.1 (APK)"
+description = "نسخة Android محدّثة بعنوان API الجديد. استخدم بطاقة التنزيل هذه، لا تفتح الملف من مستعرض ملفات المشروع."
+logical_id = "341a641e-90e7-438f-afe1-00d22ab03b45"
+content_hash = "sha256:696f15020043c3e45bfa3ff10094044c06cb71d6cfd212f4335afa6d0a2b98bd"
+size = 95994558
+mtime_ms = 1792006091617
+storage_uri = "gcs://replit-rams-assets-pike/rams/assets/repl:1acb33f3-fdb4-48bf-b45f-f7614dea49b5/341a641e-90e7-438f-afe1-00d22ab03b45/acb464bd-112a-47af-a99a-870677afc2fd"
+storage_version_token = "1792006231418501"
+content_type = "application/octet-stream"
+
+[[outputs]]
+id = "vCSt7IM6_vXK9Rwi-NK1o"
+uri = "file://artifacts/orthotypikon/dist/OrthoTypikon-1.0.3-release.apk"
+type = "unspecified"
+title = "OrthoTypikon Android APK 1.0.3"
+description = "Direct-install Android APK, arm64-v8a only. Size: 56.9 MB. Signature verified."
+logical_id = "a304d72a-efd8-453b-a39a-84b65a3eee8a"
+content_hash = "sha256:d72cdfefa65bec9b982f1aacc5abdab99d1d4f48a08934a9f5b5509e65bb85e3"
+size = 56868554
+mtime_ms = 1792072345409
+storage_uri = "gcs://replit-rams-assets-pike/rams/assets/repl:1acb33f3-fdb4-48bf-b45f-f7614dea49b5/a304d72a-efd8-453b-a39a-84b65a3eee8a/ca870ccc-16ce-442a-978b-872e8f9e6d71"
+storage_version_token = "1792072368157651"
+content_type = "application/octet-stream"
+
+[[outputs]]
+id = "hDYLr1wpA21KNOsrWv5eG"
+uri = "file://artifacts/orthotypikon/dist/OrthoTypikon-1.0.4-release.apk"
+type = "unspecified"
+title = "OrthoTypikon Android APK 1.0.4"
+description = "Android arm64 APK with api.orthotypikon.org configured for contact form delivery. Direct-install build; not Play Store signing."
+logical_id = "ff8bb418-8d45-4a4a-b72f-720ebd51c791"
+content_hash = "sha256:f0d79c18ce2380aee366252b675b3bb5672525c0cdb9c524c1f46c95e289b90d"
+size = 56869754
+mtime_ms = 1792412364876
+storage_uri = "gcs://replit-rams-assets-pike/rams/assets/repl:1acb33f3-fdb4-48bf-b45f-f7614dea49b5/ff8bb418-8d45-4a4a-b72f-720ebd51c791/b291b689-6081-4a7a-bfb5-8eb84cf2a72c"
+storage_version_token = "1792412421641384"
+content_type = "application/octet-stream"

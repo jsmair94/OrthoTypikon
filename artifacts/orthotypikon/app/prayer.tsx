@@ -1,6 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Haptics from 'expo-haptics';
-import { setAudioModeAsync, useAudioPlayer, useAudioPlayerStatus } from 'expo-audio';
+import { setAudioModeAsync } from 'expo-audio';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Feather } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
@@ -10,6 +10,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useColors } from '@/hooks/useColors';
 import { useI18n } from '@/hooks/usePreferences';
 import { ROSARY_PRAYER_CONTENT_ID, rosaryPrayerOptions, type RosaryPrayerId } from '@/data/rosaryPrayerOptions';
+import { useAppAudio } from '@/hooks/useAppAudio';
 
 const BEAD_COUNT = 33;
 const STORAGE_KEY = 'orthotypikon-prayer-count';
@@ -35,8 +36,11 @@ export default function PrayerScreen() {
   const [prayerMenuOpen, setPrayerMenuOpen] = useState(false);
   const pendingAudioPause = useRef(false);
   const introAnimation = useRef(new Animated.Value(0)).current;
-  const audioPlayer = useAudioPlayer(PRAYER_AUDIO, { updateInterval: 500, keepAudioSessionActive: true });
-  const audioStatus = useAudioPlayerStatus(audioPlayer);
+  const { player: audioPlayer, status: globalAudioStatus, activeId, play, pause } = useAppAudio();
+  const isRosaryAudio = activeId === 'rosary';
+  const audioStatus = isRosaryAudio
+    ? globalAudioStatus
+    : { ...globalAudioStatus, playing: false, currentTime: 0, duration: 0, didJustFinish: false, isLoaded: false };
   const prayerOptions = rosaryPrayerOptions[language];
   const selectedPrayer = prayerOptions.find((option) => option.id === selectedPrayerId) ?? prayerOptions[0];
   const hasPrayerContent = selectedPrayer.id === ROSARY_PRAYER_CONTENT_ID;
@@ -60,10 +64,7 @@ export default function PrayerScreen() {
 
   useEffect(() => {
     setAudioModeAsync({ playsInSilentMode: true, interruptionMode: 'duckOthers' }).catch(() => undefined);
-    return () => {
-      audioPlayer.pause();
-    };
-  }, [audioPlayer]);
+  }, []);
 
   useEffect(() => {
     if (!pendingAudioPause.current) return;
@@ -73,9 +74,9 @@ export default function PrayerScreen() {
     }
     if (!hasPrayerContent && audioStatus.currentTime > 0) {
       pendingAudioPause.current = false;
-      audioPlayer.pause();
+      pause('rosary');
     }
-  }, [audioPlayer, audioStatus.currentTime, audioStatus.playing, hasPrayerContent]);
+  }, [audioStatus.currentTime, audioStatus.playing, hasPrayerContent, pause]);
 
   const pray = async () => {
     const next = count >= BEAD_COUNT ? 1 : count + 1;
@@ -93,9 +94,9 @@ export default function PrayerScreen() {
   const selectPrayer = (id: RosaryPrayerId) => {
     if (id === ROSARY_PRAYER_CONTENT_ID) {
       pendingAudioPause.current = false;
-    } else if (id !== selectedPrayerId && audioStatus.playing) {
+    } else if (id !== selectedPrayerId && isRosaryAudio && audioStatus.playing) {
       if (audioStatus.currentTime > 0) {
-        audioPlayer.pause();
+        pause('rosary');
       } else {
         pendingAudioPause.current = true;
       }
@@ -105,14 +106,11 @@ export default function PrayerScreen() {
   };
 
   const toggleAudio = async () => {
-    if (audioStatus.playing) {
-      audioPlayer.pause();
+    if (isRosaryAudio && audioStatus.playing) {
+      pause('rosary');
       return;
     }
-    if (audioStatus.didJustFinish || (audioStatus.duration > 0 && audioStatus.currentTime >= audioStatus.duration)) {
-      await audioPlayer.seekTo(0);
-    }
-    audioPlayer.play();
+    await play('rosary', PRAYER_AUDIO);
   };
 
   const audioProgress = audioStatus.duration > 0 ? Math.min(audioStatus.currentTime / audioStatus.duration, 1) : 0;

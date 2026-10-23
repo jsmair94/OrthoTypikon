@@ -12,8 +12,10 @@ caches survive workspace restarts. Since Metro's monorepo watch folders can
 still include ignored files, exclude Gradle/SDK/native build output directories
 from Metro's block list or a populated cache can exhaust Linux's file-watcher
 limit. Dependency-wide release lint may need to run separately from APK
-packaging. If D8 runs out of heap at the DEX merge step, a fresh compute restart
-followed by an incremental retry with a larger Gradle heap can succeed.
+packaging. Do not rebuild an APK after every source or UI edit; batch changes and
+package only when the user explicitly requests an APK or release build. If D8
+runs out of heap at the DEX merge step, a fresh compute restart followed by an
+incremental retry with a larger Gradle heap can succeed.
 
 **Why:** Expo native compilation, the Kotlin daemon, Ninja's C++ compiler
 processes, Metro's file watcher, and API previews can exhaust workspace
@@ -22,12 +24,15 @@ insufficient for D8, while increasing the heap without first restarting compute
 caused the workspace to restart under combined JVM pressure.
 Even a successful clean arm64 build can take close to an hour here: Metro's
 production bundle and a fresh native dependency build both consume substantial
-CPU while logs are quiet for long stretches.
+CPU while logs are quiet for long stretches. The user also asked to avoid
+creating an APK after every modification, so source iteration should not trigger
+release packaging by default.
 
 **How to apply:** For direct-install APK work in this workspace, restart compute
 if a prior build exhausted memory, stop the app/API/preview workflows, preserve
 the low-concurrency arm64-only profile, and restore the needed workflows after
-packaging. Keep the cache local for reuse, but exclude `.gradle-home`,
+packaging. Validate UI/source edits without making an APK; build only after an
+explicit APK or release request. Keep the cache local for reuse, but exclude `.gradle-home`,
 `.android-sdk`, `android`, and `dist` from Metro file watching. Treat DEX heap
 failures, watcher-limit errors, and daemon disappearance as workspace-capacity
 issues, not app-source errors. If a clean build appears stalled, check for active

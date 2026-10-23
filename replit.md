@@ -10,8 +10,15 @@ saints, fasting guidance, and daily content.
 - `pnpm run typecheck` — full typecheck across all packages
 - `pnpm run build` — typecheck + build all packages
 - `pnpm --filter @workspace/api-spec run codegen` — regenerate API hooks and Zod schemas from the OpenAPI spec
-- `pnpm --filter @workspace/db run push` — push DB schema changes (dev only)
+- `pnpm --filter @workspace/db run generate` — generate a tracked migration after changing the Drizzle schema
+- `pnpm --filter @workspace/db run check:migrations` — verify the tracked migrations match the Drizzle schema
+- `pnpm --filter @workspace/db run push` — push DB schema changes (development only; never use for production)
 - Required env: `DATABASE_URL` — Postgres connection string
+
+In development, the API applies pending migrations from `lib/db/drizzle` before
+listening whenever `DATABASE_URL` is configured. In production, Replit Publish
+applies managed database schema changes; the API validates that schema at startup
+without applying DDL. A failed migration or schema validation stops startup.
 
 ## Stack
 
@@ -28,6 +35,7 @@ saints, fasting guidance, and daily content.
 - `artifacts/orthotypikon/app.json` — app identity, Android package, icon, splash, and native plugins
 - `artifacts/orthotypikon/ANDROID_APK.md` — APK prerequisites, build, download, install, and Play Store limitations
 - `artifacts/orthotypikon/scripts/build-apk.js` — repeatable local Android APK build
+- `lib/db/DATABASE_OPERATIONS.md` — inspect and safely recover from failed database index builds
 
 ## Architecture decisions
 
@@ -40,6 +48,9 @@ saints, fasting guidance, and daily content.
 The app onboards users into Arabic, English, or Greek, supports Gregorian or
 Julian calendar preferences, and provides home, calendar, library, live,
 prayer, fasting, learning, compass, pastoral, and widget experiences.
+The kitchen/recipe section is for food recipes only: list all recipes together
+and open a dish to show its ingredients and cooking method. Keep fasting
+calendar information out of that section.
 
 ## User preferences
 
