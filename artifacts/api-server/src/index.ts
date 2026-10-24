@@ -35,7 +35,10 @@ function formatStartupError(error: unknown): string {
 async function startServer(): Promise<void> {
   if (isDatabaseConfigured) {
     try {
-      if (process.env["NODE_ENV"] === "production") {
+      // Replit-managed production databases are migrated by Replit Publish, so only validate there.
+      // Railway-hosted databases are not migrated by anything else, so apply migrations at startup.
+      const isRailway = Boolean(process.env["RAILWAY_ENVIRONMENT_ID"]);
+      if (process.env["NODE_ENV"] === "production" && !isRailway) {
         logger.info("Validating production database schema before startup");
         await validateCurrentDatabaseSchema();
         logger.info("Production database schema is valid");
