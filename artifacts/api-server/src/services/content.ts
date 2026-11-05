@@ -85,10 +85,17 @@ function calendarResponse(
   saints: ReturnType<typeof saintSummary>[],
   calendarType: CalendarType,
 ) {
+  const canonicalDate =
+    entry.calendarSystem === "julian"
+      ? toCanonicalDate(entry.gregorianDate, "julian")
+      : entry.gregorianDate;
   return {
     id: entry.id,
-    date: fromCanonicalDate(entry.gregorianDate, calendarType),
-    canonicalDate: entry.gregorianDate,
+    date:
+      entry.calendarSystem === calendarType
+        ? entry.gregorianDate
+        : fromCanonicalDate(canonicalDate, calendarType),
+    canonicalDate,
     calendarType,
     locale: entry.locale,
     feast: entry.feastTitle
@@ -108,6 +115,28 @@ export function getCalendarByDate(
 ) {
   const canonicalDate = toCanonicalDate(requestedDate, calendarType);
   return queryDatabase(async (database) => {
+    if (calendarType === "julian") {
+      const [julianEntry] = await database
+        .select()
+        .from(calendarEntriesTable)
+        .where(
+          and(
+            eq(calendarEntriesTable.gregorianDate, requestedDate),
+            eq(calendarEntriesTable.calendarSystem, "julian"),
+            eq(calendarEntriesTable.locale, locale),
+            eq(calendarEntriesTable.publicationStatus, "published"),
+          ),
+        )
+        .limit(1);
+      if (julianEntry) {
+        const saints = await saintsForCalendarEntries(database, [julianEntry.id]);
+        return calendarResponse(
+          julianEntry,
+          saints.get(julianEntry.id) ?? [],
+          calendarType,
+        );
+      }
+    }
     const [entry] = await database
       .select()
       .from(calendarEntriesTable)
@@ -138,9 +167,25 @@ export function listCalendarByMonth(
       .from(calendarEntriesTable)
       .where(
         and(
-          gte(calendarEntriesTable.gregorianDate, start),
-          lt(calendarEntriesTable.gregorianDate, end),
-          eq(calendarEntriesTable.calendarSystem, "gregorian"),
+          or(
+            and(
+              gte(calendarEntriesTable.gregorianDate, start),
+              lt(calendarEntriesTable.gregorianDate, end),
+              eq(calendarEntriesTable.calendarSystem, "gregorian"),
+            ),
+            ...(calendarType === "julian"
+              ? [
+                  and(
+                    gte(calendarEntriesTable.gregorianDate, `${month}-01`),
+                    lt(
+                      calendarEntriesTable.gregorianDate,
+                      nextMonthStart(month),
+                    ),
+                    eq(calendarEntriesTable.calendarSystem, "julian"),
+                  ),
+                ]
+              : []),
+          ),
           eq(calendarEntriesTable.locale, locale),
           eq(calendarEntriesTable.publicationStatus, "published"),
         ),
@@ -154,6 +199,13 @@ export function listCalendarByMonth(
       calendarResponse(entry, saints.get(entry.id) ?? [], calendarType),
     );
   });
+}
+
+function nextMonthStart(month: string) {
+  const [year, monthNumber] = month.split("-").map(Number);
+  const nextYear = monthNumber === 12 ? year + 1 : year;
+  const nextMonth = monthNumber === 12 ? 1 : monthNumber + 1;
+  return `${String(nextYear).padStart(4, "0")}-${String(nextMonth).padStart(2, "0")}-01`;
 }
 
 export function getDailyContent(
