@@ -1,0 +1,1 @@
+ALTER TABLE "calendar_entries" ADD COLUMN "commemorated_saints" text[] DEFAULT '{}' NOT NULL;

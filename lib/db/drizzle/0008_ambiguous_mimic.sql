@@ -1,0 +1,1 @@
+ALTER TABLE "calendar_entries" ADD COLUMN "commemorated_saint_bios" text[] DEFAULT '{}'::text[] NOT NULL;

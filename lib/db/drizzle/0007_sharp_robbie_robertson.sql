@@ -1,0 +1,1 @@
+ALTER TABLE "calendar_entries" ALTER COLUMN "commemorated_saints" SET DEFAULT '{}'::text[];

@@ -4,22 +4,23 @@ import { MutationCache, QueryCache, QueryClient, QueryClientProvider, useQueryCl
 import {
   Archive, BookOpen, CalendarDays, Check, ChevronRight, CircleAlert, Clock3, FileText, Info,
   Flame, HeartHandshake, KeyRound, Languages, LayoutDashboard, LogOut, Menu, Pencil,
-  MapPin, Plus, Search, ShieldCheck, Sparkles, Utensils, UsersRound, X, Radio, Upload, type LucideIcon,
+  MapPin, Plus, Search, ShieldCheck, Sparkles, Trash2, Utensils, UsersRound, X, Radio, Upload, type LucideIcon,
 } from 'lucide-react';
 import {
   getGetAdminOverviewQueryKey, getListAdminCalendarEntriesQueryKey, getListAdminDailyContentQueryKey,
   getListAdminFastingGuidanceQueryKey, getListAdminFastingRecipesQueryKey, getListAdminLearningEntriesQueryKey,
-  getListAdminPrayerRequestsQueryKey, getListAdminSaintsQueryKey, setAuthTokenGetter,
+  getListAdminPrayerRequestsQueryKey, setAuthTokenGetter,
   useArchiveAdminCalendarEntry, useArchiveAdminDailyContent, useArchiveAdminFastingGuidance,
-  useArchiveAdminFastingRecipe, useArchiveAdminLearningEntry, useArchiveAdminSaint,
-  useCreateAdminSession, useCreateAdminSaint, useCreateAdminFastingRecipe, useCreateAdminLearningEntry,
+  useArchiveAdminFastingRecipe, useArchiveAdminLearningEntry,
+  useDeleteAdminCalendarEntryPermanently,
+  useCreateAdminSession, useCreateAdminFastingRecipe, useCreateAdminLearningEntry,
   useGetAdminOverview, useListAdminCalendarEntries, useListAdminDailyContent, useListAdminFastingGuidance,
-  useListAdminFastingRecipes, useListAdminLearningEntries, useListAdminPrayerRequests, useListAdminSaints,
+  useListAdminFastingRecipes, useListAdminLearningEntries, useListAdminPrayerRequests,
   useReviewAdminPrayerRequest, useUpdateAdminCalendarEntry, useUpdateAdminDailyContent,
-  useUpdateAdminFastingGuidance, useUpdateAdminFastingRecipe, useUpdateAdminLearningEntry, useUpdateAdminSaint,
+  useUpdateAdminFastingGuidance, useUpdateAdminFastingRecipe, useUpdateAdminLearningEntry,
   useUpsertAdminCalendarEntry, useUpsertAdminDailyContent, useUpsertAdminFastingGuidance,
   type AdminCalendarEntry, type AdminDailyContent, type AdminFastingGuidance, type AdminFastingRecipe,
-  type AdminLearningEntry, type AdminSaint, type PrayerRequest,
+  type AdminLearningEntry, type PrayerRequest,
 } from '@workspace/api-client-react';
 import NotFound from '@/pages/not-found';
 import OrthodoxPlacesPage from '@/pages/orthodox-places';
@@ -37,7 +38,6 @@ const nav = [
   { href: '/', label: 'Overview', icon: LayoutDashboard },
   { href: '/daily-content', label: 'Daily content', icon: FileText },
   { href: '/calendar', label: 'Calendar', icon: CalendarDays },
-  { href: '/saints', label: 'Saints', icon: Sparkles },
   { href: '/fasting', label: 'Fasting', icon: Flame },
   { href: '/learning', label: 'Learning', icon: BookOpen },
   { href: '/prayer-library', label: 'Prayer library', icon: HeartHandshake },
@@ -155,12 +155,45 @@ function Overview() {
   </main>;
 }
 
-type FieldDef = { key: string; label: string; type?: string; span?: boolean; options?: string[]; nullable?: boolean };
+type FieldDef = {
+  key: string;
+  label: string | ((form: AnyRecord) => string);
+  type?: string | ((form: AnyRecord) => string);
+  span?: boolean;
+  options?: string[];
+  nullable?: boolean;
+  required?: boolean;
+  pattern?: string;
+  placeholder?: string;
+  validate?: (value: unknown, form: AnyRecord) => string | null;
+};
 function EditorModal({ title, fields, initial, onClose, onSave, busy }: { title: string; fields: FieldDef[]; initial: AnyRecord; onClose: () => void; onSave: (data: AnyRecord) => void; busy?: boolean }) {
-  const [form, setForm] = useState<AnyRecord>(initial);
+  const [form, setForm] = useState<AnyRecord>(() => Object.fromEntries(
+    Object.entries(initial).map(([key, value]) => {
+      const field = fields.find((candidate) => candidate.key === key);
+      const fieldType = typeof field?.type === 'function' ? field.type(initial) : field?.type;
+      return [key, fieldType === 'date' && value != null
+        ? (value instanceof Date ? value.toISOString() : String(value)).slice(0, 10)
+        : value];
+    }),
+  ));
+  const [validationError, setValidationError] = useState('');
   const set = (key: string, value: any) => setForm((current) => ({ ...current, [key]: value }));
-  const submit = (event: FormEvent) => { event.preventDefault(); onSave(form); };
-  return <div className="modal-backdrop" role="presentation" onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}><form className="modal" onSubmit={submit}><div className="modal-head"><div><div className="eyebrow">Content editor</div><h2>{title}</h2></div><button type="button" className="close" onClick={onClose} data-testid="button-close-modal"><X size={19} /></button></div><div className="modal-body"><div className="form-grid">{fields.map((field) => <div className={`field ${field.span ? 'span-2' : ''}`} key={field.key}><label htmlFor={`field-${field.key}`}>{field.label}</label>{field.options ? <select id={`field-${field.key}`} className="select" value={form[field.key] ?? ''} onChange={(e) => set(field.key, e.target.value)} data-testid={`input-${field.key}`}><option value="">Select</option>{field.options.map((option) => <option value={option} key={option}>{field.key === 'locale' ? languageName(option) : option}</option>)}</select> : field.type === 'textarea' ? <textarea id={`field-${field.key}`} className="textarea" value={form[field.key] ?? ''} onChange={(e) => set(field.key, e.target.value)} data-testid={`input-${field.key}`} /> : <input id={`field-${field.key}`} className="input" type={field.type ?? 'text'} value={form[field.key] ?? ''} onChange={(e) => set(field.key, field.type === 'number' ? (e.target.value === '' ? null : Number(e.target.value)) : e.target.value)} data-testid={`input-${field.key}`} />}</div>)}</div></div><div className="modal-foot"><button type="button" className="btn btn-quiet" onClick={onClose} data-testid="button-cancel-edit">Cancel</button><button type="submit" className="btn btn-primary" disabled={busy} data-testid="button-save-record">{busy ? 'Saving…' : 'Save record'}</button></div></form></div>;
+  const submit = (event: FormEvent) => {
+    event.preventDefault();
+    const invalidField = fields.find((field) => field.validate?.(form[field.key], form));
+    if (invalidField) {
+      setValidationError(invalidField.validate?.(form[invalidField.key], form) ?? 'Enter a valid value.');
+      return;
+    }
+    setValidationError('');
+    onSave(form);
+  };
+  return <div className="modal-backdrop" role="presentation" onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}><form className="modal" onSubmit={submit}><div className="modal-head"><div><div className="eyebrow">Content editor</div><h2>{title}</h2></div><button type="button" className="close" onClick={onClose} data-testid="button-close-modal"><X size={19} /></button></div><div className="modal-body"><div className="form-grid">{fields.map((field) => {
+    const type = typeof field.type === 'function' ? field.type(form) : field.type;
+    const label = typeof field.label === 'function' ? field.label(form) : field.label;
+    return <div className={`field ${field.span ? 'span-2' : ''}`} key={field.key}><label htmlFor={`field-${field.key}`}>{label}</label>{field.options ? <select id={`field-${field.key}`} className="select" value={form[field.key] ?? ''} onChange={(e) => set(field.key, e.target.value)} data-testid={`input-${field.key}`}><option value="">Select</option>{field.options.map((option) => <option value={option} key={option}>{field.key === 'locale' ? languageName(option) : option}</option>)}</select> : type === 'textarea' ? <textarea id={`field-${field.key}`} className="textarea" value={form[field.key] ?? ''} onChange={(e) => set(field.key, e.target.value)} data-testid={`input-${field.key}`} /> : <input id={`field-${field.key}`} className="input" type={type ?? 'text'} value={form[field.key] ?? ''} required={field.required} pattern={type === 'text' ? field.pattern : undefined} placeholder={field.placeholder} onChange={(e) => set(field.key, type === 'number' ? (e.target.value === '' ? null : Number(e.target.value)) : e.target.value)} data-testid={`input-${field.key}`} />}</div>;
+  })}</div>{validationError && <p role="alert" className="table-note">{validationError}</p>}</div><div className="modal-foot"><button type="button" className="btn btn-quiet" onClick={onClose} data-testid="button-cancel-edit">Cancel</button><button type="submit" className="btn btn-primary" disabled={busy} data-testid="button-save-record">{busy ? 'Saving…' : 'Save record'}</button></div></form></div>;
 }
 
 function ResourceToolbar({ search, setSearch, onAdd, label = 'New record' }: { search: string; setSearch: (value: string) => void; onAdd: () => void; label?: string }) {
@@ -186,19 +219,84 @@ function DailyContentPage() {
 
 const commonFields: FieldDef[] = [{ key: 'locale', label: 'Language', options: ['ar', 'en', 'el'] }, { key: 'publicationStatus', label: 'Status', options: ['draft', 'published', 'archived'] }];
 function CalendarPage() {
-  const params = useMemo(() => ({ page: 1, limit: 30 }), []); const query = useListAdminCalendarEntries(params); const upsert = useUpsertAdminCalendarEntry(); const update = useUpdateAdminCalendarEntry(); const archive = useArchiveAdminCalendarEntry(); const qc = useQueryClient(); const [search, setSearch] = useState(''); const [edit, setEdit] = useState<AnyRecord | null>(null);
-  const fields = [{ key: 'gregorianDate', label: 'Gregorian date', type: 'date' }, { key: 'calendarSystem', label: 'Calendar', options: ['gregorian', 'julian'] }, ...commonFields, { key: 'feastTitle', label: 'Feast title' }, { key: 'fastingTitle', label: 'Fasting title' }, { key: 'liturgy', label: 'Liturgy' }, { key: 'color', label: 'Liturgical color' }, { key: 'saintIds', label: 'Saint IDs · comma separated', span: true }];
-  const rows = ((query.data as AnyRecord)?.items ?? []) as AdminCalendarEntry[]; const filtered = rows.filter((r) => `${r.gregorianDate} ${r.feastTitle ?? ''}`.toLowerCase().includes(search.toLowerCase()));
-  const save = (form: AnyRecord) => { const data = { ...form, feastTitle: form.feastTitle || null, fastingTitle: form.fastingTitle || null, liturgy: form.liturgy || null, color: form.color || null, saintIds: typeof form.saintIds === 'string' ? form.saintIds.split(',').map((s: string) => s.trim()).filter(Boolean) : form.saintIds ?? [] }; const done = () => { qc.invalidateQueries({ queryKey: getListAdminCalendarEntriesQueryKey(params) }); qc.invalidateQueries({ queryKey: getGetAdminOverviewQueryKey() }); setEdit(null); }; form.id ? update.mutate({ id: form.id, data: data as any }, { onSuccess: done }) : upsert.mutate({ data: data as any }, { onSuccess: done }); };
-  return <main className="workspace"><PageHeader eyebrow="Persistent library · dates" title="Calendar" subtitle="Keep feast days, fasting signals, liturgy, and saint links aligned." /><section className="card table-card"><ResourceToolbar search={search} setSearch={setSearch} label="Add calendar entry" onAdd={() => setEdit({ gregorianDate: new Date().toISOString().slice(0, 10), calendarSystem: 'gregorian', locale: 'en', feastTitle: '', fastingTitle: '', liturgy: '', color: '', saintIds: '', publicationStatus: 'draft' })} /><QueryState loading={query.isLoading} error={query.isError} empty={!filtered.length}><div className="table-wrap"><table><thead><tr><th>Date</th><th>Feast</th><th>Fasting / liturgy</th><th>Saint links</th><th>Status</th><th /></tr></thead><tbody>{filtered.map((row) => <tr key={row.id}><td className="mono">{row.gregorianDate}<span className="table-note">{row.calendarSystem} · {row.locale}</span></td><td className="table-title">{row.feastTitle ?? 'Ordinary day'}</td><td>{row.fastingTitle ?? 'No fasting note'}<span className="table-note">{row.liturgy ?? 'No liturgy'}</span></td><td>{row.saintIds.length} linked</td><td><StatusBadge status={row.publicationStatus} /></td><td><div className="actions"><button className="btn btn-quiet btn-small" onClick={() => setEdit({ ...row, saintIds: row.saintIds.join(', ') })} data-testid={`button-edit-calendar-${row.id}`}><Pencil size={13} /></button><button className="btn btn-quiet btn-small" onClick={() => { if (confirm('Archive this calendar entry?')) archive.mutate({ id: row.id }, { onSuccess: () => qc.invalidateQueries({ queryKey: getListAdminCalendarEntriesQueryKey(params) }) }); }} data-testid={`button-archive-calendar-${row.id}`}><Archive size={13} /></button></div></td></tr>)}</tbody></table></div></QueryState></section>{edit && <EditorModal title={edit.id ? 'Edit calendar entry' : 'New calendar entry'} fields={fields} initial={edit} onClose={() => setEdit(null)} onSave={save} busy={upsert.isPending || update.isPending} />}</main>;
-}
-
-function SaintsPage() {
-  const params = useMemo(() => ({ page: 1, limit: 30 }), []); const query = useListAdminSaints(params); const create = useCreateAdminSaint(); const update = useUpdateAdminSaint(); const archive = useArchiveAdminSaint(); const qc = useQueryClient(); const [search, setSearch] = useState(''); const [edit, setEdit] = useState<AnyRecord | null>(null);
-  const rows = ((query.data as AnyRecord)?.items ?? []) as AdminSaint[]; const filtered = rows.filter((r) => `${r.name} ${r.shortBio}`.toLowerCase().includes(search.toLowerCase()));
-  const fields: FieldDef[] = [{ key: 'id', label: 'Profile ID' }, { key: 'name', label: 'Name' }, { key: 'feastMonth', label: 'Feast month', type: 'number' }, { key: 'feastDay', label: 'Feast day', type: 'number' }, ...commonFields, { key: 'shortBio', label: 'Short biography', type: 'textarea', span: true }, { key: 'audioText', label: 'Audio text', type: 'textarea', span: true }];
-  const save = (form: AnyRecord) => { const data = { ...form, feastMonth: form.feastMonth || null, feastDay: form.feastDay || null }; const done = () => { qc.invalidateQueries({ queryKey: getListAdminSaintsQueryKey(params) }); qc.invalidateQueries({ queryKey: getGetAdminOverviewQueryKey() }); setEdit(null); }; form.id && rows.some((r) => r.id === form.id) ? update.mutate({ id: form.id, data: { ...data, id: undefined } as any }, { onSuccess: done }) : create.mutate({ data: data as any }, { onSuccess: done }); };
-  return <main className="workspace"><PageHeader eyebrow="Persistent library · synaxarion" title="Saint profiles" subtitle="Maintain concise profiles that make the calendar personal and prayerful." /><section className="card table-card"><ResourceToolbar search={search} setSearch={setSearch} label="Add saint profile" onAdd={() => setEdit({ id: '', name: '', feastMonth: null, feastDay: null, shortBio: '', audioText: '', locale: 'en', publicationStatus: 'draft' })} /><QueryState loading={query.isLoading} error={query.isError} empty={!filtered.length}><div className="table-wrap"><table><thead><tr><th>Profile</th><th>Feast date</th><th>Locale</th><th>Status</th><th /></tr></thead><tbody>{filtered.map((row) => <tr key={row.id}><td><div className="table-title">{row.name}</div><span className="table-note">{row.shortBio}</span></td><td className="mono">{row.feastMonth && row.feastDay ? `${String(row.feastMonth).padStart(2, '0')}.${String(row.feastDay).padStart(2, '0')}` : '—'}</td><td><span className="badge badge-draft">{row.locale}</span></td><td><StatusBadge status={row.publicationStatus} /></td><td><div className="actions"><button className="btn btn-quiet btn-small" onClick={() => setEdit(row)} data-testid={`button-edit-saint-${row.id}`}><Pencil size={13} /></button><button className="btn btn-quiet btn-small" onClick={() => { if (confirm('Archive this saint profile?')) archive.mutate({ id: row.id }, { onSuccess: () => qc.invalidateQueries({ queryKey: getListAdminSaintsQueryKey(params) }) }); }} data-testid={`button-archive-saint-${row.id}`}><Archive size={13} /></button></div></td></tr>)}</tbody></table></div></QueryState></section>{edit && <EditorModal title={edit.id && rows.some((r) => r.id === edit.id) ? 'Edit saint profile' : 'New saint profile'} fields={fields} initial={edit} onClose={() => setEdit(null)} onSave={save} busy={create.isPending || update.isPending} />}</main>;
+  const params = useMemo(() => ({ page: 1, limit: 30 }), []); const query = useListAdminCalendarEntries(params); const upsert = useUpsertAdminCalendarEntry(); const update = useUpdateAdminCalendarEntry(); const archive = useArchiveAdminCalendarEntry(); const remove = useDeleteAdminCalendarEntryPermanently(); const qc = useQueryClient(); const [search, setSearch] = useState(''); const [edit, setEdit] = useState<AnyRecord | null>(null);
+  const fields: FieldDef[] = [
+    {
+      key: 'gregorianDate',
+      label: (form) => form.calendarSystem === 'julian' ? 'Julian date' : 'Gregorian date',
+      type: (form) => form.calendarSystem === 'julian' ? 'text' : 'date',
+      required: true,
+      pattern: '\\d{4}-\\d{2}-\\d{2}',
+      placeholder: 'YYYY-MM-DD',
+      validate: (value, form) => {
+        const match = typeof value === 'string' && /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+        if (!match) return 'Enter a real date in the selected calendar system.';
+        const [, yearText, monthText, dayText] = match;
+        const year = Number(yearText);
+        const month = Number(monthText);
+        const day = Number(dayText);
+        const isValidIn = (system: string) => {
+          const leapYear = system === 'julian'
+            ? year % 4 === 0
+            : year % 4 === 0 && (year % 100 !== 0 || year % 400 === 0);
+          const monthDays = [31, leapYear ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+          return month >= 1 && month <= 12 && day >= 1 && day <= monthDays[month - 1];
+        };
+        if (!isValidIn(form.calendarSystem)) return 'Enter a real date in the selected calendar system.';
+        if (form.calendarSystem === 'julian' && !isValidIn('gregorian')) {
+          return 'This Julian date cannot yet be stored by the calendar date field.';
+        }
+        return null;
+      },
+    },
+    { key: 'calendarSystem', label: 'Calendar', options: ['gregorian', 'julian'] },
+    ...commonFields,
+    { key: 'feastTitle', label: 'Feast title' },
+    { key: 'commemoratedSaint1', label: 'Saints commemorated today · Saint 1' },
+    { key: 'commemoratedSaintBio1', label: 'Saint 1 biography', type: 'textarea' },
+    { key: 'commemoratedSaint2', label: 'Saint 2' },
+    { key: 'commemoratedSaintBio2', label: 'Saint 2 biography', type: 'textarea' },
+    { key: 'commemoratedSaint3', label: 'Saint 3' },
+    { key: 'commemoratedSaintBio3', label: 'Saint 3 biography', type: 'textarea' },
+    { key: 'commemoratedSaint4', label: 'Saint 4' },
+    { key: 'commemoratedSaintBio4', label: 'Saint 4 biography', type: 'textarea' },
+  ];
+  const rows = ((query.data as AnyRecord)?.items ?? []) as AdminCalendarEntry[]; const filtered = rows.filter((r) => `${r.gregorianDate} ${r.feastTitle ?? ''} ${(r.commemoratedSaints ?? []).join(' ')}`.toLowerCase().includes(search.toLowerCase()));
+  const save = (form: AnyRecord) => {
+    const entryFields = { ...form };
+    const saintPairs = [1, 2, 3, 4].map((index) => {
+      delete entryFields[`commemoratedSaint${index}`];
+      delete entryFields[`commemoratedSaintBio${index}`];
+      return {
+        name: String(form[`commemoratedSaint${index}`] ?? '').trim(),
+        biography: String(form[`commemoratedSaintBio${index}`] ?? '').trim(),
+      };
+    }).filter((saint) => saint.name);
+    const data = {
+      ...entryFields,
+      feastTitle: form.feastTitle || null,
+      fastingTitle: form.fastingTitle || null,
+      liturgy: form.liturgy || null,
+      color: form.color || null,
+      saintIds: Array.isArray(form.saintIds) ? form.saintIds : [],
+      commemoratedSaints: saintPairs.map((saint) => saint.name),
+      commemoratedSaintBios: saintPairs.map((saint) => saint.biography),
+    };
+    const done = () => {
+      qc.invalidateQueries({ queryKey: getListAdminCalendarEntriesQueryKey(params) });
+      qc.invalidateQueries({ queryKey: getGetAdminOverviewQueryKey() });
+      setEdit(null);
+    };
+    form.id ? update.mutate({ id: form.id, data: data as any }, { onSuccess: done }) : upsert.mutate({ data: data as any }, { onSuccess: done });
+  };
+  const deleteEntry = (id: string) => {
+    if (!window.confirm(translateCurrentAdminText('Permanently delete this calendar entry? This cannot be undone.'))) return;
+    remove.mutate({ id }, { onSuccess: () => {
+      qc.invalidateQueries({ queryKey: getListAdminCalendarEntriesQueryKey(params) });
+      qc.invalidateQueries({ queryKey: getGetAdminOverviewQueryKey() });
+    } });
+  };
+  return <main className="workspace"><PageHeader eyebrow="Persistent library · dates" title="Calendar" subtitle="Keep feast days, fasting signals, liturgy, and saint links aligned." /><section className="card table-card"><ResourceToolbar search={search} setSearch={setSearch} label="Add calendar entry" onAdd={() => setEdit({ gregorianDate: new Date().toISOString().slice(0, 10), calendarSystem: 'gregorian', locale: 'en', feastTitle: '', fastingTitle: null, liturgy: null, color: null, saintIds: [], commemoratedSaints: [], commemoratedSaintBios: [], commemoratedSaint1: '', commemoratedSaintBio1: '', commemoratedSaint2: '', commemoratedSaintBio2: '', commemoratedSaint3: '', commemoratedSaintBio3: '', commemoratedSaint4: '', commemoratedSaintBio4: '', publicationStatus: 'draft' })} /><QueryState loading={query.isLoading} error={query.isError} empty={!filtered.length}><div className="table-wrap"><table><thead><tr><th>Date</th><th>Feast</th><th>Fasting / liturgy</th><th>Saints commemorated</th><th>Status</th><th /></tr></thead><tbody>{filtered.map((row) => <tr key={row.id}><td className="mono">{row.gregorianDate}<span className="table-note">{row.calendarSystem} · {row.locale}</span></td><td className="table-title">{row.feastTitle ?? 'Ordinary day'}</td><td>{row.fastingTitle ?? 'No fasting note'}<span className="table-note">{row.liturgy ?? 'No liturgy'}</span></td><td>{row.commemoratedSaints?.length ? row.commemoratedSaints.join('، ') : `${row.saintIds.length} linked`}</td><td><StatusBadge status={row.publicationStatus} /></td><td><div className="actions"><button className="btn btn-quiet btn-small" onClick={() => setEdit({ ...row, ...Object.fromEntries([1, 2, 3, 4].flatMap((index) => [[`commemoratedSaint${index}`, row.commemoratedSaints?.[index - 1] ?? ''], [`commemoratedSaintBio${index}`, row.commemoratedSaintBios?.[index - 1] ?? '']])) })} data-testid={`button-edit-calendar-${row.id}`}><Pencil size={13} /></button><button className="btn btn-quiet btn-small" onClick={() => { if (confirm('Archive this calendar entry?')) archive.mutate({ id: row.id }, { onSuccess: () => qc.invalidateQueries({ queryKey: getListAdminCalendarEntriesQueryKey(params) }) }); }} data-testid={`button-archive-calendar-${row.id}`}><Archive size={13} /></button><button className="btn btn-quiet btn-small" onClick={() => deleteEntry(row.id)} disabled={remove.isPending} aria-label={translateCurrentAdminText('Delete calendar entry')} title={translateCurrentAdminText('Delete calendar entry')} data-testid={`button-delete-calendar-${row.id}`}><Trash2 size={13} /></button></div></td></tr>)}</tbody></table></div></QueryState></section>{edit && <EditorModal title={edit.id ? 'Edit calendar entry' : 'New calendar entry'} fields={fields} initial={edit} onClose={() => setEdit(null)} onSave={save} busy={upsert.isPending || update.isPending} />}</main>;
 }
 
 function FastingPage() {
@@ -370,7 +468,7 @@ const queryClient = new QueryClient({
   mutationCache: new MutationCache({ onError: (error) => { if (is401(error)) clearAdminSession(queryClient); } }),
 });
 function Router() {
-  return <Switch><Route path="/" component={Overview} /><Route path="/daily-content" component={DailyContentPage} /><Route path="/calendar" component={CalendarPage} /><Route path="/saints" component={SaintsPage} /><Route path="/fasting" component={FastingPage} /><Route path="/learning" component={LearningPage} /><Route path="/prayer-library">{() => <ManagedContentPage kind="prayer-library" />}</Route><Route path="/broadcasts">{() => <ManagedContentPage kind="broadcasts" />}</Route><Route path="/about">{() => <ManagedContentPage kind="about" />}</Route><Route path="/bible" component={BibleAssetsPage} /><Route path="/places" component={OrthodoxPlacesPage} /><Route path="/moderation" component={ModerationPage} /><Route component={NotFound} /></Switch>;
+  return <Switch><Route path="/" component={Overview} /><Route path="/daily-content" component={DailyContentPage} /><Route path="/calendar" component={CalendarPage} /><Route path="/fasting" component={FastingPage} /><Route path="/learning" component={LearningPage} /><Route path="/prayer-library">{() => <ManagedContentPage kind="prayer-library" />}</Route><Route path="/broadcasts">{() => <ManagedContentPage kind="broadcasts" />}</Route><Route path="/about">{() => <ManagedContentPage kind="about" />}</Route><Route path="/bible" component={BibleAssetsPage} /><Route path="/places" component={OrthodoxPlacesPage} /><Route path="/moderation" component={ModerationPage} /><Route component={NotFound} /></Switch>;
 }
 function App() {
   const [locale, setLocale] = useState<AdminLocale>(() => {

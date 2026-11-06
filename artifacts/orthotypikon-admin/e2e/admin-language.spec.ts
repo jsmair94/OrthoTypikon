@@ -43,6 +43,7 @@ async function signIn(page: Page) {
   await page.getByTestId('input-admin-key').fill('browser-test-key');
   await page.getByTestId('button-submit-login').click();
   await expect(page.getByTestId('link-overview')).toBeVisible();
+  await expect(page.getByTestId('link-saints')).toHaveCount(0);
 }
 
 test('selects Arabic, English, and Greek and restores the saved language after reload', async ({ page }) => {

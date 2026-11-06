@@ -534,6 +534,13 @@ export interface CalendarEntry {
   liturgy: string | null;
   /** @nullable */
   color: string | null;
+  /**
+   * @maxItems 4
+   * @items.minLength 1
+   */
+  commemoratedSaints: string[];
+  /** @maxItems 4 */
+  commemoratedSaintBios: string[];
   saints: SaintSummary[];
 }
 
@@ -677,6 +684,10 @@ export interface AdminDailyContentList {
 
 export interface AdminCalendarEntry {
   id: string;
+  /**
+   * Calendar date in YYYY-MM-DD format using calendarSystem.
+   * @pattern ^\d{4}-\d{2}-\d{2}$
+   */
   gregorianDate: string;
   calendarSystem: CalendarType;
   locale: Locale;
@@ -688,6 +699,13 @@ export interface AdminCalendarEntry {
   liturgy: string | null;
   /** @nullable */
   color: string | null;
+  /**
+   * @maxItems 4
+   * @items.minLength 1
+   */
+  commemoratedSaints: string[];
+  /** @maxItems 4 */
+  commemoratedSaintBios: string[];
   saintIds: string[];
   publicationStatus: PublicationStatus;
   createdAt: string;
@@ -695,6 +713,10 @@ export interface AdminCalendarEntry {
 }
 
 export interface AdminCalendarEntryInput {
+  /**
+   * Calendar date in YYYY-MM-DD format using calendarSystem.
+   * @pattern ^\d{4}-\d{2}-\d{2}$
+   */
   gregorianDate: string;
   calendarSystem: CalendarType;
   locale: Locale;
@@ -706,6 +728,13 @@ export interface AdminCalendarEntryInput {
   liturgy: string | null;
   /** @nullable */
   color: string | null;
+  /**
+   * @maxItems 4
+   * @items.minLength 1
+   */
+  commemoratedSaints: string[];
+  /** @maxItems 4 */
+  commemoratedSaintBios: string[];
   saintIds: string[];
   publicationStatus: PublicationStatus;
 }

@@ -768,6 +768,13 @@ export const ListAdminCalendarEntriesQueryParams = zod.object({
     .default(listAdminCalendarEntriesQueryLimitDefault),
 });
 
+export const listAdminCalendarEntriesResponseItemsItemGregorianDateRegExp =
+  new RegExp("^\\d{4}-\\d{2}-\\d{2}$");
+
+export const listAdminCalendarEntriesResponseItemsItemCommemoratedSaintsMax = 4;
+
+export const listAdminCalendarEntriesResponseItemsItemCommemoratedSaintBiosMax = 4;
+
 export const listAdminCalendarEntriesResponsePaginationPageMultipleOf = 1;
 
 export const listAdminCalendarEntriesResponsePaginationLimitMultipleOf = 1;
@@ -778,13 +785,22 @@ export const ListAdminCalendarEntriesResponse = zod.object({
   items: zod.array(
     zod.object({
       id: zod.string(),
-      gregorianDate: zod.coerce.date(),
+      gregorianDate: zod
+        .string()
+        .regex(listAdminCalendarEntriesResponseItemsItemGregorianDateRegExp)
+        .describe("Calendar date in YYYY-MM-DD format using calendarSystem."),
       calendarSystem: zod.enum(["gregorian", "julian"]),
       locale: zod.enum(["ar", "en", "el"]),
       feastTitle: zod.string().nullable(),
       fastingTitle: zod.string().nullable(),
       liturgy: zod.string().nullable(),
       color: zod.string().nullable(),
+      commemoratedSaints: zod
+        .array(zod.string().min(1))
+        .max(listAdminCalendarEntriesResponseItemsItemCommemoratedSaintsMax),
+      commemoratedSaintBios: zod
+        .array(zod.string())
+        .max(listAdminCalendarEntriesResponseItemsItemCommemoratedSaintBiosMax),
       saintIds: zod.array(zod.string()),
       publicationStatus: zod.enum(["draft", "published", "archived"]),
       createdAt: zod.coerce.date(),
@@ -808,27 +824,61 @@ export const ListAdminCalendarEntriesResponse = zod.object({
 /**
  * @summary Create or replace a calendar entry for a date and locale
  */
+export const upsertAdminCalendarEntryBodyGregorianDateRegExp = new RegExp(
+  "^\\d{4}-\\d{2}-\\d{2}$",
+);
+
+export const upsertAdminCalendarEntryBodyCommemoratedSaintsMax = 4;
+
+export const upsertAdminCalendarEntryBodyCommemoratedSaintBiosMax = 4;
+
 export const UpsertAdminCalendarEntryBody = zod.object({
-  gregorianDate: zod.coerce.date(),
+  gregorianDate: zod
+    .string()
+    .regex(upsertAdminCalendarEntryBodyGregorianDateRegExp)
+    .describe("Calendar date in YYYY-MM-DD format using calendarSystem."),
   calendarSystem: zod.enum(["gregorian", "julian"]),
   locale: zod.enum(["ar", "en", "el"]),
   feastTitle: zod.string().nullable(),
   fastingTitle: zod.string().nullable(),
   liturgy: zod.string().nullable(),
   color: zod.string().nullable(),
+  commemoratedSaints: zod
+    .array(zod.string().min(1))
+    .max(upsertAdminCalendarEntryBodyCommemoratedSaintsMax),
+  commemoratedSaintBios: zod
+    .array(zod.string())
+    .max(upsertAdminCalendarEntryBodyCommemoratedSaintBiosMax),
   saintIds: zod.array(zod.string()),
   publicationStatus: zod.enum(["draft", "published", "archived"]),
 });
 
+export const upsertAdminCalendarEntryResponseGregorianDateRegExp = new RegExp(
+  "^\\d{4}-\\d{2}-\\d{2}$",
+);
+
+export const upsertAdminCalendarEntryResponseCommemoratedSaintsMax = 4;
+
+export const upsertAdminCalendarEntryResponseCommemoratedSaintBiosMax = 4;
+
 export const UpsertAdminCalendarEntryResponse = zod.object({
   id: zod.string(),
-  gregorianDate: zod.coerce.date(),
+  gregorianDate: zod
+    .string()
+    .regex(upsertAdminCalendarEntryResponseGregorianDateRegExp)
+    .describe("Calendar date in YYYY-MM-DD format using calendarSystem."),
   calendarSystem: zod.enum(["gregorian", "julian"]),
   locale: zod.enum(["ar", "en", "el"]),
   feastTitle: zod.string().nullable(),
   fastingTitle: zod.string().nullable(),
   liturgy: zod.string().nullable(),
   color: zod.string().nullable(),
+  commemoratedSaints: zod
+    .array(zod.string().min(1))
+    .max(upsertAdminCalendarEntryResponseCommemoratedSaintsMax),
+  commemoratedSaintBios: zod
+    .array(zod.string())
+    .max(upsertAdminCalendarEntryResponseCommemoratedSaintBiosMax),
   saintIds: zod.array(zod.string()),
   publicationStatus: zod.enum(["draft", "published", "archived"]),
   createdAt: zod.coerce.date(),
@@ -844,27 +894,61 @@ export const UpdateAdminCalendarEntryParams = zod.object({
   id: zod.coerce.string().min(1).max(updateAdminCalendarEntryPathIdMax),
 });
 
+export const updateAdminCalendarEntryBodyGregorianDateRegExp = new RegExp(
+  "^\\d{4}-\\d{2}-\\d{2}$",
+);
+
+export const updateAdminCalendarEntryBodyCommemoratedSaintsMax = 4;
+
+export const updateAdminCalendarEntryBodyCommemoratedSaintBiosMax = 4;
+
 export const UpdateAdminCalendarEntryBody = zod.object({
-  gregorianDate: zod.coerce.date(),
+  gregorianDate: zod
+    .string()
+    .regex(updateAdminCalendarEntryBodyGregorianDateRegExp)
+    .describe("Calendar date in YYYY-MM-DD format using calendarSystem."),
   calendarSystem: zod.enum(["gregorian", "julian"]),
   locale: zod.enum(["ar", "en", "el"]),
   feastTitle: zod.string().nullable(),
   fastingTitle: zod.string().nullable(),
   liturgy: zod.string().nullable(),
   color: zod.string().nullable(),
+  commemoratedSaints: zod
+    .array(zod.string().min(1))
+    .max(updateAdminCalendarEntryBodyCommemoratedSaintsMax),
+  commemoratedSaintBios: zod
+    .array(zod.string())
+    .max(updateAdminCalendarEntryBodyCommemoratedSaintBiosMax),
   saintIds: zod.array(zod.string()),
   publicationStatus: zod.enum(["draft", "published", "archived"]),
 });
 
+export const updateAdminCalendarEntryResponseGregorianDateRegExp = new RegExp(
+  "^\\d{4}-\\d{2}-\\d{2}$",
+);
+
+export const updateAdminCalendarEntryResponseCommemoratedSaintsMax = 4;
+
+export const updateAdminCalendarEntryResponseCommemoratedSaintBiosMax = 4;
+
 export const UpdateAdminCalendarEntryResponse = zod.object({
   id: zod.string(),
-  gregorianDate: zod.coerce.date(),
+  gregorianDate: zod
+    .string()
+    .regex(updateAdminCalendarEntryResponseGregorianDateRegExp)
+    .describe("Calendar date in YYYY-MM-DD format using calendarSystem."),
   calendarSystem: zod.enum(["gregorian", "julian"]),
   locale: zod.enum(["ar", "en", "el"]),
   feastTitle: zod.string().nullable(),
   fastingTitle: zod.string().nullable(),
   liturgy: zod.string().nullable(),
   color: zod.string().nullable(),
+  commemoratedSaints: zod
+    .array(zod.string().min(1))
+    .max(updateAdminCalendarEntryResponseCommemoratedSaintsMax),
+  commemoratedSaintBios: zod
+    .array(zod.string())
+    .max(updateAdminCalendarEntryResponseCommemoratedSaintBiosMax),
   saintIds: zod.array(zod.string()),
   publicationStatus: zod.enum(["draft", "published", "archived"]),
   createdAt: zod.coerce.date(),
@@ -881,6 +965,20 @@ export const ArchiveAdminCalendarEntryParams = zod.object({
 });
 
 export const ArchiveAdminCalendarEntryResponse = zod.void();
+
+/**
+ * @summary Permanently delete a calendar entry
+ */
+export const deleteAdminCalendarEntryPermanentlyPathIdMax = 120;
+
+export const DeleteAdminCalendarEntryPermanentlyParams = zod.object({
+  id: zod.coerce
+    .string()
+    .min(1)
+    .max(deleteAdminCalendarEntryPermanentlyPathIdMax),
+});
+
+export const DeleteAdminCalendarEntryPermanentlyResponse = zod.void();
 
 /**
  * @summary List editable saint profiles
@@ -1942,6 +2040,10 @@ export const ListCalendarByMonthQueryParams = zod.object({
     .describe("Calendar used for the requested date"),
 });
 
+export const listCalendarByMonthResponseCommemoratedSaintsMax = 4;
+
+export const listCalendarByMonthResponseCommemoratedSaintBiosMax = 4;
+
 export const ListCalendarByMonthResponseItem = zod.object({
   id: zod.string(),
   date: zod.string(),
@@ -1958,6 +2060,12 @@ export const ListCalendarByMonthResponseItem = zod.object({
   fastingTitle: zod.string().nullable(),
   liturgy: zod.string().nullable(),
   color: zod.string().nullable(),
+  commemoratedSaints: zod
+    .array(zod.string().min(1))
+    .max(listCalendarByMonthResponseCommemoratedSaintsMax),
+  commemoratedSaintBios: zod
+    .array(zod.string())
+    .max(listCalendarByMonthResponseCommemoratedSaintBiosMax),
   saints: zod.array(
     zod.object({
       id: zod.string(),
@@ -1992,6 +2100,10 @@ export const GetCalendarByDateQueryParams = zod.object({
     .describe("Calendar used for the requested date"),
 });
 
+export const getCalendarByDateResponseCommemoratedSaintsMax = 4;
+
+export const getCalendarByDateResponseCommemoratedSaintBiosMax = 4;
+
 export const GetCalendarByDateResponse = zod.object({
   id: zod.string(),
   date: zod.string(),
@@ -2008,6 +2120,12 @@ export const GetCalendarByDateResponse = zod.object({
   fastingTitle: zod.string().nullable(),
   liturgy: zod.string().nullable(),
   color: zod.string().nullable(),
+  commemoratedSaints: zod
+    .array(zod.string().min(1))
+    .max(getCalendarByDateResponseCommemoratedSaintsMax),
+  commemoratedSaintBios: zod
+    .array(zod.string())
+    .max(getCalendarByDateResponseCommemoratedSaintBiosMax),
   saints: zod.array(
     zod.object({
       id: zod.string(),

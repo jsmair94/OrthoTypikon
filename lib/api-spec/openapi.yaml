@@ -650,6 +650,25 @@ paths:
           $ref: "#/components/responses/NotFound"
         "503":
           $ref: "#/components/responses/DatabaseUnavailable"
+  /admin/calendar-entries/{id}/permanent:
+    delete:
+      operationId: deleteAdminCalendarEntryPermanently
+      tags:
+        - admin
+      summary: Permanently delete a calendar entry
+      security:
+        - adminBearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/AdminContentId"
+      responses:
+        "204":
+          description: Deleted
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "503":
+          $ref: "#/components/responses/DatabaseUnavailable"
   /admin/saints:
     get:
       operationId: listAdminSaints
@@ -2452,6 +2471,17 @@ components:
           type:
             - string
             - "null"
+        commemoratedSaints:
+          type: array
+          maxItems: 4
+          items:
+            type: string
+            minLength: 1
+        commemoratedSaintBios:
+          type: array
+          maxItems: 4
+          items:
+            type: string
         saints:
           type: array
           items:
@@ -2466,6 +2496,8 @@ components:
         - fastingTitle
         - liturgy
         - color
+        - commemoratedSaints
+        - commemoratedSaintBios
         - saints
     Recipe:
       type: object
@@ -2804,7 +2836,8 @@ components:
           type: string
         gregorianDate:
           type: string
-          format: date
+          pattern: '^\d{4}-\d{2}-\d{2}$'
+          description: Calendar date in YYYY-MM-DD format using calendarSystem.
         calendarSystem:
           $ref: "#/components/schemas/CalendarType"
         locale:
@@ -2817,6 +2850,17 @@ components:
           type: ["string", "null"]
         color:
           type: ["string", "null"]
+        commemoratedSaints:
+          type: array
+          maxItems: 4
+          items:
+            type: string
+            minLength: 1
+        commemoratedSaintBios:
+          type: array
+          maxItems: 4
+          items:
+            type: string
         saintIds:
           type: array
           items:
@@ -2838,6 +2882,8 @@ components:
         - fastingTitle
         - liturgy
         - color
+        - commemoratedSaints
+        - commemoratedSaintBios
         - saintIds
         - publicationStatus
         - createdAt
@@ -2848,7 +2894,8 @@ components:
       properties:
         gregorianDate:
           type: string
-          format: date
+          pattern: '^\d{4}-\d{2}-\d{2}$'
+          description: Calendar date in YYYY-MM-DD format using calendarSystem.
         calendarSystem:
           $ref: "#/components/schemas/CalendarType"
         locale:
@@ -2861,6 +2908,17 @@ components:
           type: ["string", "null"]
         color:
           type: ["string", "null"]
+        commemoratedSaints:
+          type: array
+          maxItems: 4
+          items:
+            type: string
+            minLength: 1
+        commemoratedSaintBios:
+          type: array
+          maxItems: 4
+          items:
+            type: string
         saintIds:
           type: array
           items:
@@ -2875,6 +2933,8 @@ components:
         - fastingTitle
         - liturgy
         - color
+        - commemoratedSaints
+        - commemoratedSaintBios
         - saintIds
         - publicationStatus
     AdminCalendarEntryList:

@@ -88,6 +88,8 @@ export const calendarEntriesTable = pgTable(
     fastingTitle: text("fasting_title"),
     liturgy: text("liturgy"),
     color: text("color"),
+    commemoratedSaints: text("commemorated_saints").array().notNull().default(sql`'{}'::text[]`),
+    commemoratedSaintBios: text("commemorated_saint_bios").array().notNull().default(sql`'{}'::text[]`),
     ...contentColumns,
   },
   (table) => [

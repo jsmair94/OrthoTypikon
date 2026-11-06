@@ -53,6 +53,7 @@ import {
   CreateAdminSessionResponse,
   CreateAdminOrthodoxPlaceBody,
   CreateAdminOrthodoxPlaceResponse,
+  DeleteAdminCalendarEntryPermanentlyParams,
   GetAdminOverviewResponse,
   ListAdminCalendarEntriesQueryParams,
   ListAdminCalendarEntriesResponse,
@@ -106,6 +107,7 @@ import {
   UpsertAdminFastingGuidanceResponse,
 } from "@workspace/api-zod";
 import { DatabaseUnavailableError, invalidRequest, notFound } from "../lib/api-errors";
+import { isValidCalendarDate } from "../lib/dates";
 import { invalidateBibleAssetCache, isSupportedBibleAssetKey } from "./bible";
 import { createManagedContentRouter, type ManagedContentKey } from "./managed-content";
 
@@ -624,6 +626,20 @@ async function validateSaintIds(ids: string[]) {
   }
 }
 
+function normalizeCommemoratedSaints(names: string[], biographies: string[]) {
+  const pairs = names
+    .map((name, index) => ({
+      name: name.trim(),
+      biography: (biographies[index] ?? "").trim(),
+    }))
+    .filter((saint) => saint.name)
+    .slice(0, 4);
+  return {
+    names: pairs.map((saint) => saint.name),
+    biographies: pairs.map((saint) => saint.biography),
+  };
+}
+
 async function saveCalendarEntry(
   input: typeof UpsertAdminCalendarEntryBody._output,
   id: string = randomUUID(),
@@ -633,9 +649,14 @@ async function saveCalendarEntry(
   await validateSaintIds(saintIds);
   return database.transaction(async (tx) => {
     const { saintIds: _saintIds, ...rawValues } = input;
+    const saintContent = normalizeCommemoratedSaints(
+      rawValues.commemoratedSaints,
+      rawValues.commemoratedSaintBios,
+    );
     const values = {
       ...rawValues,
-      gregorianDate: databaseDate(rawValues.gregorianDate),
+      commemoratedSaints: saintContent.names,
+      commemoratedSaintBios: saintContent.biographies,
     };
     const [entry] = await tx.insert(calendarEntriesTable).values({
       id,
@@ -668,9 +689,14 @@ async function updateCalendarEntry(
   await validateSaintIds(saintIds);
   return database.transaction(async (tx) => {
     const { saintIds: _saintIds, ...rawValues } = input;
+    const saintContent = normalizeCommemoratedSaints(
+      rawValues.commemoratedSaints,
+      rawValues.commemoratedSaintBios,
+    );
     const [entry] = await tx.update(calendarEntriesTable).set({
       ...rawValues,
-      gregorianDate: databaseDate(rawValues.gregorianDate),
+      commemoratedSaints: saintContent.names,
+      commemoratedSaintBios: saintContent.biographies,
       updatedAt: new Date(),
     }).where(eq(calendarEntriesTable.id, id)).returning();
     if (!entry) throw notFound("Calendar entry was not found.");
@@ -732,6 +758,13 @@ router.get("/admin/calendar-entries", async (req, res): Promise<void> => {
 router.post("/admin/calendar-entries", async (req, res): Promise<void> => {
   const parsed = UpsertAdminCalendarEntryBody.safeParse(req.body);
   if (!parsed.success) throw invalidRequest();
+  if (!isValidCalendarDate(parsed.data.gregorianDate, parsed.data.calendarSystem)) {
+    throw invalidRequest("Calendar date must be a real date in the selected calendar system.");
+  }
+  if (parsed.data.calendarSystem === "julian" &&
+      !isValidCalendarDate(parsed.data.gregorianDate, "gregorian")) {
+    throw invalidRequest("This Julian date cannot yet be stored by the calendar date field.");
+  }
   try {
     const row = await saveCalendarEntry(parsed.data);
     res.json(UpsertAdminCalendarEntryResponse.parse({
@@ -751,6 +784,13 @@ router.put("/admin/calendar-entries/:id", async (req, res): Promise<void> => {
   const params = UpdateAdminCalendarEntryParams.safeParse(req.params);
   const body = UpdateAdminCalendarEntryBody.safeParse(req.body);
   if (!params.success || !body.success) throw invalidRequest();
+  if (!isValidCalendarDate(body.data.gregorianDate, body.data.calendarSystem)) {
+    throw invalidRequest("Calendar date must be a real date in the selected calendar system.");
+  }
+  if (body.data.calendarSystem === "julian" &&
+      !isValidCalendarDate(body.data.gregorianDate, "gregorian")) {
+    throw invalidRequest("This Julian date cannot yet be stored by the calendar date field.");
+  }
   try {
     const row = await updateCalendarEntry(params.data.id, body.data);
     res.json(UpdateAdminCalendarEntryResponse.parse({
@@ -771,6 +811,16 @@ router.delete("/admin/calendar-entries/:id", async (req, res): Promise<void> => 
   if (!params.success) throw invalidRequest();
   const [row] = await requireDatabase().update(calendarEntriesTable)
     .set({ publicationStatus: "archived", updatedAt: new Date() })
+    .where(eq(calendarEntriesTable.id, params.data.id))
+    .returning({ id: calendarEntriesTable.id });
+  if (!row) throw notFound("Calendar entry was not found.");
+  res.status(204).send();
+});
+
+router.delete("/admin/calendar-entries/:id/permanent", async (req, res): Promise<void> => {
+  const params = DeleteAdminCalendarEntryPermanentlyParams.safeParse(req.params);
+  if (!params.success) throw invalidRequest();
+  const [row] = await requireDatabase().delete(calendarEntriesTable)
     .where(eq(calendarEntriesTable.id, params.data.id))
     .returning({ id: calendarEntriesTable.id });
   if (!row) throw notFound("Calendar entry was not found.");

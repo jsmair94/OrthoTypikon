@@ -2208,6 +2208,98 @@ export const useArchiveAdminCalendarEntry = <
   return useMutation(getArchiveAdminCalendarEntryMutationOptions(options));
 };
 
+export const getDeleteAdminCalendarEntryPermanentlyUrl = (id: string) => {
+  return `/api/admin/calendar-entries/${id}/permanent`;
+};
+
+/**
+ * @summary Permanently delete a calendar entry
+ */
+export const deleteAdminCalendarEntryPermanently = async (
+  id: string,
+  options?: Parameters<typeof customFetch>[1],
+): Promise<void> => {
+  return customFetch<void>(getDeleteAdminCalendarEntryPermanentlyUrl(id), {
+    ...options,
+    method: "DELETE",
+  });
+};
+
+export const getDeleteAdminCalendarEntryPermanentlyMutationOptions = <
+  TError = ErrorType<
+    UnauthorizedResponse | NotFoundResponse | DatabaseUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteAdminCalendarEntryPermanently>>,
+    TError,
+    { id: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof deleteAdminCalendarEntryPermanently>>,
+  TError,
+  { id: string },
+  TContext
+> => {
+  const mutationKey = ["deleteAdminCalendarEntryPermanently"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof deleteAdminCalendarEntryPermanently>>,
+    { id: string }
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return deleteAdminCalendarEntryPermanently(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type DeleteAdminCalendarEntryPermanentlyMutationResult = NonNullable<
+  Awaited<ReturnType<typeof deleteAdminCalendarEntryPermanently>>
+>;
+
+export type DeleteAdminCalendarEntryPermanentlyMutationError = ErrorType<
+  UnauthorizedResponse | NotFoundResponse | DatabaseUnavailableResponse
+>;
+
+/**
+ * @summary Permanently delete a calendar entry
+ */
+export const useDeleteAdminCalendarEntryPermanently = <
+  TError = ErrorType<
+    UnauthorizedResponse | NotFoundResponse | DatabaseUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteAdminCalendarEntryPermanently>>,
+    TError,
+    { id: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof deleteAdminCalendarEntryPermanently>>,
+  TError,
+  { id: string },
+  TContext
+> => {
+  return useMutation(
+    getDeleteAdminCalendarEntryPermanentlyMutationOptions(options),
+  );
+};
+
 export const getListAdminSaintsUrl = (params?: ListAdminSaintsParams) => {
   const normalizedParams = new URLSearchParams();
 

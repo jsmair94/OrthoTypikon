@@ -104,6 +104,8 @@ function calendarResponse(
     fastingTitle: entry.fastingTitle,
     liturgy: entry.liturgy,
     color: entry.color,
+    commemoratedSaints: entry.commemoratedSaints,
+    commemoratedSaintBios: entry.commemoratedSaintBios,
     saints,
   };
 }
