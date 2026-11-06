@@ -4,23 +4,23 @@ import { MutationCache, QueryCache, QueryClient, QueryClientProvider, useQueryCl
 import {
   Archive, BookOpen, CalendarDays, Check, ChevronRight, CircleAlert, Clock3, FileText, Info,
   Flame, HeartHandshake, KeyRound, Languages, LayoutDashboard, LogOut, Menu, Pencil,
-  MapPin, Plus, Search, ShieldCheck, Sparkles, Trash2, Utensils, UsersRound, X, Radio, Upload, type LucideIcon,
+  MapPin, Plus, Search, ShieldCheck, Sparkles, Trash2, Utensils, X, Radio, Upload, type LucideIcon,
 } from 'lucide-react';
 import {
   getGetAdminOverviewQueryKey, getListAdminCalendarEntriesQueryKey, getListAdminDailyContentQueryKey,
   getListAdminFastingGuidanceQueryKey, getListAdminFastingRecipesQueryKey, getListAdminLearningEntriesQueryKey,
-  getListAdminPrayerRequestsQueryKey, setAuthTokenGetter,
+  setAuthTokenGetter,
   useArchiveAdminCalendarEntry, useArchiveAdminDailyContent, useArchiveAdminFastingGuidance,
   useArchiveAdminFastingRecipe, useArchiveAdminLearningEntry,
   useDeleteAdminCalendarEntryPermanently,
   useCreateAdminSession, useCreateAdminFastingRecipe, useCreateAdminLearningEntry,
   useGetAdminOverview, useListAdminCalendarEntries, useListAdminDailyContent, useListAdminFastingGuidance,
-  useListAdminFastingRecipes, useListAdminLearningEntries, useListAdminPrayerRequests,
-  useReviewAdminPrayerRequest, useUpdateAdminCalendarEntry, useUpdateAdminDailyContent,
+  useListAdminFastingRecipes, useListAdminLearningEntries,
+  useUpdateAdminCalendarEntry, useUpdateAdminDailyContent,
   useUpdateAdminFastingGuidance, useUpdateAdminFastingRecipe, useUpdateAdminLearningEntry,
   useUpsertAdminCalendarEntry, useUpsertAdminDailyContent, useUpsertAdminFastingGuidance,
   type AdminCalendarEntry, type AdminDailyContent, type AdminFastingGuidance, type AdminFastingRecipe,
-  type AdminLearningEntry, type PrayerRequest,
+  type AdminLearningEntry,
 } from '@workspace/api-client-react';
 import NotFound from '@/pages/not-found';
 import OrthodoxPlacesPage from '@/pages/orthodox-places';
@@ -45,7 +45,6 @@ const nav = [
   { href: '/bible', label: 'Bible library', icon: BookOpen },
   { href: '/broadcasts', label: 'Broadcasts', icon: Radio },
   { href: '/places', label: 'Places', icon: MapPin },
-  { href: '/moderation', label: 'Moderation', icon: HeartHandshake },
 ];
 
 function clearAdminSession(queryClient?: ReturnType<typeof useQueryClient>) {
@@ -106,7 +105,7 @@ function Shell({ children, locale, onLocaleChange }: { children: ReactNode; loca
     <aside className="sidebar">
       <Logo />
       <div className="nav-section">Workspace</div>
-      <nav aria-label="Primary navigation">{nav.map(({ href, label, icon: Icon }) => <Link key={href} href={href} data-testid={`link-${label.toLowerCase().replaceAll(' ', '-')}`} className={`nav-link ${location === href ? 'active' : ''}`}><Icon size={16} strokeWidth={1.8} /><span>{label}</span>{label === 'Moderation' && <span style={{ marginLeft: 'auto', color: 'hsl(var(--accent))' }}>•</span>}</Link>)}</nav>
+      <nav aria-label="Primary navigation">{nav.map(({ href, label, icon: Icon }) => <Link key={href} href={href} data-testid={`link-${label.toLowerCase().replaceAll(' ', '-')}`} className={`nav-link ${location === href ? 'active' : ''}`}><Icon size={16} strokeWidth={1.8} /><span>{label}</span></Link>)}</nav>
       <div style={{ marginTop: 'auto', borderTop: '1px solid hsl(39 35% 78% / .13)', paddingTop: 16 }}>
         <button className="nav-link" style={{ border: 0, background: 'transparent', width: '100%' }} onClick={signOut} data-testid="button-sign-out"><LogOut size={16} /><span>Sign out</span></button>
       </div>
@@ -144,12 +143,10 @@ function Overview() {
       <div className="metric-grid">
         <div className="card metric"><div className="metric-label">Published records</div><div className="metric-value" data-testid="metric-published">{items.reduce((sum, [, v]) => sum + Number((v as AnyRecord)?.published ?? 0), 0)}</div><div className="metric-detail">Across six content libraries</div></div>
         <div className="card metric"><div className="metric-label">Total library</div><div className="metric-value" data-testid="metric-total">{total}</div><div className="metric-detail">Persistent content records</div></div>
-        <div className="card metric"><div className="metric-label">Pending prayers</div><div className="metric-value" data-testid="metric-pending">{data?.prayerRequestsPending ?? 0}</div><div className="metric-detail">Awaiting pastoral review</div></div>
-        <div className="card metric"><div className="metric-label">Hidden prayers</div><div className="metric-value" data-testid="metric-hidden">{data?.prayerRequestsHidden ?? 0}</div><div className="metric-detail">Removed from community view</div></div>
       </div>
       <div className="content-grid">
         <section className="card"><div className="card-head"><h2>Publication pulse</h2><span className="mono" style={{ fontSize: 10, color: 'hsl(var(--muted-foreground))' }}>ALL LIBRARIES</span></div><div className="card-body"><div className="status-bar">{items.map(([name, value]) => { const v = value as AnyRecord; const max = Math.max(Number(v?.total ?? 1), 1); return <div className="bar-item" key={String(name)}><div className="bar published" style={{ height: `${Math.max((Number(v?.published ?? 0) / max) * 80, 5)}px` }} /><div>{Number(v?.published ?? 0)} / {Number(v?.total ?? 0)}</div><span>{String(name).split(' ')[0]}</span></div>; })}</div><div className="mono" style={{ fontSize: 10, color: 'hsl(var(--muted-foreground))', marginTop: 14 }}>Published / total · the green line is the work already visible in the app.</div></div></section>
-        <section className="card"><div className="card-head"><h2>At a glance</h2><Link href="/moderation" className="mono" style={{ color: 'hsl(var(--accent))', fontSize: 10, textDecoration: 'none' }}>OPEN QUEUE <ChevronRight size={12} style={{ verticalAlign: 'middle' }} /></Link></div><div className="card-body quick-list">{items.slice(0, 4).map(([name, value]) => <div className="quick-item" key={String(name)}><div className="quick-label"><span className="dot" />{String(name)}</div><strong data-testid={`overview-${String(name).replaceAll(' ', '-')}`}>{(value as AnyRecord)?.draft ?? 0}<span style={{ fontWeight: 400, color: 'hsl(var(--muted-foreground))' }}> drafts</span></strong></div>)}</div></section>
+        <section className="card"><div className="card-head"><h2>At a glance</h2><span className="mono" style={{ color: 'hsl(var(--muted-foreground))', fontSize: 10 }}>KEY CONTENT</span></div><div className="card-body quick-list">{items.slice(0, 4).map(([name, value]) => <div className="quick-item" key={String(name)}><div className="quick-label"><span className="dot" />{String(name)}</div><strong data-testid={`overview-${String(name).replaceAll(' ', '-')}`}>{(value as AnyRecord)?.draft ?? 0}<span style={{ fontWeight: 400, color: 'hsl(var(--muted-foreground))' }}> drafts</span></strong></div>)}</div></section>
       </div>
     </></QueryState>
   </main>;
@@ -438,12 +435,6 @@ function ManagedContentPage({ kind }: { kind: 'prayer-library' | 'broadcasts' | 
   </main>;
 }
 
-function ModerationPage() {
-  const query = useListAdminPrayerRequests(); const review = useReviewAdminPrayerRequest(); const qc = useQueryClient(); const requests = ((query.data as AnyRecord)?.requests ?? []) as PrayerRequest[];
-  const act = (id: string, status: 'approved' | 'rejected' | 'hidden') => review.mutate({ requestId: id, data: { status } }, { onSuccess: () => { qc.invalidateQueries({ queryKey: getListAdminPrayerRequestsQueryKey() }); qc.invalidateQueries({ queryKey: getGetAdminOverviewQueryKey() }); } });
-  return <main className="workspace"><PageHeader eyebrow="Pastoral care · review queue" title="Moderation" subtitle="Read with care. Keep the community prayer space truthful, safe, and kind." action={<span className="badge badge-pending"><UsersRound size={12} /> {requests.length} awaiting review</span>} /><section className="card table-card"><div className="card-head"><h2>Prayer requests</h2><span className="mono" style={{ color: 'hsl(var(--muted-foreground))', fontSize: 10 }}>PRIVATE REVIEW · NO PUBLIC NAMES</span></div><QueryState loading={query.isLoading} error={query.isError} empty={!requests.length}><div className="table-wrap"><table><thead><tr><th>Request</th><th>Category</th><th>Visibility</th><th>Submitted</th><th>Review</th></tr></thead><tbody>{requests.map((request) => <tr key={request.id}><td><div className="table-title">{request.nameVisibility === 'anonymous' ? 'Anonymous request' : request.name}</div><span className="table-note">Expires {request.expiresAt ? new Date(request.expiresAt).toLocaleDateString() : 'when removed'}</span></td><td>{request.category ?? 'other'}</td><td>{request.visibility}</td><td className="mono">{new Date(request.createdAt).toLocaleDateString()}</td><td><div className="actions"><button className="btn btn-primary btn-small" onClick={() => act(request.id, 'approved')} disabled={review.isPending} data-testid={`button-approve-prayer-${request.id}`}><Check size={13} /> Approve</button><button className="btn btn-quiet btn-small" onClick={() => act(request.id, 'hidden')} disabled={review.isPending} data-testid={`button-hide-prayer-${request.id}`}><Archive size={13} /></button><button className="btn btn-quiet btn-small" onClick={() => act(request.id, 'rejected')} disabled={review.isPending} data-testid={`button-reject-prayer-${request.id}`}><X size={13} /></button></div></td></tr>)}</tbody></table></div></QueryState></section></main>;
-}
-
 function Login({ locale, onLocaleChange }: { locale: AdminLocale; onLocaleChange: (locale: AdminLocale) => void }) {
   const [, setLocation] = useLocation(); const queryClient = useQueryClient(); const session = useCreateAdminSession(); const [key, setKey] = useState(''); const [show, setShow] = useState(false); const [expired, setExpired] = useState(false);
   const submit = (event: FormEvent) => { event.preventDefault(); setExpired(false); session.mutate({ data: { key } }, { onSuccess: (data) => { sessionStorage.setItem(TOKEN_KEY, data.token); setAuthTokenGetter(getToken); queryClient.clear(); setLocation('/'); }, onError: () => setExpired(true) }); };
@@ -468,7 +459,7 @@ const queryClient = new QueryClient({
   mutationCache: new MutationCache({ onError: (error) => { if (is401(error)) clearAdminSession(queryClient); } }),
 });
 function Router() {
-  return <Switch><Route path="/" component={Overview} /><Route path="/daily-content" component={DailyContentPage} /><Route path="/calendar" component={CalendarPage} /><Route path="/fasting" component={FastingPage} /><Route path="/learning" component={LearningPage} /><Route path="/prayer-library">{() => <ManagedContentPage kind="prayer-library" />}</Route><Route path="/broadcasts">{() => <ManagedContentPage kind="broadcasts" />}</Route><Route path="/about">{() => <ManagedContentPage kind="about" />}</Route><Route path="/bible" component={BibleAssetsPage} /><Route path="/places" component={OrthodoxPlacesPage} /><Route path="/moderation" component={ModerationPage} /><Route component={NotFound} /></Switch>;
+  return <Switch><Route path="/" component={Overview} /><Route path="/daily-content" component={DailyContentPage} /><Route path="/calendar" component={CalendarPage} /><Route path="/fasting" component={FastingPage} /><Route path="/learning" component={LearningPage} /><Route path="/prayer-library">{() => <ManagedContentPage kind="prayer-library" />}</Route><Route path="/broadcasts">{() => <ManagedContentPage kind="broadcasts" />}</Route><Route path="/about">{() => <ManagedContentPage kind="about" />}</Route><Route path="/bible" component={BibleAssetsPage} /><Route path="/places" component={OrthodoxPlacesPage} /><Route component={NotFound} /></Switch>;
 }
 function App() {
   const [locale, setLocale] = useState<AdminLocale>(() => {

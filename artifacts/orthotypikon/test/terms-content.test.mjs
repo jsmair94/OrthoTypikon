@@ -12,7 +12,7 @@ test('terms are complete and localized in Arabic, English, and Greek', () => {
     assert.ok(page.disclaimer.includes('OrthoTypikon'));
     assert.ok(page.intro.length > 40);
     assert.ok(page.updated.length > 0);
-    assert.equal(page.sections.length, 9);
+    assert.equal(page.sections.length, 8);
     assert.ok(page.sections.every((section) => section.title && section.body));
     assert.match(page.sections.at(-1).body, /OrthoTypikon/);
   }

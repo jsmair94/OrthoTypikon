@@ -77,8 +77,6 @@ async function mockAdminApi(page: Page) {
           fastingGuidance: { total: 0, published: 0, draft: 0 },
           fastingRecipes: { total: 0, published: 0, draft: 0 },
           learningEntries: { total: 0, published: 0, draft: 0 },
-          prayerRequestsPending: 0,
-          prayerRequestsHidden: 0,
         }),
       });
       return;

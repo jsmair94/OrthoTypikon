@@ -62,12 +62,7 @@ export const moreContent = {
         {
           title: 'المعلومات التي قد يعالجها التطبيق',
           body:
-            'يمكنك استخدام معظم أجزاء التطبيق من دون إنشاء حساب. قد يعالج التطبيق إعداداتك المحلية مثل اللغة ونوع التقويم والمظهر. وإذا استخدمت مجتمع الصلاة، فقد يعالج طلب الصلاة والاسم أو التصنيف الذي تختاره، وإعدادات الظهور والمدة اللازمة للمراجعة الرعوية.',
-        },
-        {
-          title: 'جلسة مجتمع الصلاة',
-          body:
-            'يستخدم مجتمع الصلاة جلسة مجهولة مرتبطة بجهازك حتى تتمكن من إدارة طلباتك. لا يطلب التطبيق اسمك الحقيقي أو بريدك الإلكتروني لإنشاء الجلسة. تخضع الطلبات العامة للمراجعة قبل ظهورها، ويمكنك حذف طلباتك وفق الخيارات المتاحة داخل التطبيق.',
+            'يمكنك استخدام معظم أجزاء التطبيق من دون إنشاء حساب. قد يعالج التطبيق إعداداتك المحلية مثل اللغة ونوع التقويم والمظهر.',
         },
         {
           title: 'الموقع والصلاحيات',
@@ -82,12 +77,12 @@ export const moreContent = {
         {
           title: 'الاستخدام والمشاركة',
           body:
-            'لا نبيع معلوماتك الشخصية ولا نستخدمها للإعلانات الموجّهة. نستخدم المعلومات بالقدر اللازم لتشغيل الميزات، حماية مجتمع الصلاة، مراجعة الطلبات، ومنع إساءة الاستخدام. قد تظهر الطلبات التي تختار مشاركتها مع المجتمع للآخرين بعد المراجعة.',
+            'لا نبيع معلوماتك الشخصية ولا نستخدمها للإعلانات الموجّهة. نستخدم المعلومات بالقدر اللازم لتشغيل ميزات التطبيق وتقديم المحتوى.',
         },
         {
           title: 'الاحتفاظ والأمان',
           body:
-            'نحتفظ ببيانات ميزات الخادم للفترة اللازمة لتقديم الخدمة أو للمراجعة والحماية من إساءة الاستخدام، وقد تنتهي الطلبات بحسب المدة التي تختارها. نستخدم إجراءات معقولة لحماية البيانات، لكن لا توجد وسيلة نقل أو تخزين آمنة بشكل مطلق.',
+            'نحتفظ ببيانات ميزات الخادم للفترة اللازمة لتقديم الخدمة. نستخدم إجراءات معقولة لحماية البيانات، لكن لا توجد وسيلة نقل أو تخزين آمنة بشكل مطلق.',
         },
         {
           title: 'التغييرات والتواصل',
@@ -118,11 +113,6 @@ export const moreContent = {
           title: 'الاستخدام المقبول',
           body:
             'استخدم التطبيق بطريقة قانونية ومحترمة. لا تنتحل شخصية أحد، ولا تنشر تهديدًا أو مضايقة أو محتوى غير قانوني أو رسائل مزعجة، ولا تحاول تعطيل التطبيق أو الوصول غير المصرح به إلى أنظمته. أنت مسؤول عن المحتوى الذي ترسله.',
-        },
-        {
-          title: 'طلبات الصلاة والمحتوى المشترك',
-          body:
-            'اختر إعدادات الظهور بعناية، ولا تُضمّن في طلباتك معلومات شخصية أو حساسة عنك أو عن غيرك. قد تُراجع الطلبات العامة قبل عرضها، وقد يُرفض أو يُزال المحتوى المخالف. عند اختيار مشاركة طلب، تمنح التطبيق إذنًا محدودًا لمعالجته وعرضه بالقدر اللازم لتشغيل مجتمع الصلاة ومراجعته.',
         },
         {
           title: 'الموقع والتذكيرات',
@@ -204,12 +194,7 @@ export const moreContent = {
         {
           title: 'Information the app may process',
           body:
-            'Most of the app can be used without creating an account. The app may process local preferences such as language, calendar type, and appearance. If you use the prayer community, it may process the prayer request, name or category you choose, visibility settings, and duration needed for pastoral review.',
-        },
-        {
-          title: 'Prayer community session',
-          body:
-            'The prayer community uses an anonymous device session so you can manage your requests. The app does not require your real name or email address to create the session. Public requests are reviewed before appearing to others, and you can delete your requests through the available controls.',
+            'Most of the app can be used without creating an account. The app may process local preferences such as language, calendar type, and appearance.',
         },
         {
           title: 'Location and permissions',
@@ -224,12 +209,12 @@ export const moreContent = {
         {
           title: 'Use and sharing',
           body:
-            'We do not sell personal information or use it for targeted advertising. Information is used only as needed to operate features, protect the prayer community, review requests, and prevent abuse. Requests you choose to share with the community may be visible to others after review.',
+            'We do not sell personal information or use it for targeted advertising. Information is used only as needed to operate app features and provide content.',
         },
         {
           title: 'Retention and security',
           body:
-            'Server feature data is retained for as long as needed to provide the service, review requests, and prevent abuse. Requests may expire according to the duration you select. We use reasonable safeguards to protect data, but no transmission or storage method is completely secure.',
+            'Server feature data is retained for as long as needed to provide the service. We use reasonable safeguards to protect data, but no transmission or storage method is completely secure.',
         },
         {
           title: 'Changes and contact',
@@ -260,11 +245,6 @@ export const moreContent = {
           title: 'Acceptable use',
           body:
             'Use the app lawfully and respectfully. Do not impersonate anyone, post threats, harassment, unlawful content, or spam, or attempt to disrupt the app or gain unauthorized access to its systems. You are responsible for the content you submit.',
-        },
-        {
-          title: 'Prayer requests and shared content',
-          body:
-            'Choose visibility settings carefully, and do not include personal or sensitive information about yourself or others. Public requests may be reviewed before display, and violating content may be rejected or removed. When you choose to share a request, you grant the app limited permission to process and display it as needed to operate and moderate the prayer community.',
         },
         {
           title: 'Location and reminders',
@@ -346,12 +326,7 @@ export const moreContent = {
         {
           title: 'Πληροφορίες που μπορεί να επεξεργάζεται η εφαρμογή',
           body:
-            'Τα περισσότερα μέρη της εφαρμογής λειτουργούν χωρίς δημιουργία λογαριασμού. Η εφαρμογή μπορεί να επεξεργάζεται τοπικές προτιμήσεις, όπως γλώσσα, τύπο ημερολογίου και εμφάνιση. Αν χρησιμοποιείτε την κοινότητα προσευχής, μπορεί να επεξεργάζεται το αίτημα, το όνομα ή την κατηγορία που επιλέγετε, τις ρυθμίσεις ορατότητας και τη διάρκεια που χρειάζεται για ποιμαντικό έλεγχο.',
-        },
-        {
-          title: 'Συνεδρία κοινότητας προσευχής',
-          body:
-            'Η κοινότητα προσευχής χρησιμοποιεί ανώνυμη συνεδρία συσκευής ώστε να διαχειρίζεστε τα αιτήματά σας. Δεν απαιτείται πραγματικό όνομα ή email για τη δημιουργία της συνεδρίας. Τα δημόσια αιτήματα ελέγχονται πριν εμφανιστούν και μπορείτε να τα διαγράψετε από τις διαθέσιμες επιλογές.',
+            'Τα περισσότερα μέρη της εφαρμογής λειτουργούν χωρίς δημιουργία λογαριασμού. Η εφαρμογή μπορεί να επεξεργάζεται τοπικές προτιμήσεις, όπως γλώσσα, τύπο ημερολογίου και εμφάνιση.',
         },
         {
           title: 'Τοποθεσία και άδειες',
@@ -366,12 +341,12 @@ export const moreContent = {
         {
           title: 'Χρήση και κοινοποίηση',
           body:
-            'Δεν πουλάμε προσωπικές πληροφορίες ούτε τις χρησιμοποιούμε για στοχευμένη διαφήμιση. Οι πληροφορίες χρησιμοποιούνται μόνο όσο χρειάζεται για τη λειτουργία, την προστασία της κοινότητας, τον έλεγχο αιτημάτων και την αποτροπή κατάχρησης. Τα αιτήματα που επιλέγετε να μοιραστείτε μπορεί να εμφανίζονται σε άλλους μετά τον έλεγχο.',
+            'Δεν πουλάμε προσωπικές πληροφορίες ούτε τις χρησιμοποιούμε για στοχευμένη διαφήμιση. Οι πληροφορίες χρησιμοποιούνται μόνο όσο χρειάζεται για τη λειτουργία των χαρακτηριστικών της εφαρμογής και την παροχή περιεχομένου.',
         },
         {
           title: 'Διατήρηση και ασφάλεια',
           body:
-            'Τα δεδομένα των λειτουργιών του διακομιστή διατηρούνται όσο χρειάζεται για την παροχή της υπηρεσίας, τον έλεγχο και την αποτροπή κατάχρησης. Τα αιτήματα μπορεί να λήγουν σύμφωνα με τη διάρκεια που επιλέγετε. Χρησιμοποιούμε εύλογες δικλίδες ασφαλείας, όμως καμία μέθοδος μετάδοσης ή αποθήκευσης δεν είναι απολύτως ασφαλής.',
+            'Τα δεδομένα των λειτουργιών του διακομιστή διατηρούνται όσο χρειάζεται για την παροχή της υπηρεσίας. Χρησιμοποιούμε εύλογες δικλίδες ασφαλείας, όμως καμία μέθοδος μετάδοσης ή αποθήκευσης δεν είναι απολύτως ασφαλής.',
         },
         {
           title: 'Αλλαγές και επικοινωνία',
@@ -402,11 +377,6 @@ export const moreContent = {
           title: 'Αποδεκτή χρήση',
           body:
             'Χρησιμοποιείτε την εφαρμογή νόμιμα και με σεβασμό. Μην υποδύεστε άλλο πρόσωπο, μην δημοσιεύετε απειλές, παρενόχληση, παράνομο περιεχόμενο ή ανεπιθύμητα μηνύματα και μην επιχειρείτε να διακόψετε τη λειτουργία της εφαρμογής ή να αποκτήσετε μη εξουσιοδοτημένη πρόσβαση στα συστήματά της. Είστε υπεύθυνοι για το περιεχόμενο που υποβάλλετε.',
-        },
-        {
-          title: 'Αιτήματα προσευχής και κοινοποιημένο περιεχόμενο',
-          body:
-            'Επιλέγετε προσεκτικά τις ρυθμίσεις ορατότητας και μην συμπεριλαμβάνετε προσωπικές ή ευαίσθητες πληροφορίες για εσάς ή άλλους. Τα δημόσια αιτήματα μπορεί να ελέγχονται πριν εμφανιστούν και το περιεχόμενο που παραβιάζει τους όρους μπορεί να απορριφθεί ή να αφαιρεθεί. Όταν επιλέγετε να κοινοποιήσετε ένα αίτημα, παρέχετε στην εφαρμογή περιορισμένη άδεια επεξεργασίας και προβολής του, όσο χρειάζεται για τη λειτουργία και τον έλεγχο της κοινότητας προσευχής.',
         },
         {
           title: 'Τοποθεσία και υπενθυμίσεις',

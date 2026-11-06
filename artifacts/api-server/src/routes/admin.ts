@@ -26,7 +26,6 @@ import {
   learningEntriesTable,
   orthodoxPlaceReportsTable,
   orthodoxPlacesTable,
-  prayerRequestsTable,
   saintsTable,
 } from "@workspace/db";
 import { managedContentTable } from "@workspace/db/schema";
@@ -65,14 +64,10 @@ import {
   ListAdminFastingRecipesResponse,
   ListAdminLearningEntriesQueryParams,
   ListAdminLearningEntriesResponse,
-  ListAdminPrayerRequestsResponse,
   ListAdminOrthodoxPlaceReportsResponse,
   ListAdminOrthodoxPlacesResponse,
   ListAdminSaintsQueryParams,
   ListAdminSaintsResponse,
-  ReviewAdminPrayerRequestBody,
-  ReviewAdminPrayerRequestParams,
-  ReviewAdminPrayerRequestResponse,
   ReviewAdminOrthodoxPlaceReportBody,
   ReviewAdminOrthodoxPlaceReportParams,
   ReviewAdminOrthodoxPlaceReportResponse,
@@ -417,8 +412,6 @@ router.get("/admin/overview", async (_req, res): Promise<void> => {
     fasting,
     recipes,
     learning,
-    pendingPrayerRequests,
-    hiddenPrayerRequests,
   ] = await Promise.all([
     database.select({ status: dailyContentTable.publicationStatus, total: count() })
       .from(dailyContentTable).groupBy(dailyContentTable.publicationStatus),
@@ -432,16 +425,6 @@ router.get("/admin/overview", async (_req, res): Promise<void> => {
       .from(fastingRecipesTable).groupBy(fastingRecipesTable.publicationStatus),
     database.select({ status: learningEntriesTable.publicationStatus, total: count() })
       .from(learningEntriesTable).groupBy(learningEntriesTable.publicationStatus),
-    database.select({ total: count() }).from(prayerRequestsTable)
-      .where(and(
-        eq(prayerRequestsTable.visibility, "community"),
-        eq(prayerRequestsTable.status, "pending"),
-      )),
-    database.select({ total: count() }).from(prayerRequestsTable)
-      .where(and(
-        eq(prayerRequestsTable.visibility, "community"),
-        eq(prayerRequestsTable.status, "hidden"),
-      )),
   ]);
 
   res.json(GetAdminOverviewResponse.parse({
@@ -451,8 +434,6 @@ router.get("/admin/overview", async (_req, res): Promise<void> => {
     fastingGuidance: contentCounts(fasting),
     fastingRecipes: contentCounts(recipes),
     learningEntries: contentCounts(learning),
-    prayerRequestsPending: pendingPrayerRequests[0]?.total ?? 0,
-    prayerRequestsHidden: hiddenPrayerRequests[0]?.total ?? 0,
   }));
 });
 
@@ -464,57 +445,6 @@ function isUniqueViolation(error: unknown) {
 function sendConflict(res: Response, message: string) {
   res.status(409).json({ error: message, code: "INVALID_REQUEST" });
 }
-
-function prayerRequestOutput(row: typeof prayerRequestsTable.$inferSelect) {
-  return {
-    id: row.id,
-    name: row.nameVisibility === "anonymous" ? "Someone requested prayer" : row.name,
-    ...(row.showCategory ? { category: row.category } : {}),
-    visibility: row.visibility,
-    nameVisibility: row.nameVisibility,
-    showCategory: row.showCategory,
-    showDuration: row.showDuration,
-    ...(row.showDuration ? { durationDays: row.durationDays } : {}),
-    status: row.status,
-    ...(row.expiresAt ? { expiresAt: row.expiresAt.toISOString() } : {}),
-    createdAt: row.createdAt.toISOString(),
-  };
-}
-
-router.get("/admin/moderation/prayer-requests", async (_req, res): Promise<void> => {
-  const rows = await requireDatabase()
-    .select()
-    .from(prayerRequestsTable)
-    .where(and(
-      eq(prayerRequestsTable.visibility, "community"),
-      or(
-        eq(prayerRequestsTable.status, "pending"),
-        eq(prayerRequestsTable.status, "hidden"),
-      ),
-    ))
-    .orderBy(desc(prayerRequestsTable.createdAt))
-    .limit(100);
-  res.json(ListAdminPrayerRequestsResponse.parse({
-    requests: rows.map(prayerRequestOutput),
-  }));
-});
-
-router.post("/admin/moderation/prayer-requests/:requestId/review", async (req, res): Promise<void> => {
-  const params = ReviewAdminPrayerRequestParams.safeParse(req.params);
-  const body = ReviewAdminPrayerRequestBody.safeParse(req.body);
-  if (!params.success || !body.success) throw invalidRequest();
-
-  const [updated] = await requireDatabase()
-    .update(prayerRequestsTable)
-    .set({ status: body.data.status, reviewedAt: new Date() })
-    .where(and(
-      eq(prayerRequestsTable.id, params.data.requestId),
-      eq(prayerRequestsTable.visibility, "community"),
-    ))
-    .returning();
-  if (!updated) throw notFound("Prayer request was not found.");
-  res.json(ReviewAdminPrayerRequestResponse.parse(prayerRequestOutput(updated)));
-});
 
 router.get("/admin/daily-content", async (req, res): Promise<void> => {
   const parsed = ListAdminDailyContentQueryParams.safeParse(req.query);

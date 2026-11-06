@@ -102,218 +102,6 @@ export const GetBibleChapterResponse = zod.object({
 });
 
 /**
- * @summary Create an anonymous device session
- */
-export const createPrayerSessionBodyInstallationIdMin = 32;
-export const createPrayerSessionBodyInstallationIdMax = 128;
-
-export const CreatePrayerSessionBody = zod.object({
-  installationId: zod
-    .string()
-    .min(createPrayerSessionBodyInstallationIdMin)
-    .max(createPrayerSessionBodyInstallationIdMax),
-});
-
-export const CreatePrayerSessionResponse = zod.object({
-  token: zod.string(),
-  expiresAt: zod.coerce.date(),
-});
-
-/**
- * @summary List approved community requests or the current user's requests
- */
-export const listPrayerRequestsQueryScopeDefault = `community`;
-export const listPrayerRequestsQueryLimitDefault = 30;
-export const listPrayerRequestsQueryLimitMax = 50;
-
-export const ListPrayerRequestsQueryParams = zod.object({
-  scope: zod
-    .enum(["community", "mine"])
-    .default(listPrayerRequestsQueryScopeDefault),
-  limit: zod.coerce
-    .number()
-    .int()
-    .min(1)
-    .max(listPrayerRequestsQueryLimitMax)
-    .default(listPrayerRequestsQueryLimitDefault),
-});
-
-export const ListPrayerRequestsResponse = zod.object({
-  requests: zod.array(
-    zod.object({
-      id: zod.string(),
-      name: zod.string(),
-      category: zod
-        .enum(["sick", "departed", "thanksgiving", "other"])
-        .optional(),
-      visibility: zod.enum(["community", "private"]),
-      nameVisibility: zod.enum(["named", "anonymous"]),
-      showCategory: zod.boolean(),
-      showDuration: zod.boolean(),
-      durationDays: zod
-        .union([
-          zod.literal(1),
-          zod.literal(7),
-          zod.literal(30),
-          zod.literal(90),
-        ])
-        .optional(),
-      status: zod.enum([
-        "pending",
-        "approved",
-        "rejected",
-        "hidden",
-        "removed",
-      ]),
-      expiresAt: zod.coerce.date().optional(),
-      createdAt: zod.coerce.date(),
-    }),
-  ),
-});
-
-/**
- * @summary Submit a prayer request for pastoral review
- */
-export const createPrayerRequestBodyNameMax = 100;
-
-export const CreatePrayerRequestBody = zod.object({
-  name: zod.string().min(1).max(createPrayerRequestBodyNameMax),
-  category: zod.enum(["sick", "departed", "thanksgiving", "other"]),
-  visibility: zod.enum(["community", "private"]),
-  nameVisibility: zod.enum(["named", "anonymous"]),
-  showCategory: zod.boolean(),
-  showDuration: zod.boolean(),
-  durationDays: zod.union([
-    zod.literal(1),
-    zod.literal(7),
-    zod.literal(30),
-    zod.literal(90),
-  ]),
-  consent: zod.literal(true),
-});
-
-export const CreatePrayerRequestResponse = zod.object({
-  id: zod.string(),
-  name: zod.string(),
-  category: zod.enum(["sick", "departed", "thanksgiving", "other"]).optional(),
-  visibility: zod.enum(["community", "private"]),
-  nameVisibility: zod.enum(["named", "anonymous"]),
-  showCategory: zod.boolean(),
-  showDuration: zod.boolean(),
-  durationDays: zod
-    .union([zod.literal(1), zod.literal(7), zod.literal(30), zod.literal(90)])
-    .optional(),
-  status: zod.enum(["pending", "approved", "rejected", "hidden", "removed"]),
-  expiresAt: zod.coerce.date().optional(),
-  createdAt: zod.coerce.date(),
-});
-
-/**
- * @summary Remove one of the current user's requests
- */
-export const deletePrayerRequestPathRequestIdMin = 10;
-export const deletePrayerRequestPathRequestIdMax = 100;
-
-export const DeletePrayerRequestParams = zod.object({
-  requestId: zod.coerce
-    .string()
-    .min(deletePrayerRequestPathRequestIdMin)
-    .max(deletePrayerRequestPathRequestIdMax),
-});
-
-export const DeletePrayerRequestResponse = zod.void();
-
-/**
- * @summary Report a prayer request for pastoral review
- */
-export const reportPrayerRequestPathRequestIdMin = 10;
-export const reportPrayerRequestPathRequestIdMax = 100;
-
-export const ReportPrayerRequestParams = zod.object({
-  requestId: zod.coerce
-    .string()
-    .min(reportPrayerRequestPathRequestIdMin)
-    .max(reportPrayerRequestPathRequestIdMax),
-});
-
-export const reportPrayerRequestBodyReasonMax = 500;
-
-export const ReportPrayerRequestBody = zod.object({
-  reason: zod.string().min(1).max(reportPrayerRequestBodyReasonMax),
-});
-
-export const ReportPrayerRequestResponse = zod.void();
-
-/**
- * @summary List requests awaiting pastoral moderation
- */
-export const ListModerationPrayerRequestsResponse = zod.object({
-  requests: zod.array(
-    zod.object({
-      id: zod.string(),
-      name: zod.string(),
-      category: zod
-        .enum(["sick", "departed", "thanksgiving", "other"])
-        .optional(),
-      visibility: zod.enum(["community", "private"]),
-      nameVisibility: zod.enum(["named", "anonymous"]),
-      showCategory: zod.boolean(),
-      showDuration: zod.boolean(),
-      durationDays: zod
-        .union([
-          zod.literal(1),
-          zod.literal(7),
-          zod.literal(30),
-          zod.literal(90),
-        ])
-        .optional(),
-      status: zod.enum([
-        "pending",
-        "approved",
-        "rejected",
-        "hidden",
-        "removed",
-      ]),
-      expiresAt: zod.coerce.date().optional(),
-      createdAt: zod.coerce.date(),
-    }),
-  ),
-});
-
-/**
- * @summary Approve or reject one prayer request
- */
-export const reviewPrayerRequestPathRequestIdMin = 10;
-export const reviewPrayerRequestPathRequestIdMax = 100;
-
-export const ReviewPrayerRequestParams = zod.object({
-  requestId: zod.coerce
-    .string()
-    .min(reviewPrayerRequestPathRequestIdMin)
-    .max(reviewPrayerRequestPathRequestIdMax),
-});
-
-export const ReviewPrayerRequestBody = zod.object({
-  status: zod.enum(["approved", "rejected", "hidden"]),
-});
-
-export const ReviewPrayerRequestResponse = zod.object({
-  id: zod.string(),
-  name: zod.string(),
-  category: zod.enum(["sick", "departed", "thanksgiving", "other"]).optional(),
-  visibility: zod.enum(["community", "private"]),
-  nameVisibility: zod.enum(["named", "anonymous"]),
-  showCategory: zod.boolean(),
-  showDuration: zod.boolean(),
-  durationDays: zod
-    .union([zod.literal(1), zod.literal(7), zod.literal(30), zod.literal(90)])
-    .optional(),
-  status: zod.enum(["pending", "approved", "rejected", "hidden", "removed"]),
-  expiresAt: zod.coerce.date().optional(),
-  createdAt: zod.coerce.date(),
-});
-
-/**
  * @summary Find active Orthodox places near a coordinate
  */
 export const listNearbyOrthodoxPlacesQueryLatitudeMin = -90;
@@ -398,7 +186,7 @@ export const CreateAdminSessionResponse = zod.object({
 });
 
 /**
- * @summary Get content totals and the prayer moderation backlog
+ * @summary Get content totals for the admin overview
  */
 export const getAdminOverviewResponseDailyContentTotalMultipleOf = 1;
 
@@ -447,10 +235,6 @@ export const getAdminOverviewResponseLearningEntriesPublishedMultipleOf = 1;
 export const getAdminOverviewResponseLearningEntriesDraftMultipleOf = 1;
 
 export const getAdminOverviewResponseLearningEntriesArchivedMultipleOf = 1;
-
-export const getAdminOverviewResponsePrayerRequestsPendingMultipleOf = 1;
-
-export const getAdminOverviewResponsePrayerRequestsHiddenMultipleOf = 1;
 
 export const GetAdminOverviewResponse = zod.object({
   dailyContent: zod.object({
@@ -537,12 +321,6 @@ export const GetAdminOverviewResponse = zod.object({
       .number()
       .multipleOf(getAdminOverviewResponseLearningEntriesArchivedMultipleOf),
   }),
-  prayerRequestsPending: zod
-    .number()
-    .multipleOf(getAdminOverviewResponsePrayerRequestsPendingMultipleOf),
-  prayerRequestsHidden: zod
-    .number()
-    .multipleOf(getAdminOverviewResponsePrayerRequestsHiddenMultipleOf),
 });
 
 /**
@@ -1834,75 +1612,6 @@ export const ArchiveAdminLearningEntryParams = zod.object({
 });
 
 export const ArchiveAdminLearningEntryResponse = zod.void();
-
-/**
- * @summary List community prayer requests awaiting review
- */
-export const ListAdminPrayerRequestsResponse = zod.object({
-  requests: zod.array(
-    zod.object({
-      id: zod.string(),
-      name: zod.string(),
-      category: zod
-        .enum(["sick", "departed", "thanksgiving", "other"])
-        .optional(),
-      visibility: zod.enum(["community", "private"]),
-      nameVisibility: zod.enum(["named", "anonymous"]),
-      showCategory: zod.boolean(),
-      showDuration: zod.boolean(),
-      durationDays: zod
-        .union([
-          zod.literal(1),
-          zod.literal(7),
-          zod.literal(30),
-          zod.literal(90),
-        ])
-        .optional(),
-      status: zod.enum([
-        "pending",
-        "approved",
-        "rejected",
-        "hidden",
-        "removed",
-      ]),
-      expiresAt: zod.coerce.date().optional(),
-      createdAt: zod.coerce.date(),
-    }),
-  ),
-});
-
-/**
- * @summary Approve, reject, or hide a community prayer request
- */
-export const reviewAdminPrayerRequestPathRequestIdMin = 10;
-export const reviewAdminPrayerRequestPathRequestIdMax = 100;
-
-export const ReviewAdminPrayerRequestParams = zod.object({
-  requestId: zod.coerce
-    .string()
-    .min(reviewAdminPrayerRequestPathRequestIdMin)
-    .max(reviewAdminPrayerRequestPathRequestIdMax),
-});
-
-export const ReviewAdminPrayerRequestBody = zod.object({
-  status: zod.enum(["approved", "rejected", "hidden"]),
-});
-
-export const ReviewAdminPrayerRequestResponse = zod.object({
-  id: zod.string(),
-  name: zod.string(),
-  category: zod.enum(["sick", "departed", "thanksgiving", "other"]).optional(),
-  visibility: zod.enum(["community", "private"]),
-  nameVisibility: zod.enum(["named", "anonymous"]),
-  showCategory: zod.boolean(),
-  showDuration: zod.boolean(),
-  durationDays: zod
-    .union([zod.literal(1), zod.literal(7), zod.literal(30), zod.literal(90)])
-    .optional(),
-  status: zod.enum(["pending", "approved", "rejected", "hidden", "removed"]),
-  expiresAt: zod.coerce.date().optional(),
-  createdAt: zod.coerce.date(),
-});
 
 /**
  * @summary Get daily spiritual content

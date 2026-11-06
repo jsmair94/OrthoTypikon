@@ -227,152 +227,6 @@ export interface HealthStatus {
   status: HealthStatusStatus;
 }
 
-export interface PrayerSessionCreate {
-  /**
-   * @minLength 32
-   * @maxLength 128
-   */
-  installationId: string;
-}
-
-export interface PrayerSession {
-  token: string;
-  expiresAt: string;
-}
-
-export type PrayerRequestCreateCategory =
-  (typeof PrayerRequestCreateCategory)[keyof typeof PrayerRequestCreateCategory];
-
-export const PrayerRequestCreateCategory = {
-  sick: "sick",
-  departed: "departed",
-  thanksgiving: "thanksgiving",
-  other: "other",
-} as const;
-
-export type PrayerRequestCreateVisibility =
-  (typeof PrayerRequestCreateVisibility)[keyof typeof PrayerRequestCreateVisibility];
-
-export const PrayerRequestCreateVisibility = {
-  community: "community",
-  private: "private",
-} as const;
-
-export type PrayerRequestCreateNameVisibility =
-  (typeof PrayerRequestCreateNameVisibility)[keyof typeof PrayerRequestCreateNameVisibility];
-
-export const PrayerRequestCreateNameVisibility = {
-  named: "named",
-  anonymous: "anonymous",
-} as const;
-
-export type PrayerRequestCreateDurationDays =
-  (typeof PrayerRequestCreateDurationDays)[keyof typeof PrayerRequestCreateDurationDays];
-
-export const PrayerRequestCreateDurationDays = {
-  NUMBER_1: 1,
-  NUMBER_7: 7,
-  NUMBER_30: 30,
-  NUMBER_90: 90,
-} as const;
-
-export interface PrayerRequestCreate {
-  /**
-   * @minLength 1
-   * @maxLength 100
-   */
-  name: string;
-  category: PrayerRequestCreateCategory;
-  visibility: PrayerRequestCreateVisibility;
-  nameVisibility: PrayerRequestCreateNameVisibility;
-  showCategory: boolean;
-  showDuration: boolean;
-  durationDays: PrayerRequestCreateDurationDays;
-  consent: true;
-}
-
-export type PrayerRequestCategory =
-  (typeof PrayerRequestCategory)[keyof typeof PrayerRequestCategory];
-
-export const PrayerRequestCategory = {
-  sick: "sick",
-  departed: "departed",
-  thanksgiving: "thanksgiving",
-  other: "other",
-} as const;
-
-export type PrayerRequestVisibility =
-  (typeof PrayerRequestVisibility)[keyof typeof PrayerRequestVisibility];
-
-export const PrayerRequestVisibility = {
-  community: "community",
-  private: "private",
-} as const;
-
-export type PrayerRequestNameVisibility =
-  (typeof PrayerRequestNameVisibility)[keyof typeof PrayerRequestNameVisibility];
-
-export const PrayerRequestNameVisibility = {
-  named: "named",
-  anonymous: "anonymous",
-} as const;
-
-export type PrayerRequestDurationDays =
-  (typeof PrayerRequestDurationDays)[keyof typeof PrayerRequestDurationDays];
-
-export const PrayerRequestDurationDays = {
-  NUMBER_1: 1,
-  NUMBER_7: 7,
-  NUMBER_30: 30,
-  NUMBER_90: 90,
-} as const;
-
-export type PrayerRequestStatus =
-  (typeof PrayerRequestStatus)[keyof typeof PrayerRequestStatus];
-
-export const PrayerRequestStatus = {
-  pending: "pending",
-  approved: "approved",
-  rejected: "rejected",
-  hidden: "hidden",
-  removed: "removed",
-} as const;
-
-export interface PrayerRequest {
-  id: string;
-  name: string;
-  category?: PrayerRequestCategory;
-  visibility: PrayerRequestVisibility;
-  nameVisibility: PrayerRequestNameVisibility;
-  showCategory: boolean;
-  showDuration: boolean;
-  durationDays?: PrayerRequestDurationDays;
-  status: PrayerRequestStatus;
-  expiresAt?: string;
-  createdAt: string;
-}
-
-export interface PrayerReportCreate {
-  /**
-   * @minLength 1
-   * @maxLength 500
-   */
-  reason: string;
-}
-
-export type PrayerReviewStatus =
-  (typeof PrayerReviewStatus)[keyof typeof PrayerReviewStatus];
-
-export const PrayerReviewStatus = {
-  approved: "approved",
-  rejected: "rejected",
-  hidden: "hidden",
-} as const;
-
-export interface PrayerReview {
-  status: PrayerReviewStatus;
-}
-
 export interface ApiError {
   message: string;
 }
@@ -624,8 +478,6 @@ export interface AdminOverview {
   fastingGuidance: AdminContentCounts;
   fastingRecipes: AdminContentCounts;
   learningEntries: AdminContentCounts;
-  prayerRequestsPending: number;
-  prayerRequestsHidden: number;
 }
 
 export interface AdminDailyContent {
@@ -910,10 +762,6 @@ export interface AdminLearningEntryList {
   pagination: Pagination;
 }
 
-export interface AdminPrayerQueue {
-  requests: PrayerRequest[];
-}
-
 /**
  * Invalid request
  */
@@ -977,31 +825,6 @@ export type AdminSearchQueryParameter = string;
 export type AdminPageQueryParameter = number;
 
 export type AdminLimitQueryParameter = number;
-
-export type ListPrayerRequestsParams = {
-  scope?: ListPrayerRequestsScope;
-  /**
-   * @minimum 1
-   * @maximum 50
-   */
-  limit?: number;
-};
-
-export type ListPrayerRequestsScope =
-  (typeof ListPrayerRequestsScope)[keyof typeof ListPrayerRequestsScope];
-
-export const ListPrayerRequestsScope = {
-  community: "community",
-  mine: "mine",
-} as const;
-
-export type ListPrayerRequests200 = {
-  requests: PrayerRequest[];
-};
-
-export type ListModerationPrayerRequests200 = {
-  requests: PrayerRequest[];
-};
 
 export type ListNearbyOrthodoxPlacesParams = {
   /**

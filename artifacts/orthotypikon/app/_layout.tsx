@@ -18,12 +18,9 @@ import * as SplashScreen from 'expo-splash-screen';
 import { PreferencesProvider, useI18n, usePreferences } from '@/hooks/usePreferences';
 import { useColors } from '@/hooks/useColors';
 import { AppAudioProvider } from '@/hooks/useAppAudio';
-import { configurePrayerCommunityApi } from '@/lib/prayerCommunitySession';
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
-configurePrayerCommunityApi();
-
 const queryClient = new QueryClient();
 
 function RootLayoutNav() {
